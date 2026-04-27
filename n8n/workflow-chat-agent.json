@@ -1,0 +1,459 @@
+{
+  "name": "LUE FZ - Chat Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-agent",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "conversation_id",
+              "value": "={{ $json.body.conversation_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "message_id",
+              "value": "={{ $json.body.message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "content",
+              "value": "={{ $json.body.content }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "visitor_id",
+              "value": "={{ $json.body.visitor_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/conversations?id=eq.{{ $json.conversation_id }}&select=id,status,assigned_to,visitor_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Get Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json[0].status }}",
+              "rightValue": "ai_active",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "IF ai_active",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/messages?conversation_id=eq.{{ $('Edit Fields').item.json.conversation_id }}&order=created_at.asc&limit=50&select=role,content",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000005",
+      "name": "Get Message History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 100]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Histórico da conversa:\n{{ $json.map(m => m.role + ': ' + m.content).join('\\n') }}\n\nNova mensagem do cliente:\n{{ $('Edit Fields').item.json.content }}",
+        "options": {
+          "systemMessage": "# Persona\nVocê é um vendedor da FácilZap\n\n# Contexto\nVocê está atendendo pessoas que acessaram o chat comercial da FácilZap no site e querem conhecer os planos\n\n# Objetivo\nVocê deve apresentar os planos da FácilZap, tirar dúvidas e converter o visitante em cliente\n\n# O que é a FácilZap\n{{ $('Edit Fields').item.json.store_info }}\n\n# Tools disponíveis\n- **search_products**: Use para buscar produtos/planos no catálogo quando o cliente perguntar sobre itens, preços ou funcionalidades. Sempre consulte antes de responder sobre produtos.\n\n# Comportamento\n- Seja consultivo, claro e direto\n- Não force venda\n- Primeiro entenda a dor do lojista\n- Mostre como a FácilZap resolve exatamente essa dor\n- Explique que existe um serviço especializado pago para configurar a loja quando necessário\n- Mostre as funcionalidades de acordo com a dor do lead\n\nCaso o lead queira comprar envie esse link:\nhttps://facilzap.com.br/planos\n\n# Nunca faça\n- Respostas muito longas no início do atendimento\n- Enviar emojis em excesso\n- Inventar produtos, preços ou funcionalidades — use apenas dados retornados pela tool search_products"
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000006",
+      "name": "Chat Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [1120, 100]
+    },
+    {
+      "parameters": {
+        "model": "claude-haiku-4-5-20251001",
+        "options": {
+          "maxTokensToSample": 1024
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000007",
+      "name": "Claude Chat",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [1020, 320]
+    },
+    {
+      "parameters": {
+        "name": "search_products",
+        "description": "Busca produtos no catálogo da loja por nome, categoria ou faixa de preço. Use quando o cliente perguntar sobre produtos disponíveis.",
+        "method": "GET",
+        "url": "=https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/products?or=(name.ilike.*{query}*,category.ilike.*{query}*,description.ilike.*{query}*)&select=name,description,price,compare_at_price,category,stock_quantity,image_urls,variants&is_available=eq.true&limit=10",
+        "sendHeaders": true,
+        "parametersHeaders": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "query",
+              "description": "Termo de busca: nome do produto, categoria, ou palavra-chave",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000008",
+      "name": "Search Products",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [1220, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"conversation_id\": \"{{ $('Edit Fields').item.json.conversation_id }}\",\n  \"role\": \"assistant\",\n  \"content\": {{ JSON.stringify($json.output) }}\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000009",
+      "name": "Save Assistant Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 100]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analise a seguinte mensagem do cliente e extraia informações de contato se houver:\n\nMensagem: {{ $('Edit Fields').item.json.content }}\n\nSe encontrar um número de WhatsApp ou telefone, ou um nome, retorne em formato JSON:\n{\"whatsapp\": \"número ou null\", \"name\": \"nome ou null\"}\n\nSe não encontrar nenhuma informação de contato, retorne:\n{\"whatsapp\": null, \"name\": null}",
+        "options": {
+          "systemMessage": "Você é um extrator de dados de leads. Sua tarefa é analisar mensagens de clientes e extrair:\n1. Número de WhatsApp/telefone (normalizar para formato com código do país, ex: 5511999999999)\n2. Nome do cliente\n\nRetorne APENAS o JSON solicitado, sem texto adicional.\nSe a mensagem não contiver informações de contato, retorne nulls.\nNúmeros podem estar em formatos variados: (11) 99999-9999, 11999999999, +55 11 99999-9999, etc."
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000010",
+      "name": "Lead Analyzer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "model": "claude-haiku-4-5-20251001",
+        "options": {
+          "maxTokensToSample": 256
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000011",
+      "name": "Claude Lead",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [460, 720]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ JSON.parse($json.output).whatsapp }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000012",
+      "name": "IF Has Lead Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"whatsapp\": {{ JSON.parse($('Lead Analyzer').item.json.output).whatsapp ? JSON.stringify(JSON.parse($('Lead Analyzer').item.json.output).whatsapp) : 'null' }},\n  \"name\": {{ JSON.parse($('Lead Analyzer').item.json.output).name ? JSON.stringify(JSON.parse($('Lead Analyzer').item.json.output).name) : 'null' }},\n  \"source\": \"chat\",\n  \"last_seen_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000013",
+      "name": "Save Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 500]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lead Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation": {
+      "main": [
+        [
+          {
+            "node": "IF ai_active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF ai_active": {
+      "main": [
+        [
+          {
+            "node": "Get Message History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Message History": {
+      "main": [
+        [
+          {
+            "node": "Chat Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Agent": {
+      "main": [
+        [
+          {
+            "node": "Save Assistant Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Chat": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Chat Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Products": {
+      "ai_tool": [
+        [
+          {
+            "node": "Chat Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Lead": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Lead Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Analyzer": {
+      "main": [
+        [
+          {
+            "node": "IF Has Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Save Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "pinData": {}
+}
