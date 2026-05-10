@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { getUploadUrl, sendMessage } from '@/actions/chat'
 import type { ChatMessage } from '../ChatClient'
+import { AudioRecorder } from './AudioRecorder'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ALLOWED_IMAGE = ['image/jpeg', 'image/png', 'image/webp']
@@ -49,6 +50,58 @@ export function ChatInput({
 }) {
   const [text, setText] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [audioSupported, setAudioSupported] = useState(false)
+  const [recordingMode, setRecordingMode] = useState(false)
+
+  useEffect(() => {
+    setAudioSupported(
+      typeof window !== 'undefined' &&
+        typeof navigator !== 'undefined' &&
+        !!navigator.mediaDevices?.getUserMedia &&
+        typeof MediaRecorder !== 'undefined',
+    )
+  }, [])
+
+  async function handleAudio(blob: Blob) {
+    setRecordingMode(false)
+    if (blob.size > 2 * 1024 * 1024) {
+      onError('Áudio maior que 2MB.')
+      return
+    }
+    onSending(true)
+    onError(null)
+    try {
+      const upload = await getUploadUrl({
+        slug,
+        mime: 'audio/webm',
+        size: blob.size,
+      })
+      if (!upload.success || !upload.uploadUrl || !upload.mediaPath) {
+        onError(upload.error ?? 'Erro no upload.')
+        return
+      }
+      const put = await fetch(upload.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'audio/webm' },
+        body: blob,
+      })
+      if (!put.ok) {
+        onError('Falha no upload.')
+        return
+      }
+      const result = await sendMessage({
+        slug,
+        text: '',
+        mediaPath: upload.mediaPath,
+        messageType: 'audio',
+      })
+      if (!result.success) {
+        onError(result.error ?? 'Erro ao enviar áudio.')
+      }
+    } finally {
+      onSending(false)
+    }
+  }
 
   async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -136,39 +189,61 @@ export function ChatInput({
 
   return (
     <footer className="flex items-end gap-2 bg-white px-3 py-2 shadow-inner">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={handleImage}
-      />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={sending}
-        className="flex h-10 w-10 items-center justify-center text-gray-500 disabled:opacity-50"
-        aria-label="Anexar imagem"
-      >
-        📎
-      </button>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={handleKey}
-        rows={1}
-        placeholder="Mensagem"
-        className="max-h-32 flex-1 resize-none rounded-2xl bg-gray-100 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
-      />
-      <button
-        type="button"
-        onClick={handleSend}
-        disabled={!text.trim() || sending}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-[#075E54] text-white disabled:opacity-50"
-        aria-label="Enviar"
-      >
-        ➤
-      </button>
+      {recordingMode ? (
+        <AudioRecorder
+          onRecorded={handleAudio}
+          onCancel={() => setRecordingMode(false)}
+          disabled={sending}
+        />
+      ) : (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleImage}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending}
+            className="flex h-10 w-10 items-center justify-center text-gray-500 disabled:opacity-50"
+            aria-label="Anexar imagem"
+          >
+            📎
+          </button>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKey}
+            rows={1}
+            placeholder="Mensagem"
+            className="max-h-32 flex-1 resize-none rounded-2xl bg-gray-100 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+          />
+          {text.trim() ? (
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sending}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#075E54] text-white disabled:opacity-50"
+              aria-label="Enviar"
+            >
+              ➤
+            </button>
+          ) : audioSupported ? (
+            <button
+              type="button"
+              onClick={() => setRecordingMode(true)}
+              disabled={sending}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#075E54] text-white disabled:opacity-50"
+              aria-label="Gravar áudio"
+            >
+              🎤
+            </button>
+          ) : null}
+        </>
+      )}
     </footer>
   )
 }
