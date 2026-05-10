@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { CopyButton } from './CopyButton'
-import { QRCodeDialog } from './QRCodeDialog'
+import { ChatUrlBox } from './ChatUrlBox'
 
 export async function ChatUrlCard() {
   const supabase = await createClient()
@@ -25,28 +24,14 @@ export async function ChatUrlCard() {
     )
   }
 
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? ''
-  const url = `${base}/chat/${data.chat_slug}`
+  const envBase = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? null
 
   return (
     <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
       <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
         <span aria-hidden>💬</span> URL do seu chat
       </h3>
-      <div className="mb-3 flex gap-2">
-        <input
-          readOnly
-          value={url}
-          className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-mono"
-        />
-        <CopyButton value={url} />
-      </div>
-      <p className="text-xs text-gray-600">
-        Compartilhe este link com seus clientes para iniciarem uma conversa
-        com o atendimento da sua loja.
-      </p>
-      <QRCodeDialog value={url} />
+      <ChatUrlBox slug={data.chat_slug} envBase={envBase} />
     </div>
   )
 }
