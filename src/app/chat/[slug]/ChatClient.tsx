@@ -23,6 +23,7 @@ interface State {
 
 type Action =
   | { type: 'add'; message: ChatMessage }
+  | { type: 'replaceTemp'; tempId: string; realId: string }
   | { type: 'sending'; sending: boolean }
   | { type: 'error'; error: string | null }
 
@@ -31,6 +32,13 @@ function reducer(state: State, action: Action): State {
     case 'add':
       if (state.messages.some((m) => m.id === action.message.id)) return state
       return { ...state, messages: [...state.messages, action.message] }
+    case 'replaceTemp':
+      return {
+        ...state,
+        messages: state.messages.map((m) =>
+          m.id === action.tempId ? { ...m, id: action.realId } : m,
+        ),
+      }
     case 'sending':
       return { ...state, sending: action.sending }
     case 'error':
@@ -127,6 +135,9 @@ export function ChatClient({
         onSending={(sending) => dispatch({ type: 'sending', sending })}
         onError={(error) => dispatch({ type: 'error', error })}
         onLocalAdd={(message) => dispatch({ type: 'add', message })}
+        onReplaceTemp={(tempId, realId) =>
+          dispatch({ type: 'replaceTemp', tempId, realId })
+        }
       />
       {state.error && (
         <div className="bg-red-50 px-4 py-2 text-sm text-red-700">

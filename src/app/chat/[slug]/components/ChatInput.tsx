@@ -40,6 +40,7 @@ export function ChatInput({
   onSending,
   onError,
   onLocalAdd,
+  onReplaceTemp,
 }: {
   slug: string
   conversationId: string
@@ -47,6 +48,7 @@ export function ChatInput({
   onSending: (s: boolean) => void
   onError: (e: string | null) => void
   onLocalAdd: (m: ChatMessage) => void
+  onReplaceTemp: (tempId: string, realId: string) => void
 }) {
   const [text, setText] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -176,6 +178,8 @@ export function ChatInput({
 
     if (!result.success) {
       onError(result.error ?? 'Erro ao enviar.')
+    } else if (result.messageId) {
+      onReplaceTemp(tempId, result.messageId)
     }
     onSending(false)
   }
