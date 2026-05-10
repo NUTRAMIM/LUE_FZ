@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { CopyButton } from './CopyButton'
+import { QRCodeDialog } from './QRCodeDialog'
 
 export async function ChatUrlCard() {
   const supabase = await createClient()
@@ -45,6 +46,7 @@ export async function ChatUrlCard() {
         Compartilhe este link com seus clientes para iniciarem uma conversa
         com o atendimento da sua loja.
       </p>
+      <QRCodeDialog value={url} />
     </div>
   )
 }
