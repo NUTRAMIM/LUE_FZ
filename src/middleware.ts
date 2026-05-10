@@ -1,7 +1,29 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  COOKIE_NAME,
+  COOKIE_OPTIONS,
+  buildVisitorCookieValue,
+  generateVisitorId,
+  parseVisitorCookieValue,
+} from '@/lib/visitor-cookie'
+
+function ensureVisitorCookie(request: NextRequest, response: NextResponse) {
+  const raw = request.cookies.get(COOKIE_NAME)?.value
+  if (parseVisitorCookieValue(raw)) return
+  const newId = generateVisitorId()
+  response.cookies.set(COOKIE_NAME, buildVisitorCookieValue(newId), COOKIE_OPTIONS)
+}
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  if (pathname.startsWith('/chat/')) {
+    const response = NextResponse.next({ request })
+    ensureVisitorCookie(request, response)
+    return response
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -26,7 +48,6 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl
 
   if (!user && (pathname.startsWith('/painel') || pathname.startsWith('/estoque') || pathname.startsWith('/loja'))) {
     const url = request.nextUrl.clone()
@@ -45,6 +66,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|widget|api|chat).*)',
+    '/((?!_next/static|_next/image|favicon.ico|widget|api).*)',
   ],
 }

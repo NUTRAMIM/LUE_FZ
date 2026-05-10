@@ -35,9 +35,16 @@ async function getOrCreateVisitorId(): Promise<string> {
   const existing = parseVisitorCookieValue(raw)
   if (existing) return existing
 
-  const newId = generateVisitorId()
-  cookieStore.set(COOKIE_NAME, buildVisitorCookieValue(newId), COOKIE_OPTIONS)
-  return newId
+  // Cookie missing/invalid in a Server Component context — middleware
+  // normally sets it for /chat/*. Server Actions (POST) can also set it.
+  try {
+    const newId = generateVisitorId()
+    cookieStore.set(COOKIE_NAME, buildVisitorCookieValue(newId), COOKIE_OPTIONS)
+    return newId
+  } catch {
+    // Fallback: middleware will set on next request; transient ID for this render.
+    return generateVisitorId()
+  }
 }
 
 async function resolveStoreBySlug(slug: string) {
