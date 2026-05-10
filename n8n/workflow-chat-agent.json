@@ -20,25 +20,43 @@
             {
               "id": "a1",
               "name": "conversation_id",
-              "value": "={{ $json.body.conversation_id }}",
+              "value": "={{ $json.body.id_conversa }}",
               "type": "string"
             },
             {
               "id": "a2",
               "name": "message_id",
-              "value": "={{ $json.body.message_id }}",
+              "value": "={{ $json.body.id_mensagem }}",
               "type": "string"
             },
             {
               "id": "a3",
               "name": "content",
-              "value": "={{ $json.body.content }}",
+              "value": "={{ $json.body.mensagem }}",
               "type": "string"
             },
             {
               "id": "a4",
-              "name": "visitor_id",
-              "value": "={{ $json.body.visitor_id }}",
+              "name": "store_id",
+              "value": "={{ $json.body.id_loja }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "store_name",
+              "value": "={{ $json.body.nome_loja }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "message_type",
+              "value": "={{ $json.body.tipo_de_mensagem }}",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "media_url",
+              "value": "={{ $json.body.media_url || '' }}",
               "type": "string"
             }
           ]
