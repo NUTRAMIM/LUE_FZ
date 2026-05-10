@@ -1,8 +1,36 @@
 'use client'
 
-import { useState } from 'react'
-import { sendMessage } from '@/actions/chat'
+import { useState, useRef } from 'react'
+import { getUploadUrl, sendMessage } from '@/actions/chat'
 import type { ChatMessage } from '../ChatClient'
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ALLOWED_IMAGE = ['image/jpeg', 'image/png', 'image/webp']
+
+async function resizeImage(file: File): Promise<Blob> {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = reject
+      i.src = url
+    })
+    const maxW = 1920
+    if (img.width <= maxW) return file
+    const scale = maxW / img.width
+    const canvas = document.createElement('canvas')
+    canvas.width = maxW
+    canvas.height = Math.round(img.height * scale)
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    return await new Promise<Blob>((resolve) => {
+      canvas.toBlob((b) => resolve(b ?? file), file.type, 0.9)
+    })
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
 
 export function ChatInput({
   slug,
@@ -20,6 +48,55 @@ export function ChatInput({
   onLocalAdd: (m: ChatMessage) => void
 }) {
   const [text, setText] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!ALLOWED_IMAGE.includes(file.type)) {
+      onError('Tipo de imagem não suportado.')
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      onError('Imagem maior que 5MB.')
+      return
+    }
+    onSending(true)
+    onError(null)
+    try {
+      const blob = await resizeImage(file)
+      const upload = await getUploadUrl({
+        slug,
+        mime: file.type,
+        size: blob.size,
+      })
+      if (!upload.success || !upload.uploadUrl || !upload.mediaPath) {
+        onError(upload.error ?? 'Erro no upload.')
+        return
+      }
+      const put = await fetch(upload.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: blob,
+      })
+      if (!put.ok) {
+        onError('Falha no upload.')
+        return
+      }
+      const result = await sendMessage({
+        slug,
+        text: '',
+        mediaPath: upload.mediaPath,
+        messageType: 'image',
+      })
+      if (!result.success) {
+        onError(result.error ?? 'Erro ao enviar imagem.')
+      }
+    } finally {
+      onSending(false)
+    }
+  }
 
   async function handleSend() {
     const trimmed = text.trim()
@@ -59,6 +136,22 @@ export function ChatInput({
 
   return (
     <footer className="flex items-end gap-2 bg-white px-3 py-2 shadow-inner">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleImage}
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={sending}
+        className="flex h-10 w-10 items-center justify-center text-gray-500 disabled:opacity-50"
+        aria-label="Anexar imagem"
+      >
+        📎
+      </button>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
