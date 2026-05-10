@@ -1,0 +1,289 @@
+'use server'
+
+import { cookies } from 'next/headers'
+import { notFound } from 'next/navigation'
+import { randomUUID } from 'node:crypto'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { dispatchToN8n } from '@/lib/n8n'
+import {
+  COOKIE_NAME,
+  COOKIE_OPTIONS,
+  buildVisitorCookieValue,
+  generateVisitorId,
+  parseVisitorCookieValue,
+} from '@/lib/visitor-cookie'
+
+export interface ChatBootstrap {
+  conversationId: string
+  storeId: string
+  storeName: string
+  messages: Array<{
+    id: string
+    role: 'user' | 'assistant' | 'operator' | 'system'
+    content: string
+    message_type: 'text' | 'image' | 'audio'
+    media_url: string | null
+    created_at: string
+  }>
+}
+
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24
+
+async function getOrCreateVisitorId(): Promise<string> {
+  const cookieStore = await cookies()
+  const raw = cookieStore.get(COOKIE_NAME)?.value
+  const existing = parseVisitorCookieValue(raw)
+  if (existing) return existing
+
+  const newId = generateVisitorId()
+  cookieStore.set(COOKIE_NAME, buildVisitorCookieValue(newId), COOKIE_OPTIONS)
+  return newId
+}
+
+async function resolveStoreBySlug(slug: string) {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('store_settings')
+    .select('id, store_name, chat_slug')
+    .eq('chat_slug', slug)
+    .maybeSingle()
+  if (error) {
+    console.error('resolveStoreBySlug error', error)
+    return null
+  }
+  return data
+}
+
+async function signedReadUrl(
+  path: string | null,
+): Promise<string | null> {
+  if (!path) return null
+  const admin = createAdminClient()
+  const { data, error } = await admin.storage
+    .from('chat-media')
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+  if (error || !data) {
+    console.error('signedReadUrl error', error)
+    return null
+  }
+  return data.signedUrl
+}
+
+export async function ensureConversation(slug: string): Promise<ChatBootstrap> {
+  const store = await resolveStoreBySlug(slug)
+  if (!store) notFound()
+
+  const visitorId = await getOrCreateVisitorId()
+  const admin = createAdminClient()
+
+  let { data: conversation } = await admin
+    .from('conversations')
+    .select('id')
+    .eq('store_id', store.id)
+    .eq('visitor_id', visitorId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!conversation) {
+    const { data: created, error } = await admin
+      .from('conversations')
+      .insert({
+        store_id: store.id,
+        visitor_id: visitorId,
+        status: 'ai_active',
+      })
+      .select('id')
+      .single()
+    if (error || !created) {
+      console.error('create conversation error', error)
+      throw new Error('Não foi possível iniciar a conversa.')
+    }
+    conversation = created
+  }
+
+  const { data: rows } = await admin
+    .from('messages')
+    .select('id, role, content, message_type, media_path, created_at')
+    .eq('conversation_id', conversation.id)
+    .order('created_at', { ascending: true })
+    .limit(200)
+
+  const messages = await Promise.all(
+    (rows ?? []).map(async (m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      message_type: m.message_type,
+      media_url: await signedReadUrl(m.media_path),
+      created_at: m.created_at,
+    })),
+  )
+
+  return {
+    conversationId: conversation.id,
+    storeId: store.id,
+    storeName: store.store_name,
+    messages,
+  }
+}
+
+export interface SendMessageInput {
+  slug: string
+  text: string
+  mediaPath?: string
+  messageType: 'text' | 'image' | 'audio'
+}
+
+export interface SendMessageResult {
+  success: boolean
+  messageId?: string
+  error?: string
+}
+
+export async function sendMessage(
+  input: SendMessageInput,
+): Promise<SendMessageResult> {
+  const store = await resolveStoreBySlug(input.slug)
+  if (!store) return { success: false, error: 'Loja não encontrada.' }
+
+  const visitorId = await getOrCreateVisitorId()
+  const admin = createAdminClient()
+
+  const { data: conv } = await admin
+    .from('conversations')
+    .select('id')
+    .eq('store_id', store.id)
+    .eq('visitor_id', visitorId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!conv) return { success: false, error: 'Conversa não encontrada.' }
+
+  const text = (input.text ?? '').slice(0, 4000)
+  if (input.messageType === 'text' && text.trim().length === 0) {
+    return { success: false, error: 'Mensagem vazia.' }
+  }
+
+  const { data: inserted, error: insertErr } = await admin
+    .from('messages')
+    .insert({
+      conversation_id: conv.id,
+      role: 'user',
+      content: text,
+      message_type: input.messageType,
+      media_path: input.mediaPath ?? null,
+    })
+    .select('id')
+    .single()
+
+  if (insertErr || !inserted) {
+    console.error('insert message error', insertErr)
+    return { success: false, error: 'Erro ao salvar mensagem.' }
+  }
+
+  const mediaUrl = await signedReadUrl(input.mediaPath ?? null)
+
+  try {
+    await dispatchToN8n({
+      mensagem: text,
+      id_mensagem: inserted.id,
+      id_conversa: conv.id,
+      nome_loja: store.store_name,
+      id_loja: store.id,
+      tipo_de_mensagem: input.messageType,
+      ...(mediaUrl ? { media_url: mediaUrl } : {}),
+    })
+  } catch (e) {
+    console.error('dispatchToN8n threw', e)
+    await admin.from('messages').insert({
+      conversation_id: conv.id,
+      role: 'system',
+      content: 'Estamos com instabilidade. Sua mensagem foi recebida.',
+      message_type: 'text',
+    })
+  }
+
+  return { success: true, messageId: inserted.id }
+}
+
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_AUDIO_MIME = ['audio/webm', 'audio/ogg']
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_AUDIO_BYTES = 2 * 1024 * 1024
+
+export interface GetUploadUrlInput {
+  slug: string
+  mime: string
+  size: number
+}
+
+export interface GetUploadUrlResult {
+  success: boolean
+  uploadUrl?: string
+  mediaPath?: string
+  token?: string
+  error?: string
+}
+
+export async function getUploadUrl(
+  input: GetUploadUrlInput,
+): Promise<GetUploadUrlResult> {
+  const store = await resolveStoreBySlug(input.slug)
+  if (!store) return { success: false, error: 'Loja não encontrada.' }
+
+  const visitorId = await getOrCreateVisitorId()
+  const admin = createAdminClient()
+
+  const { data: conv } = await admin
+    .from('conversations')
+    .select('id')
+    .eq('store_id', store.id)
+    .eq('visitor_id', visitorId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!conv) return { success: false, error: 'Conversa não encontrada.' }
+
+  const isImage = ALLOWED_IMAGE_MIME.includes(input.mime)
+  const isAudio = ALLOWED_AUDIO_MIME.includes(input.mime)
+  if (!isImage && !isAudio) {
+    return { success: false, error: 'Tipo de arquivo não suportado.' }
+  }
+  const maxBytes = isImage ? MAX_IMAGE_BYTES : MAX_AUDIO_BYTES
+  if (input.size > maxBytes) {
+    return { success: false, error: 'Arquivo excede o tamanho máximo.' }
+  }
+
+  const ext =
+    input.mime === 'image/jpeg'
+      ? 'jpg'
+      : input.mime === 'image/png'
+      ? 'png'
+      : input.mime === 'image/webp'
+      ? 'webp'
+      : input.mime === 'audio/webm'
+      ? 'webm'
+      : 'ogg'
+
+  const messageId = randomUUID()
+  const path = `${store.id}/${conv.id}/${messageId}.${ext}`
+
+  const { data, error } = await admin.storage
+    .from('chat-media')
+    .createSignedUploadUrl(path)
+
+  if (error || !data) {
+    console.error('createSignedUploadUrl error', error)
+    return { success: false, error: 'Erro ao gerar URL de upload.' }
+  }
+
+  return {
+    success: true,
+    uploadUrl: data.signedUrl,
+    mediaPath: path,
+    token: data.token,
+  }
+}
