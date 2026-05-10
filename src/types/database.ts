@@ -84,6 +84,7 @@ export interface Database {
           last_message_at: string | null
           created_at: string
           updated_at: string
+          store_id: string | null
         }
         Insert: {
           id?: string
@@ -96,6 +97,7 @@ export interface Database {
           last_message_at?: string | null
           created_at?: string
           updated_at?: string
+          store_id?: string | null
         }
         Update: {
           id?: string
@@ -107,6 +109,7 @@ export interface Database {
           metadata?: Json
           last_message_at?: string | null
           updated_at?: string
+          store_id?: string | null
         }
         Relationships: []
       }
@@ -118,6 +121,8 @@ export interface Database {
           content: string
           metadata: Json
           created_at: string
+          message_type: 'text' | 'image' | 'audio'
+          media_path: string | null
         }
         Insert: {
           id?: string
@@ -126,6 +131,8 @@ export interface Database {
           content: string
           metadata?: Json
           created_at?: string
+          message_type?: 'text' | 'image' | 'audio'
+          media_path?: string | null
         }
         Update: {
           id?: string
@@ -133,6 +140,8 @@ export interface Database {
           role?: 'user' | 'assistant' | 'operator' | 'system'
           content?: string
           metadata?: Json
+          message_type?: 'text' | 'image' | 'audio'
+          media_path?: string | null
         }
         Relationships: []
       }
@@ -207,6 +216,7 @@ export interface Database {
           categories: string[]
           created_at: string
           updated_at: string
+          chat_slug: string
         }
         Insert: {
           id: string
@@ -218,6 +228,7 @@ export interface Database {
           categories?: string[]
           created_at?: string
           updated_at?: string
+          chat_slug?: string
         }
         Update: {
           id?: string
@@ -228,6 +239,7 @@ export interface Database {
           delivery_methods?: string[]
           categories?: string[]
           updated_at?: string
+          chat_slug?: string
         }
         Relationships: []
       }
