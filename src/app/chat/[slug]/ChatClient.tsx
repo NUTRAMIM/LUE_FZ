@@ -1,6 +1,7 @@
 'use client'
 
 import { useReducer, useEffect, useRef } from 'react'
+import { createClient as createBrowserSupabase } from '@/lib/supabase/client'
 import { ChatHeader } from './components/ChatHeader'
 import { MessageList } from './components/MessageList'
 import { ChatInput } from './components/ChatInput'
@@ -53,6 +54,62 @@ export function ChatClient({
     sending: false,
     error: null,
   })
+
+  useEffect(() => {
+    const supabase = createBrowserSupabase()
+    const channel = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        async (payload) => {
+          const row = payload.new as {
+            id: string
+            conversation_id: string
+            role: ChatMessage['role']
+            content: string
+            message_type: ChatMessage['message_type']
+            media_path: string | null
+            created_at: string
+          }
+
+          let media_url: string | null = null
+          if (row.media_path) {
+            const res = await fetch('/api/chat/media-url', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: row.media_path }),
+            })
+            if (res.ok) {
+              const j = await res.json()
+              media_url = j.url ?? null
+            }
+          }
+
+          dispatch({
+            type: 'add',
+            message: {
+              id: row.id,
+              role: row.role,
+              content: row.content,
+              message_type: row.message_type,
+              media_url,
+              created_at: row.created_at,
+            },
+          })
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [conversationId])
 
   const scrollAnchor = useRef<HTMLDivElement>(null)
   useEffect(() => {
