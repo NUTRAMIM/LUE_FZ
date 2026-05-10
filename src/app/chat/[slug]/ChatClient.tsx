@@ -33,6 +33,12 @@ function reducer(state: State, action: Action): State {
       if (state.messages.some((m) => m.id === action.message.id)) return state
       return { ...state, messages: [...state.messages, action.message] }
     case 'replaceTemp':
+      if (state.messages.some((m) => m.id === action.realId)) {
+        return {
+          ...state,
+          messages: state.messages.filter((m) => m.id !== action.tempId),
+        }
+      }
       return {
         ...state,
         messages: state.messages.map((m) =>
