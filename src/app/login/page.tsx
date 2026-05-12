@@ -3,11 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Wordmark } from '@/components/ui/Wordmark'
+import { Button } from '@/components/ui/Button'
+import { Input, Label } from '@/components/ui/Input'
+import { IconMail, IconLock, IconArrowRight } from '@/components/icons'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const router = useRouter()
@@ -20,17 +25,12 @@ export default function LoginPage() {
     const supabase = createClient()
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      })
-
+      const { error } = await supabase.auth.signUp({ email, password })
       if (error) {
         setError(error.message)
         setLoading(false)
         return
       }
-
       setError(null)
       setIsSignUp(false)
       setPassword('')
@@ -39,11 +39,7 @@ export default function LoginPage() {
       return
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError(error.message)
       setLoading(false)
@@ -54,69 +50,119 @@ export default function LoginPage() {
     router.refresh()
   }
 
-  const [successMsg, setSuccessMsg] = useState<string | null>(null)
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm p-8 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">
-          {isSignUp ? 'Criar Conta' : 'Painel do Operador'}
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="operador@empresa.com"
-            />
+    <div className="bg-brand-mesh relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      {/* Decorative orbs */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 -right-32 h-[40rem] w-[40rem] rounded-full bg-brand-300/30 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-48 -left-32 h-[36rem] w-[36rem] rounded-full bg-fuchsia-300/25 blur-3xl"
+      />
+
+      <div className="relative w-full max-w-md">
+        <div className="mb-6 flex flex-col items-center">
+          <Wordmark size="lg" />
+          <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-slate-500">
+            Painel do Operador
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white bg-white/95 p-8 shadow-[0_30px_80px_-30px_rgba(76,29,149,0.35)] backdrop-blur-sm">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+            {isSignUp ? 'Criar uma conta' : 'Bem-vindo de volta'}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {isSignUp
+              ? 'Configure seu acesso em 30 segundos.'
+              : 'Entre para acessar seu painel.'}
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <IconMail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="operador@empresa.com"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <div className="relative">
+                <IconLock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="••••••••"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-danger-soft border-danger/20 rounded-lg border px-3 py-2">
+                <p className="text-danger text-sm font-medium">{error}</p>
+              </div>
+            )}
+            {successMsg && (
+              <div className="bg-success-soft border-success/20 rounded-lg border px-3 py-2">
+                <p className="text-success text-sm font-medium">{successMsg}</p>
+              </div>
+            )}
+
+            <Button type="submit" disabled={loading} size="lg" className="w-full">
+              {loading ? (
+                isSignUp ? 'Criando...' : 'Entrando...'
+              ) : (
+                <>
+                  {isSignUp ? 'Criar conta' : 'Entrar'}
+                  <IconArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              ou
+            </span>
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="••••••••"
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
-          {successMsg && (
-            <p className="text-sm text-green-600">{successMsg}</p>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading
-              ? (isSignUp ? 'Criando...' : 'Entrando...')
-              : (isSignUp ? 'Criar Conta' : 'Entrar')}
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          {isSignUp ? 'Já tem uma conta?' : 'Não tem uma conta?'}{' '}
-          <button
-            type="button"
-            onClick={() => { setIsSignUp(!isSignUp); setError(null); setSuccessMsg(null) }}
-            className="text-blue-600 hover:underline font-medium"
-          >
-            {isSignUp ? 'Fazer login' : 'Criar conta'}
-          </button>
+
+          <p className="mt-5 text-center text-sm text-slate-600">
+            {isSignUp ? 'Já tem uma conta?' : 'Ainda não tem conta?'}{' '}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setError(null)
+                setSuccessMsg(null)
+              }}
+              className="font-semibold text-brand-600 transition-colors hover:text-brand-700"
+            >
+              {isSignUp ? 'Fazer login' : 'Criar conta'}
+            </button>
+          </p>
+        </div>
+
+        <p className="mt-6 text-center text-[11px] text-slate-400">
+          © 2026 LUE · Acesso seguro
         </p>
       </div>
     </div>

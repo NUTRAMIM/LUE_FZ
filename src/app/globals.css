@@ -1,20 +1,66 @@
 @import "tailwindcss";
 
+@theme {
+  /* Brand — Violet ramp */
+  --color-brand-50:  #F5F3FF;
+  --color-brand-100: #EDE9FE;
+  --color-brand-200: #DDD6FE;
+  --color-brand-300: #C4B5FD;
+  --color-brand-400: #A78BFA;
+  --color-brand-500: #8B5CF6;
+  --color-brand-600: #7C3AED;
+  --color-brand-700: #6D28D9;
+  --color-brand-800: #5B21B6;
+  --color-brand-900: #4C1D95;
+
+  /* Semantic */
+  --color-success: #10B981;
+  --color-success-soft: #ECFDF5;
+  --color-info: #3B82F6;
+  --color-info-soft: #EFF6FF;
+  --color-warning: #F59E0B;
+  --color-warning-soft: #FFFBEB;
+  --color-danger: #F43F5E;
+  --color-danger-soft: #FFF1F2;
+
+  /* Fonts */
+  --font-display: var(--font-sora), 'Sora', system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.5rem;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FAFAFB;
+  --foreground: #0F172A;
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, #5B21B6 0%, #7C3AED 45%, #A78BFA 100%);
+}
+
+.bg-brand-mesh {
+  background-color: #FAF8FF;
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(167, 139, 250, 0.45) 0, transparent 45%),
+    radial-gradient(circle at 82% 8%, rgba(124, 58, 237, 0.28) 0, transparent 50%),
+    radial-gradient(circle at 4% 80%, rgba(139, 92, 246, 0.20) 0, transparent 55%),
+    radial-gradient(circle at 90% 88%, rgba(192, 132, 252, 0.22) 0, transparent 50%);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
