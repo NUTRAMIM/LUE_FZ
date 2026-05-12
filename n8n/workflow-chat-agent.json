@@ -4,95 +4,244 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "chat-agent",
+        "path": "b9126634-c871-444a-90e7-38909895e06b",
+        "responseMode": "responseNode",
         "options": {}
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "id": "eeca6a60-c499-497f-9bb0-4d779879c7bd",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1.1,
-      "position": [0, 300]
+      "typeVersion": 2.1,
+      "position": [-288, -1344],
+      "webhookId": "b9126634-c871-444a-90e7-38909895e06b"
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "a1",
-              "name": "conversation_id",
+              "id": "697c92ad-3e76-4c71-8771-af1f858079a2",
+              "name": "sessionId",
               "value": "={{ $json.body.id_conversa }}",
               "type": "string"
             },
             {
-              "id": "a2",
-              "name": "message_id",
-              "value": "={{ $json.body.id_mensagem }}",
-              "type": "string"
-            },
-            {
-              "id": "a3",
-              "name": "content",
+              "id": "310c5f70-fcce-448b-b0a2-ff2733223e39",
+              "name": "chatInput",
               "value": "={{ $json.body.mensagem }}",
               "type": "string"
             },
             {
-              "id": "a4",
+              "id": "a8e4f3b1-1234-4567-8901-abcdef012345",
               "name": "store_id",
               "value": "={{ $json.body.id_loja }}",
               "type": "string"
-            },
-            {
-              "id": "a5",
-              "name": "store_name",
-              "value": "={{ $json.body.nome_loja }}",
-              "type": "string"
-            },
-            {
-              "id": "a6",
-              "name": "message_type",
-              "value": "={{ $json.body.tipo_de_mensagem }}",
-              "type": "string"
-            },
-            {
-              "id": "a7",
-              "name": "media_url",
-              "value": "={{ $json.body.media_url || '' }}",
-              "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "id": "f24d2c16-5bf4-4789-93bd-58da4e02689d",
       "name": "Edit Fields",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [220, 300]
+      "position": [32, -1344]
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "=https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/conversations?id=eq.{{ $json.conversation_id }}&select=id,status,assigned_to,visitor_id",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "operation": "get",
+        "tableId": "store_settings",
+        "filters": {
+          "conditions": [
             {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "keyName": "id",
+              "keyValue": "={{ $('Edit Fields').item.json.store_id }}"
             }
           ]
+        }
+      },
+      "id": "4d6755a9-2802-4910-9012-6b4304fbf9cc",
+      "name": "Informaçoes da loja1",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [432, -1344],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Edit Fields').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "=# Persona\nVocê é o vendedor virtual da {{ $('Informaçoes da loja1').item.json.store_name }}.\nSeja consultivo, claro e direto. Descubra a intenção antes de oferecer.\n\n# Contexto da loja\n- Categorias: {{ $('Informaçoes da loja1').item.json.categories }}\n- Pagamento: {{ $('Informaçoes da loja1').item.json.payment_methods }}\n- Entrega: {{ $('Informaçoes da loja1').item.json.delivery_methods }}\n- Instruções da loja: {{ $('Informaçoes da loja1').item.json.service_instructions }}\n\n# Tool disponível\nBUSCAR_PRODUTOS — busca semântica no catálogo. Use quando a conversa\nenvolver disponibilidade, preço, tamanho, cor, recomendação ou\ncomparação de itens. A tool aceita linguagem natural (\"blusa azul P\",\n\"vestido floral\", \"calça jeans cintura alta\") — não precisa normalizar.\nNunca invente produto, preço, tamanho, cor ou estoque: use só o que vier da tool.\n\n# Chamando a BUSCAR_PRODUTOS\nSempre passe DOIS parâmetros:\n- `query`: termo livre (cor, ocasião, estilo, marca).\n- `category`: a categoria da loja que casa com o pedido — copie do bloco \"Categorias da loja\" acima, exatamente como está escrito. Se o pedido é vago (ex: \"algo pra festa\"), passe `category=\"\"`.\n\nA tool JÁ FILTRA pela categoria no banco — você não precisa filtrar de novo. Mas faça duas checagens rápidas em cada resultado antes de mostrar:\n1. O `name` tem palavras como \"conjunto\", \"kit\", \"combo\", \"set\", \"dupla\"? Se sim e o cliente pediu item solo, descarte.\n2. Se nenhum resultado sobrar, NÃO invente — diga que não achou esse tipo e pergunte detalhes (cor, tamanho, estilo).\n\n# Apresentação de produtos\n- Antes da lista, uma frase curta de transição.\n- Máximo 3 produtos por mensagem.\n- Por produto, mostre: nome, preço (R$), tamanhos, cores, link da imagem.\n  Omita campos vazios.\n- Se cores ou tamanhos tiverem mais de 6 itens, mostre 5 e diga \"e mais\".\n\n# Coleta de dados\nOutro sistema observa e registra. Você só pede naturalmente, um dado por vez:\n- Nome quando a conversa engatar.\n- WhatsApp quando o cliente demonstrar interesse real (comprar, reservar).\n- Email quando fizer sentido (catálogo, lista de espera).\nNão peça tudo junto. Não insista em dado recusado.\n\n# Don'ts\n- Não invente nada (produto, preço, prazo, desconto).\n- Não use mais de 1 emoji por mensagem.\n- Não mostre produto que não bate com o pedido só porque a tool retornou.\n- Não exponha falha de busca — se nada bater, diga que vai procurar diferente e pergunte mais detalhes.\n- Não force venda depois de \"não\" claro."
+        }
+      },
+      "id": "04021648-9c43-4257-80c8-51f2378ac4a8",
+      "name": "AI Agent2",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [752, -1344]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
         },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 4096
+        }
+      },
+      "id": "c3e04e64-187a-4f63-b55e-7a3e7016ef1a",
+      "name": "OpenAI Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [576, -1104],
+      "credentials": {
+        "openAiApi": {
+          "id": "9P4hWIaS93nW5FhK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields').item.json.sessionId }}"
+      },
+      "id": "d3cba747-9508-4a56-99e6-1db5be7b226a",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [752, -1104],
+      "credentials": {
+        "postgres": {
+          "id": "5LgfkDaHLkpMWYfd",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Busca semântica no catálogo de produtos da loja. Use sempre que o cliente perguntar sobre produtos.\n\nParâmetros:\n- query (string): termo em linguagem natural — cor, ocasião, estilo, marca, características. Ex: \"floral\", \"pra casamento\", \"cintura alta tamanho M\".\n- category (string): a categoria EXATA da loja que melhor descreve o pedido. Use uma das categorias listadas no system prompt em \"Categorias da loja\", copiando o texto exato (singular/plural como aparece). Se o pedido é vago e não bate com nenhuma categoria, passe string vazia.\n\nExemplos:\n- Cliente: \"quero um top floral\" → query=\"floral\", category=\"top\"\n- Cliente: \"vestido pra casamento\" → query=\"casamento\", category=\"vestido\"\n- Cliente: \"alguma calça cintura alta\" → query=\"cintura alta\", category=\"calça\"\n- Cliente: \"o que vocês têm pra festa?\" → query=\"festa\", category=\"\"\n\nRetorna até 5 produtos JÁ FILTRADOS pela categoria no banco. Cada resultado traz no metadata: name, price, category, cores, tamanhos, brand, image_url. Se não retornar nada, peça mais detalhes ao cliente.",
+        "tableName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "documents"
+        },
+        "topK": 5,
+        "options": {
+          "queryName": "match_documents",
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "user_id",
+                "value": "={{ $('Informaçoes da loja1').item.json.id }}"
+              },
+              {
+                "name": "category",
+                "value": "={{ $fromAI('category', 'Categoria exata da loja que melhor descreve o pedido do cliente. Copie do system prompt em Categorias da loja. String vazia se não souber.', 'string') }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "d95a19eb-26a4-4eff-b9e3-2b16c94fa863",
+      "name": "BUSCAR_PRODUTOS",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [976, -1168],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "id": "308840bc-b20c-42f3-abad-25c3e738f031",
+      "name": "Embeddings OpenAI2",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [1056, -944],
+      "credentials": {
+        "openAiApi": {
+          "id": "9P4hWIaS93nW5FhK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ output: $('AI Agent2').item.json.output }) }}",
         "options": {}
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000003",
-      "name": "Get Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [460, 100]
+      "id": "144c2506-459d-4c3c-be7f-0b076139654b",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1136, -1344]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Edit Fields').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "Você é um extrator de informações pessoais. Analise a mensagem do cliente e identifique se ele compartilhou algum destes dados:\n\n- nome (próprio do cliente, ex: \"meu nome é João\", \"sou a Maria\")\n- telefone (WhatsApp ou fixo — qualquer número com >= 10 dígitos)\n- email\n- cep (formato 00000-000 ou 00000000)\n\nRetorne APENAS um JSON puro, sem markdown e sem texto adicional, no formato:\n{\"nome\": \"João\" ou null, \"telefone\": \"5511999999999\" ou null, \"email\": \"x@y.com\" ou null, \"cep\": \"01310-100\" ou null}\n\nSe nada foi compartilhado, retorne:\n{\"nome\": null, \"telefone\": null, \"email\": null, \"cep\": null}\n\nNormalize:\n- telefone: somente dígitos, com código do país (Brasil = 55).\n- cep: formato 00000-000.\n- nome: capitalizado (\"João\", não \"joão\")."
+        }
+      },
+      "id": "e1f2a3b4-c5d6-4789-90ab-cdef12345678",
+      "name": "Lead Analyzer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [752, -1600]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "f2e3d4c5-b6a7-4890-9012-3456789abcde",
+      "name": "OpenAI Chat Model - Lead",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [752, -1820],
+      "credentials": {
+        "openAiApi": {
+          "id": "9P4hWIaS93nW5FhK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output ?? '';\nlet parsed = { nome: null, telefone: null, email: null, cep: null };\ntry {\n  const cleaned = String(raw).replace(/^```json\\s*|\\s*```$/g, '').trim();\n  const obj = JSON.parse(cleaned);\n  parsed = {\n    nome: obj?.nome || null,\n    telefone: obj?.telefone || null,\n    email: obj?.email || null,\n    cep: obj?.cep || null,\n  };\n} catch (e) {}\nconst hasData = !!(parsed.nome || parsed.telefone || parsed.email || parsed.cep);\nreturn [{ json: {\n  ...parsed,\n  hasData,\n  conversation_id: $('Edit Fields').item.json.sessionId,\n  store_id: $('Edit Fields').item.json.store_id,\n} }];"
+      },
+      "id": "a3b4c5d6-e7f8-4901-2345-6789abcdef01",
+      "name": "Parse Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [976, -1600]
     },
     {
       "parameters": {
@@ -100,16 +249,18 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose",
+            "version": 2
           },
           "conditions": [
             {
-              "id": "c1",
-              "leftValue": "={{ $json[0].status }}",
-              "rightValue": "ai_active",
+              "id": "lead-c1",
+              "leftValue": "={{ $json.hasData }}",
+              "rightValue": "",
               "operator": {
-                "type": "string",
-                "operation": "equals"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -117,161 +268,47 @@
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000004",
-      "name": "IF ai_active",
+      "id": "b4c5d6e7-f8a9-4012-3456-789abcdef012",
+      "name": "IF Has Lead Data",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 100]
+      "typeVersion": 2.3,
+      "position": [1200, -1600]
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "=https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/messages?conversation_id=eq.{{ $('Edit Fields').item.json.conversation_id }}&order=created_at.asc&limit=50&select=role,content",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "operation": "getAll",
+        "tableId": "leads",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "keyName": "conversation_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Parse Lead').item.json.conversation_id }}"
             },
             {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "a1b2c3d4-0001-0001-0001-000000000005",
-      "name": "Get Message History",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [900, 100]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=Histórico da conversa:\n{{ $json.map(m => m.role + ': ' + m.content).join('\\n') }}\n\nNova mensagem do cliente:\n{{ $('Edit Fields').item.json.content }}",
-        "options": {
-          "systemMessage": "# Persona\nVocê é um vendedor da FácilZap\n\n# Contexto\nVocê está atendendo pessoas que acessaram o chat comercial da FácilZap no site e querem conhecer os planos\n\n# Objetivo\nVocê deve apresentar os planos da FácilZap, tirar dúvidas e converter o visitante em cliente\n\n# O que é a FácilZap\n{{ $('Edit Fields').item.json.store_info }}\n\n# Tools disponíveis\n- **search_products**: Use para buscar produtos/planos no catálogo quando o cliente perguntar sobre itens, preços ou funcionalidades. Sempre consulte antes de responder sobre produtos.\n\n# Comportamento\n- Seja consultivo, claro e direto\n- Não force venda\n- Primeiro entenda a dor do lojista\n- Mostre como a FácilZap resolve exatamente essa dor\n- Explique que existe um serviço especializado pago para configurar a loja quando necessário\n- Mostre as funcionalidades de acordo com a dor do lead\n\nCaso o lead queira comprar envie esse link:\nhttps://facilzap.com.br/planos\n\n# Nunca faça\n- Respostas muito longas no início do atendimento\n- Enviar emojis em excesso\n- Inventar produtos, preços ou funcionalidades — use apenas dados retornados pela tool search_products"
-        }
-      },
-      "id": "a1b2c3d4-0001-0001-0001-000000000006",
-      "name": "Chat Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.6,
-      "position": [1120, 100]
-    },
-    {
-      "parameters": {
-        "model": "claude-haiku-4-5-20251001",
-        "options": {
-          "maxTokensToSample": 1024
-        }
-      },
-      "id": "a1b2c3d4-0001-0001-0001-000000000007",
-      "name": "Claude Chat",
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.2,
-      "position": [1020, 320]
-    },
-    {
-      "parameters": {
-        "name": "search_products",
-        "description": "Busca produtos no catálogo da loja por nome, categoria ou faixa de preço. Use quando o cliente perguntar sobre produtos disponíveis.",
-        "method": "GET",
-        "url": "=https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/products?or=(name.ilike.*{query}*,category.ilike.*{query}*,description.ilike.*{query}*)&select=name,description,price,compare_at_price,category,stock_quantity,image_urls,variants&is_available=eq.true&limit=10",
-        "sendHeaders": true,
-        "parametersHeaders": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            }
-          ]
-        },
-        "placeholderDefinitions": {
-          "values": [
-            {
-              "name": "query",
-              "description": "Termo de busca: nome do produto, categoria, ou palavra-chave",
-              "type": "string"
+              "keyName": "store_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Parse Lead').item.json.store_id }}"
             }
           ]
         }
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000008",
-      "name": "Search Products",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [1220, 320]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"conversation_id\": \"{{ $('Edit Fields').item.json.conversation_id }}\",\n  \"role\": \"assistant\",\n  \"content\": {{ JSON.stringify($json.output) }}\n}",
-        "options": {}
-      },
-      "id": "a1b2c3d4-0001-0001-0001-000000000009",
-      "name": "Save Assistant Message",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1340, 100]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=Analise a seguinte mensagem do cliente e extraia informações de contato se houver:\n\nMensagem: {{ $('Edit Fields').item.json.content }}\n\nSe encontrar um número de WhatsApp ou telefone, ou um nome, retorne em formato JSON:\n{\"whatsapp\": \"número ou null\", \"name\": \"nome ou null\"}\n\nSe não encontrar nenhuma informação de contato, retorne:\n{\"whatsapp\": null, \"name\": null}",
-        "options": {
-          "systemMessage": "Você é um extrator de dados de leads. Sua tarefa é analisar mensagens de clientes e extrair:\n1. Número de WhatsApp/telefone (normalizar para formato com código do país, ex: 5511999999999)\n2. Nome do cliente\n\nRetorne APENAS o JSON solicitado, sem texto adicional.\nSe a mensagem não contiver informações de contato, retorne nulls.\nNúmeros podem estar em formatos variados: (11) 99999-9999, 11999999999, +55 11 99999-9999, etc."
+      "id": "d6e7f8a9-b0c1-4234-5678-9abcdef01234",
+      "name": "Get Lead",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1424, -1600],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
         }
-      },
-      "id": "a1b2c3d4-0001-0001-0001-000000000010",
-      "name": "Lead Analyzer",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.6,
-      "position": [460, 500]
-    },
-    {
-      "parameters": {
-        "model": "claude-haiku-4-5-20251001",
-        "options": {
-          "maxTokensToSample": 256
-        }
-      },
-      "id": "a1b2c3d4-0001-0001-0001-000000000011",
-      "name": "Claude Lead",
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.2,
-      "position": [460, 720]
+      }
     },
     {
       "parameters": {
@@ -279,16 +316,18 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose"
+            "typeValidation": "loose",
+            "version": 2
           },
           "conditions": [
             {
-              "id": "c2",
-              "leftValue": "={{ JSON.parse($json.output).whatsapp }}",
+              "id": "lead-exists-c1",
+              "leftValue": "={{ $json.id }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "isNotEmpty"
+                "operation": "notEmpty",
+                "singleValue": true
               }
             }
           ],
@@ -296,47 +335,112 @@
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000012",
-      "name": "IF Has Lead Data",
+      "id": "e7f8a9b0-c1d2-4345-6789-abcdef012345",
+      "name": "IF Lead Exists",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 500]
+      "typeVersion": 2.3,
+      "position": [1648, -1600]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://tdnvrjispkejbvwyrilf.supabase.co/rest/v1/leads",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "operation": "update",
+        "tableId": "leads",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
             {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"whatsapp\": {{ JSON.parse($('Lead Analyzer').item.json.output).whatsapp ? JSON.stringify(JSON.parse($('Lead Analyzer').item.json.output).whatsapp) : 'null' }},\n  \"name\": {{ JSON.parse($('Lead Analyzer').item.json.output).name ? JSON.stringify(JSON.parse($('Lead Analyzer').item.json.output).name) : 'null' }},\n  \"source\": \"chat\",\n  \"last_seen_at\": \"{{ new Date().toISOString() }}\"\n}",
-        "options": {}
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Parse Lead').item.json.nome || $json.name }}"
+            },
+            {
+              "fieldId": "whatsapp",
+              "fieldValue": "={{ $('Parse Lead').item.json.telefone || $json.whatsapp }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Parse Lead').item.json.email || $json.email }}"
+            },
+            {
+              "fieldId": "cep",
+              "fieldValue": "={{ $('Parse Lead').item.json.cep || $json.cep }}"
+            },
+            {
+              "fieldId": "last_seen_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
       },
-      "id": "a1b2c3d4-0001-0001-0001-000000000013",
-      "name": "Save Lead",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [900, 500]
+      "id": "f8a9b0c1-d2e3-4456-789a-bcdef0123456",
+      "name": "Update Lead",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1872, -1712],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "leads",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "conversation_id",
+              "fieldValue": "={{ $('Parse Lead').item.json.conversation_id }}"
+            },
+            {
+              "fieldId": "store_id",
+              "fieldValue": "={{ $('Parse Lead').item.json.store_id }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Parse Lead').item.json.nome }}"
+            },
+            {
+              "fieldId": "whatsapp",
+              "fieldValue": "={{ $('Parse Lead').item.json.telefone }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Parse Lead').item.json.email }}"
+            },
+            {
+              "fieldId": "cep",
+              "fieldValue": "={{ $('Parse Lead').item.json.cep }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "chat"
+            }
+          ]
+        }
+      },
+      "id": "c5d6e7f8-a9b0-4123-4567-89abcdef0123",
+      "name": "Create Lead",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1872, -1488],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
     }
   ],
   "connections": {
@@ -355,7 +459,18 @@
       "main": [
         [
           {
-            "node": "Get Conversation",
+            "node": "Informaçoes da loja1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Informaçoes da loja1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
             "type": "main",
             "index": 0
           },
@@ -367,84 +482,18 @@
         ]
       ]
     },
-    "Get Conversation": {
-      "main": [
-        [
-          {
-            "node": "IF ai_active",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "IF ai_active": {
-      "main": [
-        [
-          {
-            "node": "Get Message History",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Message History": {
-      "main": [
-        [
-          {
-            "node": "Chat Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Chat Agent": {
-      "main": [
-        [
-          {
-            "node": "Save Assistant Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Claude Chat": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Chat Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Search Products": {
-      "ai_tool": [
-        [
-          {
-            "node": "Chat Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Claude Lead": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Lead Analyzer",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Lead Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Parse Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Lead": {
       "main": [
         [
           {
@@ -459,8 +508,103 @@
       "main": [
         [
           {
-            "node": "Save Lead",
+            "node": "Get Lead",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead": {
+      "main": [
+        [
+          {
+            "node": "IF Lead Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Lead Exists": {
+      "main": [
+        [
+          {
+            "node": "Update Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Lead": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Lead Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BUSCAR_PRODUTOS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "BUSCAR_PRODUTOS",
+            "type": "ai_embedding",
             "index": 0
           }
         ]
@@ -473,5 +617,42 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 1,
-  "pinData": {}
+  "pinData": {
+    "Webhook": [
+      {
+        "headers": {
+          "host": "nutramim-n8n.ev7c2h.easypanel.host",
+          "user-agent": "node",
+          "content-length": "218",
+          "accept": "*/*",
+          "accept-encoding": "br, gzip, deflate",
+          "accept-language": "*",
+          "content-type": "application/json",
+          "sec-fetch-mode": "cors",
+          "x-forwarded-for": "177.6.239.152",
+          "x-forwarded-host": "nutramim-n8n.ev7c2h.easypanel.host",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "a272c80437d7",
+          "x-real-ip": "177.6.239.152"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "mensagem": "oi",
+          "id_mensagem": "2689acbf-4fcb-42e6-97b2-fb1e1bd67c8d",
+          "id_conversa": "92ee6d49-7dad-47f1-99ad-5f2ff13fc818",
+          "nome_loja": "Teste",
+          "id_loja": "c96ad899-bdaf-4ed4-919d-6f596e0f7db8",
+          "tipo_de_mensagem": "text"
+        },
+        "webhookUrl": "https://nutramim-n8n.ev7c2h.easypanel.host/webhook/b9126634-c871-444a-90e7-38909895e06b",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8df8f0cc9e0dd2c7cb8defe1329622a749d50753d5b3ebadada383d6be670f87"
+  }
 }
