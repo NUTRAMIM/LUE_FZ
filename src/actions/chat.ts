@@ -168,7 +168,7 @@ export async function sendMessage(
 
   if (!conv) return { success: false, error: 'Conversa não encontrada.' }
 
-  const text = (input.text ?? '').slice(0, 4000)
+  const text = (input.text ?? '').slice(0, 20000)
   if (input.messageType === 'text' && text.trim().length === 0) {
     return { success: false, error: 'Mensagem vazia.' }
   }
@@ -193,7 +193,7 @@ export async function sendMessage(
   const mediaUrl = await signedReadUrl(input.mediaPath ?? null)
 
   try {
-    await dispatchToN8n({
+    const res = await dispatchToN8n({
       mensagem: text,
       id_mensagem: inserted.id,
       id_conversa: conv.id,
@@ -202,6 +202,21 @@ export async function sendMessage(
       tipo_de_mensagem: input.messageType,
       ...(mediaUrl ? { media_url: mediaUrl } : {}),
     })
+
+    if (res && res.ok) {
+      const data = (await res
+        .json()
+        .catch(() => null)) as { output?: string } | null
+      const output = data?.output?.trim()
+      if (output) {
+        await admin.from('messages').insert({
+          conversation_id: conv.id,
+          role: 'assistant',
+          content: output,
+          message_type: 'text',
+        })
+      }
+    }
   } catch (e) {
     console.error('dispatchToN8n threw', e)
     await admin.from('messages').insert({
