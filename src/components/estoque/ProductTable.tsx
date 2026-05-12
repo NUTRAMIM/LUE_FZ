@@ -58,16 +58,22 @@ export function ProductTable({
   )
 }
 
+const alignClass = {
+  left: 'text-left',
+  center: 'text-center',
+  right: 'text-right',
+} as const
+
 function Th({
   children,
   align = 'left',
 }: {
   children: React.ReactNode
-  align?: 'left' | 'center' | 'right'
+  align?: keyof typeof alignClass
 }) {
   return (
     <th
-      className={`px-4 py-3 text-${align} text-[11px] font-semibold uppercase tracking-[0.10em] text-slate-500`}
+      className={`px-4 py-3 ${alignClass[align]} text-[11px] font-semibold uppercase tracking-[0.10em] text-slate-500`}
     >
       {children}
     </th>

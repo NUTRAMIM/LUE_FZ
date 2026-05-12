@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 export function Drawer({
@@ -18,16 +18,21 @@ export function Drawer({
   side?: 'right' | 'left'
   widthClass?: string
 }) {
+  const panelRef = useRef<HTMLElement>(null)
+
   useEffect(() => {
     if (!open) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
+    panelRef.current?.focus()
     return () => {
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      previouslyFocused?.focus?.()
     }
   }, [open, onClose])
 
@@ -45,6 +50,8 @@ export function Drawer({
         aria-hidden="true"
       />
       <aside
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}

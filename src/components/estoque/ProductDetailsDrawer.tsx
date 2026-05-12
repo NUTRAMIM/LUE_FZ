@@ -28,9 +28,7 @@ export function ProductDetailsDrawer({
   open: boolean
   onClose: () => void
 }) {
-  if (!product) {
-    return <Drawer open={open} onClose={onClose} title="" />
-  }
+  if (!product) return null
 
   const cfg = statusConfig[status]
   const images = product.image_urls ?? []
