@@ -28,6 +28,84 @@ function toggleValue(arr: string[], value: string): string[] {
     : [...arr, value]
 }
 
+function addCustomValue(arr: string[], predefined: string[], value: string): string[] {
+  const trimmed = value.trim()
+  if (!trimmed) return arr
+  const match = predefined.find(p => p.toLowerCase() === trimmed.toLowerCase())
+  const finalValue = match ?? trimmed
+  if (arr.some(v => v.toLowerCase() === finalValue.toLowerCase())) return arr
+  return [...arr, finalValue]
+}
+
+function ChipInput({
+  selected,
+  predefined,
+  onAdd,
+  onRemove,
+  placeholder,
+  label,
+}: {
+  selected: string[]
+  predefined: string[]
+  onAdd: (value: string) => void
+  onRemove: (value: string) => void
+  placeholder: string
+  label: string
+}) {
+  const [value, setValue] = useState('')
+  const customChips = selected.filter(
+    s => !predefined.some(p => p.toLowerCase() === s.toLowerCase())
+  )
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const trimmed = value.trim()
+      if (trimmed) {
+        onAdd(trimmed)
+        setValue('')
+      }
+    } else if (e.key === 'Backspace' && value === '' && customChips.length > 0) {
+      e.preventDefault()
+      onRemove(customChips[customChips.length - 1])
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      <p className="text-xs text-gray-500 mb-2">{label}</p>
+      {customChips.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {customChips.map(chip => (
+            <span
+              key={chip}
+              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-md"
+            >
+              {chip}
+              <button
+                type="button"
+                onClick={() => onRemove(chip)}
+                className="text-blue-600 hover:text-blue-900 leading-none"
+                aria-label={`Remover ${chip}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        type="text"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+    </div>
+  )
+}
+
 export function LojaForm() {
   const [storeName, setStoreName] = useState('')
   const [serviceSteps, setServiceSteps] = useState<string[]>([])
@@ -164,6 +242,14 @@ export function LojaForm() {
             ))}
           </div>
         )}
+        <ChipInput
+          selected={categories}
+          predefined={availableCategories}
+          onAdd={v => setCategories(addCustomValue(categories, availableCategories, v))}
+          onRemove={v => setCategories(categories.filter(c => c !== v))}
+          placeholder="Digite uma categoria e pressione Enter"
+          label="Outras categorias:"
+        />
       </fieldset>
 
       {/* Etapas do Atendimento */}
@@ -232,6 +318,14 @@ export function LojaForm() {
             </label>
           ))}
         </div>
+        <ChipInput
+          selected={paymentMethods}
+          predefined={PAYMENT_OPTIONS}
+          onAdd={v => setPaymentMethods(addCustomValue(paymentMethods, PAYMENT_OPTIONS, v))}
+          onRemove={v => setPaymentMethods(paymentMethods.filter(m => m !== v))}
+          placeholder="Digite uma forma de pagamento e pressione Enter"
+          label="Outras formas:"
+        />
       </fieldset>
 
       {/* Formas de Entrega */}
@@ -252,6 +346,14 @@ export function LojaForm() {
             </label>
           ))}
         </div>
+        <ChipInput
+          selected={deliveryMethods}
+          predefined={DELIVERY_OPTIONS}
+          onAdd={v => setDeliveryMethods(addCustomValue(deliveryMethods, DELIVERY_OPTIONS, v))}
+          onRemove={v => setDeliveryMethods(deliveryMethods.filter(m => m !== v))}
+          placeholder="Digite uma forma de entrega e pressione Enter"
+          label="Outras formas:"
+        />
       </fieldset>
 
       {/* Feedback */}
