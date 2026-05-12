@@ -14,7 +14,7 @@ export function Drawer({
   open: boolean
   onClose: () => void
   title?: string
-  children: React.ReactNode
+  children?: React.ReactNode
   side?: 'right' | 'left'
   widthClass?: string
 }) {
