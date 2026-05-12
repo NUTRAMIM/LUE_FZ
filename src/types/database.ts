@@ -22,6 +22,7 @@ export interface Database {
           category: string | null
           brand: string | null
           stock_quantity: number
+          stock_min: number
           is_available: boolean
           image_urls: string[] | null
           variants: Json
@@ -43,6 +44,7 @@ export interface Database {
           category?: string | null
           brand?: string | null
           stock_quantity?: number
+          stock_min?: number
           image_urls?: string[] | null
           variants?: Json
           cores?: string[]
@@ -63,6 +65,7 @@ export interface Database {
           category?: string | null
           brand?: string | null
           stock_quantity?: number
+          stock_min?: number
           image_urls?: string[] | null
           variants?: Json
           cores?: string[]
@@ -214,6 +217,7 @@ export interface Database {
           payment_methods: string[]
           delivery_methods: string[]
           categories: string[]
+          default_stock_min: number
           created_at: string
           updated_at: string
           chat_slug: string
@@ -226,6 +230,7 @@ export interface Database {
           payment_methods?: string[]
           delivery_methods?: string[]
           categories?: string[]
+          default_stock_min?: number
           created_at?: string
           updated_at?: string
           chat_slug?: string
@@ -238,6 +243,7 @@ export interface Database {
           payment_methods?: string[]
           delivery_methods?: string[]
           categories?: string[]
+          default_stock_min?: number
           updated_at?: string
           chat_slug?: string
         }
