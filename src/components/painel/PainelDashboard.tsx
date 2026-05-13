@@ -379,6 +379,32 @@ function SectionHeader({
   )
 }
 
+/* ───────── LivePulse footer ───────── */
+function LivePulse() {
+  return (
+    <div className="mt-12 -mx-8 px-8 py-3 border-t border-ink-100 bg-ink-50/60 font-mono text-[12px] text-ink-500 flex items-center gap-2 flex-wrap">
+      <span className="live-dot" />
+      <span className="font-semibold text-ink-700">LIVE</span>
+      <span className="text-ink-300">·</span>
+      <span><span className="text-ink-700 font-semibold">3</span> sessões</span>
+      <span className="text-ink-300">·</span>
+      <span><span className="text-ink-700 font-semibold">17</span> visitantes</span>
+      <span className="text-ink-300">·</span>
+      <span>IA p95 <span className="text-ink-700 font-semibold">1,8s</span></span>
+      <span className="text-ink-300">·</span>
+      <span>fila <span className="text-ink-700 font-semibold">5</span></span>
+      <span className="text-ink-300">·</span>
+      <span>vendedores <span className="text-ink-700 font-semibold">2/4</span> ON</span>
+      <span className="text-ink-300">·</span>
+      <span>uptime <span className="text-ink-700 font-semibold">99,97%</span></span>
+      <span className="text-ink-300">·</span>
+      <span>últ. evento <span className="text-ink-700 font-semibold">00:03s</span></span>
+      <span className="text-ink-300 ml-auto">·</span>
+      <span className="eyebrow text-ink-400">LUE FZ v0.4.0 · BUILD 1284</span>
+    </div>
+  )
+}
+
 /* ───────── PainelDashboard ───────── */
 export function PainelDashboard() {
   return (
@@ -404,10 +430,7 @@ export function PainelDashboard() {
         <IntentCatalogo />
       </section>
 
-      <footer className="mt-12 mb-4 flex items-center justify-between text-[12px] text-ink-400">
-        <div className="eyebrow">LUE FZ · v0.4.0 · BUILD 1284</div>
-        <div className="eyebrow">DADOS · 09:42 · PT-BR · UTC−3</div>
-      </footer>
+      <LivePulse />
     </div>
   )
 }
