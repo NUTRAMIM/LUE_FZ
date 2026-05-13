@@ -49,7 +49,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user && (pathname.startsWith('/painel') || pathname.startsWith('/estoque') || pathname.startsWith('/loja'))) {
+  if (!user && (pathname.startsWith('/painel') || pathname.startsWith('/estoque') || pathname.startsWith('/loja') || pathname.startsWith('/conversas'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
