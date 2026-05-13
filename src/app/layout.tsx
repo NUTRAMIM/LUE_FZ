@@ -3,24 +3,24 @@ import { Sora, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const sora = Sora({
-  variable: "--font-sora",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sora",
   display: "swap",
+  weight: ["400", "600", "700", "800"],
 });
 
 const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  variable: "--font-jakarta",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  variable: "--font-jetbrains",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${sora.variable} ${jakarta.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`h-full antialiased ${sora.variable} ${jakarta.variable} ${jetbrains.variable}`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
