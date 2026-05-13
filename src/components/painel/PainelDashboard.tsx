@@ -2,9 +2,7 @@
 
 import { Icon, Chip, type ChipTone } from './Icons'
 import { FunilCaptura } from './FunilCaptura'
-import { PerformanceIA } from './PerformanceIA'
 import { GapsConhecimento } from './GapsConhecimento'
-import { FilaVendedor } from './FilaVendedor'
 import { IntentCatalogo } from './IntentCatalogo'
 
 /* ───────── Topbar ───────── */
@@ -175,7 +173,6 @@ const PULSE: Array<{ tone: ChipTone; icon: string; label: string; value: string;
   { tone: 'brand', icon: 'msgSq', label: 'Sessões IA ativas', value: '03', sub: 'IA RESPONDENDO  ·  p95 1,8s' },
   { tone: 'info', icon: 'eye', label: 'Visitantes na loja', value: '17', sub: 'PICO 09H–11H' },
   { tone: 'warn', icon: 'userX', label: 'Leads sem atribuição', value: '05', sub: 'AÇÃO  ATRIBUIR' },
-  { tone: 'danger', icon: 'clock', label: 'Leads atrasados > 30min', value: '02', sub: 'STATUS  CRÍTICO' },
 ]
 
 function PulseStripe() {
@@ -201,7 +198,7 @@ function PulseStripe() {
         </div>
       </div>
 
-      <div className="card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-ink-100 overflow-hidden">
+      <div className="card grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-ink-100 overflow-hidden">
         {PULSE.map((q) => (
           <div key={q.label} className="p-6 relative">
             <div className="flex items-center gap-2.5">
@@ -262,13 +259,8 @@ export function PainelDashboard() {
         <FunilCaptura />
       </section>
 
-      <section className="mt-6 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
-        <PerformanceIA />
-        <GapsConhecimento />
-      </section>
-
       <section className="mt-6">
-        <FilaVendedor />
+        <GapsConhecimento />
       </section>
 
       <section className="mt-6">
