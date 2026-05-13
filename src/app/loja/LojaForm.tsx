@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { saveStoreSettings } from '@/actions/store-settings'
+import { LogoUpload } from '@/components/loja/LogoUpload'
+import { Icon } from '@/components/painel/Icons'
 
 const PAYMENT_OPTIONS = [
   'PIX',
@@ -12,29 +14,59 @@ const PAYMENT_OPTIONS = [
 ]
 
 const SERVICE_STEP_OPTIONS = [
-  { value: 'Saudação', description: 'Cumprimentar o cliente e se apresentar' },
-  { value: 'Identificar necessidade', description: 'Perguntar o que o cliente precisa' },
-  { value: 'Apresentar produtos', description: 'Mostrar opções de produtos do catálogo' },
-  { value: 'Capturar contato', description: 'Pegar número de telefone e e-mail do cliente' },
+  {
+    value: 'Saudação',
+    description: 'Recebe o cliente e apresenta a loja em uma frase.',
+  },
+  {
+    value: 'Identificar necessidade',
+    description: 'Pergunta sobre estilo, ocasião, prazo ou orçamento.',
+  },
+  {
+    value: 'Apresentar produtos',
+    description: 'Sugere itens do catálogo com foto, preço e variações.',
+  },
+  {
+    value: 'Capturar contato',
+    description: 'Pede nome e WhatsApp antes de transferir para você.',
+  },
 ]
 
-const DELIVERY_OPTIONS = [
-  'Correios',
-]
+const DELIVERY_OPTIONS = ['Correios']
+
+const MAX_BIO_LENGTH = 280
+const MAX_NAME_LENGTH = 100
+const MAX_INSTRUCTIONS_LENGTH = 2000
 
 function toggleValue(arr: string[], value: string): string[] {
   return arr.includes(value)
-    ? arr.filter(v => v !== value)
+    ? arr.filter((v) => v !== value)
     : [...arr, value]
 }
 
-function addCustomValue(arr: string[], predefined: string[], value: string): string[] {
+function addCustomValue(
+  arr: string[],
+  predefined: string[],
+  value: string
+): string[] {
   const trimmed = value.trim()
   if (!trimmed) return arr
-  const match = predefined.find(p => p.toLowerCase() === trimmed.toLowerCase())
+  const match = predefined.find(
+    (p) => p.toLowerCase() === trimmed.toLowerCase()
+  )
   const finalValue = match ?? trimmed
-  if (arr.some(v => v.toLowerCase() === finalValue.toLowerCase())) return arr
+  if (arr.some((v) => v.toLowerCase() === finalValue.toLowerCase())) return arr
   return [...arr, finalValue]
+}
+
+function formatPhone(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 11)
+  if (d.length === 0) return ''
+  if (d.length <= 2) return `(${d}`
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10)
+    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
 function ChipInput({
@@ -43,18 +75,16 @@ function ChipInput({
   onAdd,
   onRemove,
   placeholder,
-  label,
 }: {
   selected: string[]
   predefined: string[]
   onAdd: (value: string) => void
   onRemove: (value: string) => void
   placeholder: string
-  label: string
 }) {
   const [value, setValue] = useState('')
   const customChips = selected.filter(
-    s => !predefined.some(p => p.toLowerCase() === s.toLowerCase())
+    (s) => !predefined.some((p) => p.toLowerCase() === s.toLowerCase())
   )
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -72,48 +102,84 @@ function ChipInput({
   }
 
   return (
-    <div className="mt-3">
-      <p className="text-xs text-gray-500 mb-2">{label}</p>
-      {customChips.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {customChips.map(chip => (
-            <span
-              key={chip}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-md"
-            >
-              {chip}
-              <button
-                type="button"
-                onClick={() => onRemove(chip)}
-                className="text-blue-600 hover:text-blue-900 leading-none"
-                aria-label={`Remover ${chip}`}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+    <div className="chip-input-shell">
+      {customChips.map((chip) => (
+        <span key={chip} className="pill">
+          {chip}
+          <button
+            type="button"
+            onClick={() => onRemove(chip)}
+            aria-label={`Remover ${chip}`}
+          >
+            ×
+          </button>
+        </span>
+      ))}
       <input
         type="text"
         value={value}
-        onChange={e => setValue(e.target.value)}
+        onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       />
     </div>
   )
 }
 
+function SectionHeader({
+  step,
+  title,
+  description,
+  toneIcon,
+  tone,
+  trailing,
+}: {
+  step: string
+  title: string
+  description: string
+  toneIcon: string
+  tone: 'brand' | 'success' | 'info'
+  trailing?: React.ReactNode
+}) {
+  return (
+    <header className="flex items-start justify-between gap-3 mb-5">
+      <div className="flex items-start gap-3">
+        <span className={`chip chip-${tone}`}>
+          <Icon name={toneIcon} />
+        </span>
+        <div>
+          <div className="eyebrow text-ink-500">{step}</div>
+          <h3
+            className="font-display font-bold text-ink-900 mt-0.5"
+            style={{ fontSize: 17 }}
+          >
+            {title}
+          </h3>
+          <p className="text-[12.5px] text-ink-500 mt-0.5">{description}</p>
+        </div>
+      </div>
+      {trailing}
+    </header>
+  )
+}
+
 export function LojaForm() {
+  const [userId, setUserId] = useState<string | null>(null)
   const [storeName, setStoreName] = useState('')
+  const [storeBio, setStoreBio] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
+  const [sellerPhone, setSellerPhone] = useState('')
+  const [instagramHandle, setInstagramHandle] = useState('')
   const [serviceSteps, setServiceSteps] = useState<string[]>([])
   const [serviceInstructions, setServiceInstructions] = useState('')
   const [paymentMethods, setPaymentMethods] = useState<string[]>([])
   const [deliveryMethods, setDeliveryMethods] = useState<string[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [availableCategories, setAvailableCategories] = useState<string[]>([])
+  const [minOrderEnabled, setMinOrderEnabled] = useState(false)
+  const [minOrderQuantity, setMinOrderQuantity] = useState<string>('')
+  const [minOrderValue, setMinOrderValue] = useState<string>('')
+  const [minOrderLogic, setMinOrderLogic] = useState<'all' | 'any'>('all')
 
   const [initialLoading, setInitialLoading] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -123,11 +189,14 @@ export function LojaForm() {
   useEffect(() => {
     async function loadSettings() {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         setInitialLoading(false)
         return
       }
+      setUserId(user.id)
 
       const { data } = await supabase
         .from('store_settings')
@@ -135,16 +204,17 @@ export function LojaForm() {
         .eq('id', user.id)
         .maybeSingle()
 
-      // Load distinct categories from user's products
       const { data: products } = await supabase
         .from('products')
         .select('category')
 
-      const uniqueCats = [...new Set(
-        (products ?? [])
-          .map(p => p.category)
-          .filter((c): c is string => !!c)
-      )].sort()
+      const uniqueCats = [
+        ...new Set(
+          (products ?? [])
+            .map((p) => p.category)
+            .filter((c): c is string => !!c)
+        ),
+      ].sort()
       setAvailableCategories(uniqueCats)
 
       if (data) {
@@ -154,6 +224,20 @@ export function LojaForm() {
         setPaymentMethods(data.payment_methods ?? [])
         setDeliveryMethods(data.delivery_methods ?? [])
         setCategories(data.categories ?? [])
+        setSellerPhone(data.seller_phone ?? '')
+        setInstagramHandle(data.instagram_handle ?? '')
+        setStoreBio(data.store_bio ?? '')
+        setLogoUrl(data.logo_url ?? '')
+        setMinOrderEnabled(data.min_order_enabled ?? false)
+        setMinOrderQuantity(
+          data.min_order_quantity != null
+            ? String(data.min_order_quantity)
+            : ''
+        )
+        setMinOrderValue(
+          data.min_order_value != null ? String(data.min_order_value) : ''
+        )
+        setMinOrderLogic(data.min_order_logic === 'any' ? 'any' : 'all')
       }
       setInitialLoading(false)
     }
@@ -167,12 +251,36 @@ export function LojaForm() {
     setSuccess(false)
 
     if (!storeName.trim()) {
-      setError('Nome da loja é obrigatório.')
+      setError('Informe o nome da loja.')
+      setLoading(false)
+      return
+    }
+    if (sellerPhone && (sellerPhone.length < 10 || sellerPhone.length > 11)) {
+      setError(
+        'Número do WhatsApp inválido. Use 10 ou 11 dígitos.'
+      )
       setLoading(false)
       return
     }
     if (paymentMethods.length === 0) {
       setError('Selecione pelo menos uma forma de pagamento.')
+      setLoading(false)
+      return
+    }
+
+    const parsedQty =
+      minOrderQuantity.trim() === '' ? null : parseInt(minOrderQuantity, 10)
+    const parsedValue =
+      minOrderValue.trim() === '' ? null : parseFloat(minOrderValue)
+    const cleanQty =
+      parsedQty !== null && Number.isFinite(parsedQty) ? parsedQty : null
+    const cleanValue =
+      parsedValue !== null && Number.isFinite(parsedValue) ? parsedValue : null
+
+    if (minOrderEnabled && cleanQty === null && cleanValue === null) {
+      setError(
+        'Defina quantidade ou valor mínimo, ou desative o pedido mínimo.'
+      )
       setLoading(false)
       return
     }
@@ -184,6 +292,14 @@ export function LojaForm() {
       payment_methods: paymentMethods,
       delivery_methods: deliveryMethods,
       categories,
+      seller_phone: sellerPhone,
+      instagram_handle: instagramHandle,
+      store_bio: storeBio,
+      logo_url: logoUrl,
+      min_order_enabled: minOrderEnabled,
+      min_order_quantity: cleanQty,
+      min_order_value: cleanValue,
+      min_order_logic: minOrderLogic,
     })
 
     if (result.success) {
@@ -195,187 +311,550 @@ export function LojaForm() {
   }
 
   if (initialLoading) {
-    return <p className="text-gray-500">Carregando...</p>
+    return <p className="text-ink-500 text-sm">Carregando…</p>
   }
 
+  const minOrderBothFilled =
+    minOrderQuantity.trim() !== '' && minOrderValue.trim() !== ''
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Nome da Loja */}
-      <div>
-        <label htmlFor="storeName" className="block text-sm font-medium text-gray-700 mb-1">
-          Nome da Loja *
-        </label>
-        <input
-          id="storeName"
-          type="text"
-          value={storeName}
-          onChange={e => setStoreName(e.target.value)}
-          maxLength={100}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Ex: Minha Loja Online"
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+      {/* ── Seção 1 · Identidade ───────── */}
+      <section className="card p-6" id="sec-identidade">
+        <SectionHeader
+          step="01 · IDENTIDADE"
+          title="Identidade da loja"
+          description="Como sua loja se apresenta para os clientes."
+          toneIcon="store"
+          tone="brand"
         />
-      </div>
 
-      {/* Categorias de Produtos */}
-      <fieldset>
-        <legend className="block text-sm font-medium text-gray-700 mb-2">
-          Categorias de Produtos
-        </legend>
-        <p className="text-xs text-gray-500 mb-3">
-          Selecione as categorias da loja. As opções são carregadas automaticamente dos produtos importados.
-        </p>
-        {availableCategories.length === 0 ? (
-          <p className="text-sm text-gray-400">Nenhuma categoria disponível. Importe produtos primeiro.</p>
-        ) : (
-          <div className="space-y-2">
-            {availableCategories.map(cat => (
-              <label key={cat} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={categories.includes(cat)}
-                  onChange={() => setCategories(toggleValue(categories, cat))}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">{cat}</span>
-              </label>
-            ))}
+        <div className="space-y-6">
+          {/* Logo */}
+          <div>
+            <label className="label">Logomarca</label>
+            <LogoUpload
+              userId={userId}
+              value={logoUrl}
+              onChange={setLogoUrl}
+            />
           </div>
-        )}
-        <ChipInput
-          selected={categories}
-          predefined={availableCategories}
-          onAdd={v => setCategories(addCustomValue(categories, availableCategories, v))}
-          onRemove={v => setCategories(categories.filter(c => c !== v))}
-          placeholder="Digite uma categoria e pressione Enter"
-          label="Outras categorias:"
-        />
-      </fieldset>
 
-      {/* Etapas do Atendimento */}
-      <fieldset>
-        <legend className="block text-sm font-medium text-gray-700 mb-2">
-          Etapas do Atendimento
-        </legend>
-        <p className="text-xs text-gray-500 mb-3">
-          Selecione as etapas que o agente de IA deve seguir durante o atendimento.
-        </p>
-        <div className="space-y-2">
-          {SERVICE_STEP_OPTIONS.map(option => (
-            <label key={option.value} className="flex items-start gap-2 cursor-pointer">
+          {/* Nome */}
+          <div>
+            <label className="label" htmlFor="storeName">
+              Nome da loja<span className="req">*</span>
+            </label>
+            <input
+              id="storeName"
+              className="input"
+              type="text"
+              maxLength={MAX_NAME_LENGTH}
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+              placeholder="Ex: Floricultura Zaira"
+              required
+            />
+            <div className="flex justify-between mt-1.5">
+              <p className="helper">
+                Exibido no topo do chat e no link público.
+              </p>
+              <p
+                className={`helper counter ${
+                  storeName.length >= MAX_NAME_LENGTH ? 'over' : ''
+                }`}
+              >
+                {storeName.length}/{MAX_NAME_LENGTH}
+              </p>
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="label" htmlFor="storeBio">
+              Descrição da loja{' '}
+              <span className="text-ink-400 font-medium">(bio)</span>
+            </label>
+            <textarea
+              id="storeBio"
+              className="input"
+              maxLength={MAX_BIO_LENGTH}
+              value={storeBio}
+              onChange={(e) =>
+                setStoreBio(e.target.value.slice(0, MAX_BIO_LENGTH))
+              }
+              placeholder="Conte o que sua loja vende, seu diferencial e quem é seu público."
+            />
+            <div className="flex justify-between mt-1.5">
+              <p className="helper">
+                Aparece para o cliente no início da conversa.
+              </p>
+              <p
+                className={`helper counter ${
+                  storeBio.length >= MAX_BIO_LENGTH ? 'over' : ''
+                }`}
+              >
+                {storeBio.length}/{MAX_BIO_LENGTH}
+              </p>
+            </div>
+          </div>
+
+          {/* Categorias */}
+          <div>
+            <label className="label">Categorias de produtos</label>
+            <p className="helper mb-2.5">
+              Carregadas automaticamente do seu catálogo. Adicione customizadas
+              digitando e pressionando <span className="kbd">Enter</span>.
+            </p>
+            {availableCategories.length === 0 ? (
+              <p className="text-[13px] text-ink-400 mb-3">
+                Nenhuma categoria disponível. Importe produtos primeiro.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 mb-3">
+                {availableCategories.map((cat) => (
+                  <label
+                    key={cat}
+                    className="flex items-center gap-2.5 text-[13px] text-ink-800"
+                  >
+                    <input
+                      type="checkbox"
+                      className="check"
+                      checked={categories.includes(cat)}
+                      onChange={() =>
+                        setCategories(toggleValue(categories, cat))
+                      }
+                    />
+                    {cat}
+                  </label>
+                ))}
+              </div>
+            )}
+            <ChipInput
+              selected={categories}
+              predefined={availableCategories}
+              onAdd={(v) =>
+                setCategories(addCustomValue(categories, availableCategories, v))
+              }
+              onRemove={(v) =>
+                setCategories(categories.filter((c) => c !== v))
+              }
+              placeholder="Adicionar categoria…"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Seção 2 · Contato ───────── */}
+      <section className="card p-6" id="sec-contato">
+        <SectionHeader
+          step="02 · CONTATO"
+          title="Contato"
+          description="Canais para o cliente falar com você fora do chat."
+          toneIcon="phone"
+          tone="success"
+        />
+
+        <div className="grid md:grid-cols-2 gap-5">
+          {/* WhatsApp */}
+          <div>
+            <label className="label" htmlFor="whats">
+              Vendedor (WhatsApp)
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-success-600">
+                <Icon name="phone" className="w-4 h-4" />
+              </div>
+              <input
+                id="whats"
+                className="input"
+                style={{ paddingLeft: 36 }}
+                type="tel"
+                inputMode="numeric"
+                placeholder="(11) 98765-4321"
+                value={formatPhone(sellerPhone)}
+                onChange={(e) =>
+                  setSellerPhone(e.target.value.replace(/\D/g, '').slice(0, 11))
+                }
+              />
+            </div>
+            <p className="helper mt-1.5">
+              Formato (XX) 9XXXX-XXXX. Salvamos só os dígitos.
+            </p>
+          </div>
+
+          {/* Instagram */}
+          <div>
+            <label className="label" htmlFor="ig">
+              Instagram
+            </label>
+            <div className="adorn">
+              <span className="pre">@</span>
+              <input
+                id="ig"
+                type="text"
+                maxLength={30}
+                value={instagramHandle}
+                onChange={(e) =>
+                  setInstagramHandle(
+                    e.target.value
+                      .replace(/^@+/, '')
+                      .replace(/[^a-zA-Z0-9._]/g, '')
+                      .slice(0, 30)
+                  )
+                }
+                placeholder="floricultura.zaira"
+              />
+            </div>
+            <p className="helper mt-1.5">
+              Apenas o handle. Letras, números, ponto e underline.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Seção 3 · Atendimento ───────── */}
+      <section className="card p-6" id="sec-atendimento">
+        <SectionHeader
+          step="03 · ATENDIMENTO"
+          title="Agente de IA"
+          description="Como o agente conduz a conversa com o cliente."
+          toneIcon="sparkle"
+          tone="brand"
+          trailing={
+            <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-100 px-2 py-1 rounded-md">
+              <Icon name="sparkle" className="w-3 h-3" />
+              MODELO v3.2
+            </span>
+          }
+        />
+
+        <div className="space-y-5">
+          <div>
+            <label className="label">Etapas do atendimento</label>
+            <div className="grid md:grid-cols-2 gap-2.5">
+              {SERVICE_STEP_OPTIONS.map((opt) => (
+                <label
+                  key={opt.value}
+                  className="flex items-start gap-3 p-3 rounded-xl border border-ink-200 hover:border-brand-200 hover:bg-brand-50/40 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    className="check mt-0.5"
+                    checked={serviceSteps.includes(opt.value)}
+                    onChange={() =>
+                      setServiceSteps(toggleValue(serviceSteps, opt.value))
+                    }
+                  />
+                  <span>
+                    <span className="text-[13px] font-semibold text-ink-900">
+                      {opt.value}
+                    </span>
+                    <span className="block text-[11.5px] text-ink-500 mt-0.5">
+                      {opt.description}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="label" htmlFor="agentNotes">
+              Instruções adicionais para o agente
+            </label>
+            <textarea
+              id="agentNotes"
+              className="input"
+              maxLength={MAX_INSTRUCTIONS_LENGTH}
+              rows={5}
+              value={serviceInstructions}
+              onChange={(e) => setServiceInstructions(e.target.value)}
+              placeholder="Ex: Sempre ofereça parcelamento em até 6× sem juros. Nunca prometa entrega no mesmo dia. Use linguagem informal mas sem gírias."
+            />
+            <div className="flex justify-between mt-1.5">
+              <p className="helper">
+                Personalize tom de voz, regras de venda, restrições e detalhes
+                que o agente deve sempre lembrar.
+              </p>
+              <p
+                className={`helper counter ${
+                  serviceInstructions.length >= MAX_INSTRUCTIONS_LENGTH
+                    ? 'over'
+                    : ''
+                }`}
+              >
+                {serviceInstructions.length}/{MAX_INSTRUCTIONS_LENGTH}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Seção 4 · Operação ───────── */}
+      <section className="card p-6" id="sec-operacao">
+        <SectionHeader
+          step="04 · OPERAÇÃO"
+          title="Operação"
+          description="Regras de compra, pagamento e entrega."
+          toneIcon="package"
+          tone="info"
+        />
+
+        <div className="space-y-6">
+          {/* Pedido mínimo */}
+          <div>
+            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-brand-200 bg-brand-50/40 cursor-pointer">
               <input
                 type="checkbox"
-                checked={serviceSteps.includes(option.value)}
-                onChange={() => setServiceSteps(toggleValue(serviceSteps, option.value))}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="check mt-0.5"
+                checked={minOrderEnabled}
+                onChange={() => setMinOrderEnabled((v) => !v)}
               />
-              <span className="text-sm text-gray-700">
-                <strong>{option.value}</strong>
-                <span className="text-gray-500"> — {option.description}</span>
+              <span className="flex-1">
+                <span className="text-[13.5px] font-semibold text-ink-900">
+                  Exigir pedido mínimo{' '}
+                  <span className="text-ink-400 font-medium">(atacado)</span>
+                </span>
+                <span className="block text-[11.5px] text-ink-600 mt-0.5">
+                  O agente avisa o cliente antes de fechar quando o carrinho
+                  não atinge o mínimo.
+                </span>
               </span>
             </label>
-          ))}
-        </div>
-      </fieldset>
 
-      {/* Instruções Adicionais */}
-      <div>
-        <label htmlFor="serviceInstructions" className="block text-sm font-medium text-gray-700 mb-1">
-          Instruções Adicionais para o Agente
-        </label>
-        <p className="text-xs text-gray-500 mb-2">
-          Escreva instruções personalizadas que o agente de IA deve seguir no atendimento.
-        </p>
-        <textarea
-          id="serviceInstructions"
-          value={serviceInstructions}
-          onChange={e => setServiceInstructions(e.target.value)}
-          maxLength={2000}
-          rows={4}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
-          placeholder="Ex: Sempre ofereça frete grátis para compras acima de R$200..."
-        />
-        <p className="text-xs text-gray-400 mt-1">
-          {serviceInstructions.length}/2000 caracteres
-        </p>
-      </div>
+            <div className={`collapsible ${minOrderEnabled ? 'open' : ''}`}>
+              <div>
+                <div className="mt-3 ml-4 pl-5 border-l-2 border-brand-100 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label
+                        className="label"
+                        style={{ fontSize: 12, color: '#4A4F66' }}
+                        htmlFor="minQty"
+                      >
+                        Quantidade mínima de peças
+                      </label>
+                      <input
+                        id="minQty"
+                        className="input"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={minOrderQuantity}
+                        onChange={(e) => setMinOrderQuantity(e.target.value)}
+                        placeholder="6"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        className="label"
+                        style={{ fontSize: 12, color: '#4A4F66' }}
+                        htmlFor="minVal"
+                      >
+                        Valor mínimo (R$)
+                      </label>
+                      <input
+                        id="minVal"
+                        className="input"
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={minOrderValue}
+                        onChange={(e) => setMinOrderValue(e.target.value)}
+                        placeholder="300,00"
+                      />
+                    </div>
+                  </div>
 
-      {/* Formas de Pagamento */}
-      <fieldset>
-        <legend className="block text-sm font-medium text-gray-700 mb-2">
-          Formas de Pagamento *
-        </legend>
-        <div className="space-y-2">
-          {PAYMENT_OPTIONS.map(method => (
-            <label key={method} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={paymentMethods.includes(method)}
-                onChange={() => setPaymentMethods(toggleValue(paymentMethods, method))}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">{method}</span>
+                  {minOrderBothFilled && (
+                    <div>
+                      <p className="eyebrow text-ink-500 mb-2">
+                        QUANDO AMBOS PREENCHIDOS, EXIGIR
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-ink-200 hover:border-brand-200 cursor-pointer text-[12.5px] text-ink-800 font-medium">
+                          <input
+                            type="radio"
+                            name="minOrderMode"
+                            className="radio"
+                            checked={minOrderLogic === 'all'}
+                            onChange={() => setMinOrderLogic('all')}
+                          />
+                          Os dois critérios
+                        </label>
+                        <label className="flex items-center gap-2.5 p-2.5 rounded-lg border border-ink-200 hover:border-brand-200 cursor-pointer text-[12.5px] text-ink-800 font-medium">
+                          <input
+                            type="radio"
+                            name="minOrderMode"
+                            className="radio"
+                            checked={minOrderLogic === 'any'}
+                            onChange={() => setMinOrderLogic('any')}
+                          />
+                          Qualquer um dos dois
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="helper">
+                    Pelo menos um dos campos acima é obrigatório quando o
+                    pedido mínimo está ativado.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-ink-100" />
+
+          {/* Pagamentos */}
+          <div>
+            <label className="label">
+              Formas de pagamento<span className="req">*</span>
             </label>
-          ))}
-        </div>
-        <ChipInput
-          selected={paymentMethods}
-          predefined={PAYMENT_OPTIONS}
-          onAdd={v => setPaymentMethods(addCustomValue(paymentMethods, PAYMENT_OPTIONS, v))}
-          onRemove={v => setPaymentMethods(paymentMethods.filter(m => m !== v))}
-          placeholder="Digite uma forma de pagamento e pressione Enter"
-          label="Outras formas:"
-        />
-      </fieldset>
+            <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-3">
+              {PAYMENT_OPTIONS.map((method) => (
+                <label
+                  key={method}
+                  className="flex items-center gap-2.5 text-[13px] text-ink-800"
+                >
+                  <input
+                    type="checkbox"
+                    className="check"
+                    checked={paymentMethods.includes(method)}
+                    onChange={() =>
+                      setPaymentMethods(toggleValue(paymentMethods, method))
+                    }
+                  />
+                  {method}
+                  {method === 'PIX' && paymentMethods.includes('PIX') && (
+                    <span className="eyebrow text-success-700 bg-success-50 px-1.5 py-0.5 rounded-md ml-auto">
+                      PREFERIDO
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+            <ChipInput
+              selected={paymentMethods}
+              predefined={PAYMENT_OPTIONS}
+              onAdd={(v) =>
+                setPaymentMethods(
+                  addCustomValue(paymentMethods, PAYMENT_OPTIONS, v)
+                )
+              }
+              onRemove={(v) =>
+                setPaymentMethods(paymentMethods.filter((m) => m !== v))
+              }
+              placeholder="Adicionar forma de pagamento…"
+            />
+            <p className="helper mt-1.5">
+              Selecione pelo menos uma forma de pagamento.
+            </p>
+          </div>
 
-      {/* Formas de Entrega */}
-      <fieldset>
-        <legend className="block text-sm font-medium text-gray-700 mb-2">
-          Formas de Entrega
-        </legend>
-        <div className="space-y-2">
-          {DELIVERY_OPTIONS.map(method => (
-            <label key={method} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={deliveryMethods.includes(method)}
-                onChange={() => setDeliveryMethods(toggleValue(deliveryMethods, method))}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">{method}</span>
-            </label>
-          ))}
+          <div className="h-px bg-ink-100" />
+
+          {/* Entrega */}
+          <div>
+            <label className="label">Formas de entrega</label>
+            <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-3">
+              {DELIVERY_OPTIONS.map((method) => (
+                <label
+                  key={method}
+                  className="flex items-center gap-2.5 text-[13px] text-ink-800"
+                >
+                  <input
+                    type="checkbox"
+                    className="check"
+                    checked={deliveryMethods.includes(method)}
+                    onChange={() =>
+                      setDeliveryMethods(toggleValue(deliveryMethods, method))
+                    }
+                  />
+                  {method}
+                  {method === 'Correios' && (
+                    <span className="eyebrow text-ink-400 ml-auto">
+                      PADRÃO
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+            <ChipInput
+              selected={deliveryMethods}
+              predefined={DELIVERY_OPTIONS}
+              onAdd={(v) =>
+                setDeliveryMethods(
+                  addCustomValue(deliveryMethods, DELIVERY_OPTIONS, v)
+                )
+              }
+              onRemove={(v) =>
+                setDeliveryMethods(deliveryMethods.filter((m) => m !== v))
+              }
+              placeholder="Adicionar forma de entrega…"
+            />
+          </div>
         </div>
-        <ChipInput
-          selected={deliveryMethods}
-          predefined={DELIVERY_OPTIONS}
-          onAdd={v => setDeliveryMethods(addCustomValue(deliveryMethods, DELIVERY_OPTIONS, v))}
-          onRemove={v => setDeliveryMethods(deliveryMethods.filter(m => m !== v))}
-          placeholder="Digite uma forma de entrega e pressione Enter"
-          label="Outras formas:"
-        />
-      </fieldset>
+      </section>
 
       {/* Feedback */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="banner banner-error" role="alert">
+          <Icon name="infoCircle" className="w-[18px] h-[18px]" />
+          <div>
+            <strong className="block mb-0.5 font-display">
+              Não foi possível salvar
+            </strong>
+            <span>{error}</span>
+          </div>
         </div>
       )}
       {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-sm text-green-700">Configurações salvas com sucesso!</p>
+        <div className="banner banner-success" role="status">
+          <Icon name="check" className="w-[18px] h-[18px]" />
+          <div>
+            <strong className="block mb-0.5 font-display">
+              Configurações salvas
+            </strong>
+            <span className="text-success-700/90">
+              Seu chat público já foi atualizado.
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Botão Salvar */}
-      <button
-        type="submit"
-        disabled={loading}
-        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Salvando...' : 'Salvar Configurações'}
-      </button>
+      {/* Footer / save */}
+      <div className="flex items-center justify-between gap-3 pt-3 pb-12">
+        <p className="text-[12px] text-ink-500 max-w-[40ch]">
+          Alterações são publicadas imediatamente no chat público após salvar.
+        </p>
+        <button type="submit" disabled={loading} className="btn btn-primary">
+          {loading ? (
+            <>
+              <svg
+                className="animate-spin"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Salvando…
+            </>
+          ) : (
+            <>
+              <Icon name="check" className="w-4 h-4" />
+              Salvar configurações
+            </>
+          )}
+        </button>
+      </div>
     </form>
   )
 }

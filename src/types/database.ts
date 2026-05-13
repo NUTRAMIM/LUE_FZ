@@ -221,6 +221,14 @@ export interface Database {
           created_at: string
           updated_at: string
           chat_slug: string
+          seller_phone: string
+          instagram_handle: string
+          store_bio: string
+          logo_url: string
+          min_order_enabled: boolean
+          min_order_quantity: number | null
+          min_order_value: number | null
+          min_order_logic: 'all' | 'any'
         }
         Insert: {
           id: string
@@ -234,6 +242,14 @@ export interface Database {
           created_at?: string
           updated_at?: string
           chat_slug?: string
+          seller_phone?: string
+          instagram_handle?: string
+          store_bio?: string
+          logo_url?: string
+          min_order_enabled?: boolean
+          min_order_quantity?: number | null
+          min_order_value?: number | null
+          min_order_logic?: 'all' | 'any'
         }
         Update: {
           id?: string
@@ -246,6 +262,14 @@ export interface Database {
           default_stock_min?: number
           updated_at?: string
           chat_slug?: string
+          seller_phone?: string
+          instagram_handle?: string
+          store_bio?: string
+          logo_url?: string
+          min_order_enabled?: boolean
+          min_order_quantity?: number | null
+          min_order_value?: number | null
+          min_order_logic?: 'all' | 'any'
         }
         Relationships: []
       }

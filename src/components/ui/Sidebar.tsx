@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { logout } from '@/actions/auth'
 import { Icon, type IconName } from '@/components/painel/Icons'
+import { createClient } from '@/lib/supabase/client'
 
 type NavItem = {
   href: string
@@ -95,6 +97,106 @@ function OperadoresOnline() {
   )
 }
 
+const LOJA_SECTIONS = [
+  { href: '#sec-identidade', label: 'Identidade' },
+  { href: '#sec-contato', label: 'Contato' },
+  { href: '#sec-atendimento', label: 'Atendimento (IA)' },
+  { href: '#sec-operacao', label: 'Operação' },
+]
+
+function NestaPaginaLoja() {
+  return (
+    <>
+      <div className="eyebrow text-ink-400 px-3 mt-7 mb-2">NESTA PÁGINA</div>
+      <ul className="space-y-1 text-[12.5px]">
+        {LOJA_SECTIONS.map((s) => (
+          <li key={s.href}>
+            <a
+              href={s.href}
+              className="block px-3 py-1.5 rounded-md text-ink-600 hover:text-brand-700 hover:bg-brand-50"
+            >
+              {s.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function SuaUrlPublica() {
+  const [slug, setSlug] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('store_settings')
+        .select('chat_slug')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!cancelled && data?.chat_slug) setSlug(data.chat_slug)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function handleCopy() {
+    if (!slug) return
+    const base =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
+      (typeof window !== 'undefined' ? window.location.origin : '')
+    try {
+      await navigator.clipboard.writeText(`${base}/chat/${slug}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1400)
+    } catch {
+      // ignore
+    }
+  }
+
+  return (
+    <div className="mt-6 mx-1 p-3.5 rounded-2xl bg-ink-900 text-white relative overflow-hidden">
+      <div
+        aria-hidden
+        className="absolute -top-10 -right-10 w-32 h-32 rounded-full"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(167,139,250,0.30), transparent 65%)',
+        }}
+      />
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <span className="live-dot" />
+          <span className="eyebrow text-brand-300">SUA URL PÚBLICA</span>
+        </div>
+        <div className="text-[12.5px] mt-1.5 text-ink-200 leading-snug">
+          <span className="font-mono text-brand-200">lue.fz/chat/</span>
+          <span className="font-mono text-white font-semibold">
+            {slug ?? '…'}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleCopy}
+          disabled={!slug}
+          className="mt-2.5 w-full bg-white/10 hover:bg-white/15 text-white text-[12px] font-semibold py-1.5 rounded-lg ring-1 ring-white/15 disabled:opacity-50"
+        >
+          {copied ? 'Copiado!' : 'Copiar link'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AgenteIA() {
   return (
     <div className="mt-6 mx-1 p-3.5 rounded-2xl bg-ink-900 text-white relative overflow-hidden">
@@ -126,6 +228,7 @@ function AgenteIA() {
 export function Sidebar() {
   const pathname = usePathname()
   const isConversas = pathname?.startsWith('/conversas') ?? false
+  const isLoja = pathname?.startsWith('/loja') ?? false
 
   return (
     <aside
@@ -192,6 +295,11 @@ export function Sidebar() {
           <>
             <OperadoresOnline />
             <AgenteIA />
+          </>
+        ) : isLoja ? (
+          <>
+            <NestaPaginaLoja />
+            <SuaUrlPublica />
           </>
         ) : (
           <ProximaNaFila />

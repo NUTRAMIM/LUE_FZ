@@ -1,17 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import { Icon } from '@/components/painel/Icons'
 
-export function CopyButton({ value }: { value: string }) {
+export function LojaCopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), 1400)
     } catch {
-      // fallback noop
+      // ignore
     }
   }
 
@@ -19,8 +20,10 @@ export function CopyButton({ value }: { value: string }) {
     <button
       type="button"
       onClick={copy}
-      className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+      className="btn btn-secondary"
+      style={{ padding: '6px 10px', fontSize: 11.5 }}
     >
+      <Icon name="copy" className="w-3.5 h-3.5" />
       {copied ? 'Copiado!' : 'Copiar'}
     </button>
   )

@@ -1,6 +1,6 @@
 import { Sidebar } from '@/components/ui/Sidebar'
 
-export default function LojaLayout({
+export default function ConversasLayout({
   children,
 }: {
   children: React.ReactNode
