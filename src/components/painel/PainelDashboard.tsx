@@ -41,11 +41,11 @@ function Topbar() {
 
 /* ───────── Hero ───────── */
 const ACTIVITY = [
-  { t: '09:42', a: 'Renata C.', k: 'iniciou conversa', tag: 'CONVERSA' },
-  { t: '09:38', a: 'Pedido #2841', k: 'foi confirmado', tag: 'PEDIDO' },
-  { t: '09:31', a: 'Bia M.', k: 'enviou áudio', tag: 'CONVERSA' },
-  { t: '09:24', a: 'Lead WhatsApp', k: 'capturado', tag: 'LEAD' },
-]
+  { t: '09:42', a: 'vis_4f1c', k: 'sessão iniciada', tag: 'CHAT' },
+  { t: '09:39', a: '#2841', k: 'lead capturado', tag: 'LEAD' },
+  { t: '09:36', a: '#2837', k: 'handoff → Camila R.', tag: 'HANDOFF' },
+  { t: '09:31', a: 'vis_a02e', k: 'sessão expirou (180s)', tag: 'CHAT' },
+] as const
 
 function Hero() {
   return (
@@ -80,47 +80,44 @@ function Hero() {
             Bem-vinda, Mariana.
           </h1>
           <p className="mt-3.5 text-[15px] text-brand-100/90 max-w-[44ch] leading-relaxed">
-            Sua loja está com{' '}
-            <span className="font-semibold text-white">
-              3 conversas em atendimento
-            </span>{' '}
-            agora e{' '}
-            <span className="font-semibold text-white">
-              2 atrasadas no SLA
-            </span>
-            . Comece pelo topo da fila.
+            Sua IA capturou{' '}
+            <span className="font-semibold text-white">47 leads esta semana</span>
+            . <span className="font-semibold text-white">31 aguardam contato</span> do
+            seu time —{' '}
+            <span className="font-semibold text-white">3 parados há &gt; 1h</span>.
           </p>
 
           {/* Inline glance numbers */}
           <div className="mt-7 flex items-stretch gap-7">
             <div>
-              <div className="eyebrow text-brand-200">CONVERTIDO HOJE</div>
+              <div className="eyebrow text-brand-200">CAPTURADOS HOJE</div>
               <div
                 className="font-display font-extrabold tabular mt-1.5"
                 style={{ fontSize: '30px', lineHeight: 1 }}
               >
-                R$ 4.218
+                47
+                <span className="text-brand-300 text-[18px] ml-1">/60</span>
               </div>
             </div>
             <div className="w-px bg-white/15" />
             <div>
-              <div className="eyebrow text-brand-200">CONVERSAS · HOJE</div>
+              <div className="eyebrow text-brand-200">TAXA DE CAPTURA</div>
               <div
                 className="font-display font-extrabold tabular mt-1.5"
                 style={{ fontSize: '30px', lineHeight: 1 }}
               >
-                28
-                <span className="text-brand-300 text-[18px] ml-1">/40</span>
+                15,1
+                <span className="text-brand-300 text-[18px] ml-0.5">%</span>
               </div>
             </div>
             <div className="w-px bg-white/15" />
             <div>
-              <div className="eyebrow text-brand-200">RESPOSTA MÉDIA</div>
+              <div className="eyebrow text-brand-200">LATÊNCIA IA · p95</div>
               <div
                 className="font-display font-extrabold tabular mt-1.5"
                 style={{ fontSize: '30px', lineHeight: 1 }}
               >
-                4m12
+                1,8
                 <span className="text-brand-300 text-[16px] ml-0.5">s</span>
               </div>
             </div>
@@ -128,8 +125,7 @@ function Hero() {
 
           <div className="mt-7 flex flex-wrap gap-2.5">
             <button className="inline-flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-50 transition-colors text-[13px] font-semibold px-4 py-2.5 rounded-xl">
-              Abrir fila de conversas{' '}
-              <Icon name="arrow" className="w-4 h-4" />
+              Abrir fila de leads <Icon name="arrow" className="w-4 h-4" />
             </button>
             <button className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl ring-1 ring-white/15">
               Ver relatório do dia
@@ -155,7 +151,7 @@ function Hero() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] leading-snug truncate">
-                      <span className="font-semibold text-white">{e.a}</span>{' '}
+                      <span className="font-mono font-semibold text-white">{e.a}</span>{' '}
                       <span className="text-brand-100/80">{e.k}</span>
                     </div>
                   </div>
