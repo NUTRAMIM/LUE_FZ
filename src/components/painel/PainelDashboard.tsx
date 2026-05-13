@@ -2,6 +2,9 @@
 
 import { useId } from 'react'
 import { Icon, Chip, type ChipTone } from './Icons'
+import { FunilCaptura } from './FunilCaptura'
+import { PerformanceIA } from './PerformanceIA'
+import { GapsConhecimento } from './GapsConhecimento'
 
 /* ───────── Topbar ───────── */
 function Topbar() {
@@ -381,6 +384,15 @@ export function PainelDashboard() {
       <Topbar />
       <Hero />
       <PulseStripe />
+
+      <section className="mt-10">
+        <FunilCaptura />
+      </section>
+
+      <section className="mt-6 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
+        <PerformanceIA />
+        <GapsConhecimento />
+      </section>
 
       <footer className="mt-12 mb-4 flex items-center justify-between text-[12px] text-ink-400">
         <div className="eyebrow">LUE FZ · v0.4.0 · BUILD 1284</div>
