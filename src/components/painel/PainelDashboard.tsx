@@ -166,15 +166,15 @@ function Hero() {
   )
 }
 
-/* ───────── QueueStripe ───────── */
-const QUEUE: Array<{ tone: ChipTone; icon: string; label: string; value: string; sub: string }> = [
-  { tone: 'info', icon: 'clock', label: 'Aguardando', value: '12', sub: 'TEMPO MÁX  15M' },
-  { tone: 'brand', icon: 'msgSq', label: 'Atendendo', value: '03', sub: 'EQUIPE  4 ONLINE' },
-  { tone: 'warn', icon: 'userX', label: 'Sem atendente', value: '05', sub: 'AÇÃO  REDIRECIONAR' },
-  { tone: 'danger', icon: 'alert', label: 'Atrasadas SLA', value: '02', sub: 'STATUS  CRÍTICO' },
+/* ───────── PulseStripe ───────── */
+const PULSE: Array<{ tone: ChipTone; icon: string; label: string; value: string; sub: string }> = [
+  { tone: 'brand', icon: 'msgSq', label: 'Sessões IA ativas', value: '03', sub: 'IA RESPONDENDO  ·  p95 1,8s' },
+  { tone: 'info', icon: 'eye', label: 'Visitantes na loja', value: '17', sub: 'PICO 09H–11H' },
+  { tone: 'warn', icon: 'userX', label: 'Leads sem atribuição', value: '05', sub: 'AÇÃO  ATRIBUIR' },
+  { tone: 'danger', icon: 'clock', label: 'Leads atrasados > 30min', value: '02', sub: 'STATUS  CRÍTICO' },
 ]
 
-function QueueStripe() {
+function PulseStripe() {
   return (
     <section className="mt-10">
       <div className="flex items-end justify-between mb-4">
@@ -184,7 +184,7 @@ function QueueStripe() {
             className="font-display font-bold text-ink-900 tracking-tight mt-1"
             style={{ fontSize: '20px' }}
           >
-            Minha fila hoje
+            Pulso ao vivo
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -198,7 +198,7 @@ function QueueStripe() {
       </div>
 
       <div className="card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-ink-100 overflow-hidden">
-        {QUEUE.map((q) => (
+        {PULSE.map((q) => (
           <div key={q.label} className="p-6 relative">
             <div className="flex items-center gap-2.5">
               <Chip tone={q.tone} name={q.icon} />
@@ -519,7 +519,7 @@ export function PainelDashboard() {
     <div className="max-w-[1280px] mx-auto px-8 py-7">
       <Topbar />
       <Hero />
-      <QueueStripe />
+      <PulseStripe />
 
       {/* Resultado do mês */}
       <section className="mt-10">
