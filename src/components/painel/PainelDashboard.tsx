@@ -5,6 +5,8 @@ import { Icon, Chip, type ChipTone } from './Icons'
 import { FunilCaptura } from './FunilCaptura'
 import { PerformanceIA } from './PerformanceIA'
 import { GapsConhecimento } from './GapsConhecimento'
+import { FilaVendedor } from './FilaVendedor'
+import { IntentCatalogo } from './IntentCatalogo'
 
 /* ───────── Topbar ───────── */
 function Topbar() {
@@ -392,6 +394,14 @@ export function PainelDashboard() {
       <section className="mt-6 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
         <PerformanceIA />
         <GapsConhecimento />
+      </section>
+
+      <section className="mt-6">
+        <FilaVendedor />
+      </section>
+
+      <section className="mt-6">
+        <IntentCatalogo />
       </section>
 
       <footer className="mt-12 mb-4 flex items-center justify-between text-[12px] text-ink-400">
