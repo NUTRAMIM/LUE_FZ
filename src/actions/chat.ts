@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { randomUUID } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dispatchToN8n } from '@/lib/n8n'
+import { signedReadUrl } from '@/lib/chat-media'
 import {
   COOKIE_NAME,
   COOKIE_OPTIONS,
@@ -26,8 +27,6 @@ export interface ChatBootstrap {
     created_at: string
   }>
 }
-
-const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24
 
 async function getOrCreateVisitorId(): Promise<string> {
   const cookieStore = await cookies()
@@ -59,21 +58,6 @@ async function resolveStoreBySlug(slug: string) {
     return null
   }
   return data
-}
-
-async function signedReadUrl(
-  path: string | null,
-): Promise<string | null> {
-  if (!path) return null
-  const admin = createAdminClient()
-  const { data, error } = await admin.storage
-    .from('chat-media')
-    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
-  if (error || !data) {
-    console.error('signedReadUrl error', error)
-    return null
-  }
-  return data.signedUrl
 }
 
 export async function ensureConversation(slug: string): Promise<ChatBootstrap> {
