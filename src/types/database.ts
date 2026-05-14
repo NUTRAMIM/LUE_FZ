@@ -126,6 +126,7 @@ export interface Database {
           created_at: string
           message_type: 'text' | 'image' | 'audio'
           media_path: string | null
+          store_id: string
         }
         Insert: {
           id?: string
@@ -136,6 +137,7 @@ export interface Database {
           created_at?: string
           message_type?: 'text' | 'image' | 'audio'
           media_path?: string | null
+          store_id?: string
         }
         Update: {
           id?: string
@@ -145,6 +147,7 @@ export interface Database {
           metadata?: Json
           message_type?: 'text' | 'image' | 'audio'
           media_path?: string | null
+          store_id?: string
         }
         Relationships: []
       }
