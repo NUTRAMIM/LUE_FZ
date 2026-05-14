@@ -88,6 +88,7 @@ export interface Database {
           created_at: string
           updated_at: string
           store_id: string | null
+          last_read_at: string | null
         }
         Insert: {
           id?: string
@@ -101,6 +102,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           store_id?: string | null
+          last_read_at?: string | null
         }
         Update: {
           id?: string
@@ -113,6 +115,7 @@ export interface Database {
           last_message_at?: string | null
           updated_at?: string
           store_id?: string | null
+          last_read_at?: string | null
         }
         Relationships: []
       }
