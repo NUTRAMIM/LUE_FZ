@@ -2,7 +2,7 @@
 
 import { Icon } from './Icons'
 
-type ProductStatus = 'OK' | 'BLACKHOLE' | 'DESC VAZIA' | 'SEM FOTO' | 'STOCK OUT'
+type ProductStatus = 'OK' | 'DESC VAZIA' | 'SEM FOTO' | 'STOCK OUT'
 
 type Product = {
   name: string
@@ -16,7 +16,6 @@ type Product = {
 
 const PRODUCTS: Product[] = [
   { name: 'Buquê Maria',       views: 412, mentions: 87, leads: 12, hasDesc: true,  hasPhoto: true,  status: 'OK' },
-  { name: 'Rosa Equador',      views: 189, mentions: 71, leads:  0, hasDesc: false, hasPhoto: false, status: 'BLACKHOLE' },
   { name: 'Tulipa Branca',     views: 298, mentions: 54, leads:  2, hasDesc: false, hasPhoto: true,  status: 'DESC VAZIA' },
   { name: 'Coroa Premium',     views: 211, mentions: 33, leads:  9, hasDesc: true,  hasPhoto: true,  status: 'OK' },
   { name: 'Assinatura Mensal', views: 142, mentions: 29, leads:  4, hasDesc: true,  hasPhoto: false, status: 'SEM FOTO' },
@@ -25,7 +24,6 @@ const PRODUCTS: Product[] = [
 
 const STATUS_CLS: Record<ProductStatus, string> = {
   'OK':         'text-success-700 bg-success-50 ring-success-100',
-  'BLACKHOLE':  'text-danger-700 bg-danger-50 ring-danger-100',
   'DESC VAZIA': 'text-warn-700 bg-warn-50 ring-warn-100',
   'SEM FOTO':   'text-warn-700 bg-warn-50 ring-warn-100',
   'STOCK OUT':  'text-danger-700 bg-danger-50 ring-danger-100',
