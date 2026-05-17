@@ -166,6 +166,8 @@ export interface Database {
           metadata: Json
           created_at: string
           store_id: string | null
+          conversation_id: string | null
+          cep: string | null
         }
         Insert: {
           id?: string
@@ -178,6 +180,8 @@ export interface Database {
           metadata?: Json
           created_at?: string
           store_id?: string | null
+          conversation_id?: string | null
+          cep?: string | null
         }
         Update: {
           id?: string
@@ -188,6 +192,8 @@ export interface Database {
           last_seen_at?: string
           metadata?: Json
           store_id?: string | null
+          conversation_id?: string | null
+          cep?: string | null
         }
         Relationships: []
       }
