@@ -33,47 +33,52 @@ export async function getPainelPulse(): Promise<PainelPulse> {
   const dayStart = rangeStart(now, 'day').toISOString()
   const weekStart = rangeStart(now, 'week').toISOString()
   const oneHourAgo = new Date(now.getTime() - 3_600_000).toISOString()
+  // "sessão IA ativa" = conversa com atividade da IA nos últimos 5 minutos
   const fiveMinAgo = new Date(now.getTime() - 300_000).toISOString()
 
+  const results = await Promise.all([
+    supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('store_id', store)
+      .gte('created_at', weekStart),
+    supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('store_id', store)
+      .gte('created_at', dayStart),
+    supabase
+      .from('conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('store_id', store)
+      .eq('status', 'ai_active')
+      .is('assigned_to', null)
+      .not('lead_id', 'is', null),
+    supabase
+      .from('conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('store_id', store)
+      .eq('status', 'ai_active')
+      .is('assigned_to', null)
+      .not('lead_id', 'is', null)
+      .lt('last_message_at', oneHourAgo),
+    supabase
+      .from('conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('store_id', store)
+      .eq('status', 'ai_active')
+      .gte('last_message_at', fiveMinAgo),
+    supabase
+      .from('conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('store_id', store)
+      .gte('created_at', dayStart),
+  ])
+  results.forEach((r, i) => {
+    if (r.error) console.error(`getPainelPulse query[${i}] error`, r.error)
+  })
   const [leadsWeek, leadsToday, awaiting, stale, activeAi, sessionsToday] =
-    await Promise.all([
-      supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('store_id', store)
-        .gte('created_at', weekStart),
-      supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('store_id', store)
-        .gte('created_at', dayStart),
-      supabase
-        .from('conversations')
-        .select('*', { count: 'exact', head: true })
-        .eq('store_id', store)
-        .eq('status', 'ai_active')
-        .is('assigned_to', null)
-        .not('lead_id', 'is', null),
-      supabase
-        .from('conversations')
-        .select('*', { count: 'exact', head: true })
-        .eq('store_id', store)
-        .eq('status', 'ai_active')
-        .is('assigned_to', null)
-        .not('lead_id', 'is', null)
-        .lt('last_message_at', oneHourAgo),
-      supabase
-        .from('conversations')
-        .select('*', { count: 'exact', head: true })
-        .eq('store_id', store)
-        .eq('status', 'ai_active')
-        .gte('last_message_at', fiveMinAgo),
-      supabase
-        .from('conversations')
-        .select('*', { count: 'exact', head: true })
-        .eq('store_id', store)
-        .gte('created_at', dayStart),
-    ])
+    results
 
   return {
     leadsWeek: leadsWeek.count ?? 0,
