@@ -14,6 +14,7 @@ export default async function ChatPage({
   return (
     <ChatClient
       slug={slug}
+      storeId={bootstrap.storeId}
       conversationId={bootstrap.conversationId}
       storeName={bootstrap.storeName}
       initialMessages={bootstrap.messages}

@@ -54,11 +54,13 @@ function reducer(state: State, action: Action): State {
 
 export function ChatClient({
   slug,
+  storeId,
   conversationId,
   storeName,
   initialMessages,
 }: {
   slug: string
+  storeId: string
   conversationId: string
   storeName: string
   initialMessages: ChatMessage[]
@@ -124,6 +126,21 @@ export function ChatClient({
       supabase.removeChannel(channel)
     }
   }, [conversationId])
+
+  useEffect(() => {
+    const supabase = createBrowserSupabase()
+    const channel = supabase.channel(`store:${storeId}:visitors`, {
+      config: { presence: { key: crypto.randomUUID() } },
+    })
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        channel.track({ online_at: new Date().toISOString() })
+      }
+    })
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [storeId])
 
   const scrollAnchor = useRef<HTMLDivElement>(null)
   useEffect(() => {
