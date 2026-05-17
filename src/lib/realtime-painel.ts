@@ -43,7 +43,9 @@ export function usePainelPulse(
     const refresh = () => {
       if (timer) clearTimeout(timer)
       timer = setTimeout(() => {
-        getPainelPulse().then(setPulse)
+        getPainelPulse()
+          .then(setPulse)
+          .catch((err) => console.error('usePainelPulse refresh failed', err))
       }, 2000)
     }
 
