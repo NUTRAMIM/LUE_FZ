@@ -21,6 +21,7 @@ export function Topbar({ dateLabel }: { dateLabel: string }) {
             className="w-4 h-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2"
           />
           <input
+            aria-label="Buscar conversas, produtos, pedidos"
             placeholder="Buscar conversas, produtos, pedidos…"
             className="w-[300px] pl-9 pr-12 py-2.5 rounded-xl bg-white border border-ink-200 text-[13px] placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400"
           />
@@ -28,7 +29,7 @@ export function Topbar({ dateLabel }: { dateLabel: string }) {
             ⌘K
           </span>
         </div>
-        <button className="relative w-10 h-10 rounded-xl bg-white border border-ink-200 text-ink-600 hover:text-ink-900 hover:bg-ink-50 flex items-center justify-center">
+        <button aria-label="Notificações" className="relative w-10 h-10 rounded-xl bg-white border border-ink-200 text-ink-600 hover:text-ink-900 hover:bg-ink-50 flex items-center justify-center">
           <Icon name="bell" className="w-4 h-4" />
           <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-brand-600 ring-2 ring-white" />
         </button>
