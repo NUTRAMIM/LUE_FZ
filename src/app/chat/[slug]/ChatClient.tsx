@@ -71,6 +71,8 @@ export function ChatClient({
     error: null,
   })
 
+  const visitorKeyRef = useRef(crypto.randomUUID())
+
   useEffect(() => {
     const supabase = createBrowserSupabase()
     const channel = supabase
@@ -130,7 +132,7 @@ export function ChatClient({
   useEffect(() => {
     const supabase = createBrowserSupabase()
     const channel = supabase.channel(`store:${storeId}:visitors`, {
-      config: { presence: { key: crypto.randomUUID() } },
+      config: { presence: { key: visitorKeyRef.current } },
     })
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
