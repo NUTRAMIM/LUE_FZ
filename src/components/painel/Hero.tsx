@@ -46,12 +46,12 @@ export function Hero({
             />
             {greeting} · {clock}
           </div>
-          <h1
+          <div
             className="font-display font-extrabold leading-[1.02] tracking-tight mt-3"
             style={{ fontSize: '48px' }}
           >
             Bem-vinda, Mariana.
-          </h1>
+          </div>
           <p className="mt-3.5 text-[15px] text-brand-100/90 max-w-[44ch] leading-relaxed">
             Sua IA capturou{' '}
             <span className="font-semibold text-white">

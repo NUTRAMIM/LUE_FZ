@@ -45,7 +45,9 @@ export function PainelDashboard({
 
   const handleRangeChange = (r: FunnelRange) => {
     setRange(r)
-    getFunnel(r).then(setFunnel)
+    getFunnel(r)
+      .then(setFunnel)
+      .catch((err) => console.error('getFunnel failed', err))
   }
 
   return (
