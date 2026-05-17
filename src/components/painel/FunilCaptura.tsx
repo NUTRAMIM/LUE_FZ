@@ -116,7 +116,7 @@ export function FunilCaptura({
               </div>
             </div>
             <span className="font-mono tabular text-[12px] text-right text-ink-500">
-              {s.pct.toFixed(1)}%
+              {formatPercent1(s.pct)}
             </span>
             <span
               className="font-display font-bold tabular text-ink-900 text-right"
@@ -138,7 +138,7 @@ export function FunilCaptura({
             >
               <div className="eyebrow text-ink-400">ETAPA {i + 2}</div>
               <div className="font-mono tabular text-[13px] font-semibold text-danger-700 mt-1">
-                {(s.drop ?? 0).toFixed(1)}%
+                {formatPercent1(s.drop ?? 0)}
               </div>
             </div>
           ))}
@@ -170,7 +170,7 @@ export function FunilCaptura({
             className="font-display font-bold tabular text-ink-900 mt-1.5 flex items-baseline gap-1"
             style={{ fontSize: '22px' }}
           >
-            {funnel.cycleDays.toLocaleString('pt-BR')}
+            {formatIntBr(funnel.cycleDays)}
             <span className="text-ink-400 text-[15px]">dias</span>
           </div>
         </div>
