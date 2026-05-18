@@ -11,6 +11,7 @@ export interface PainelPulse {
   stale1h: number
   activeAiSessions: number
   sessionsToday: number
+  aiLatencyP95Ms: number
 }
 
 const EMPTY_PULSE: PainelPulse = {
@@ -20,6 +21,7 @@ const EMPTY_PULSE: PainelPulse = {
   stale1h: 0,
   activeAiSessions: 0,
   sessionsToday: 0,
+  aiLatencyP95Ms: 0,
 }
 
 export async function getPainelPulse(): Promise<PainelPulse> {
@@ -74,12 +76,21 @@ export async function getPainelPulse(): Promise<PainelPulse> {
       .select('*', { count: 'exact', head: true })
       .eq('store_id', store)
       .gte('created_at', dayStart),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).rpc('get_ai_latency_p95', { p_store_id: store }),
   ])
   results.forEach((r, i) => {
     if (r.error) console.error(`getPainelPulse query[${i}] error`, r.error)
   })
-  const [leadsWeek, leadsToday, awaiting, stale, activeAi, sessionsToday] =
-    results
+  const [
+    leadsWeek,
+    leadsToday,
+    awaiting,
+    stale,
+    activeAi,
+    sessionsToday,
+    latency,
+  ] = results
 
   return {
     leadsWeek: leadsWeek.count ?? 0,
@@ -88,6 +99,7 @@ export async function getPainelPulse(): Promise<PainelPulse> {
     stale1h: stale.count ?? 0,
     activeAiSessions: activeAi.count ?? 0,
     sessionsToday: sessionsToday.count ?? 0,
+    aiLatencyP95Ms: Number(latency.data ?? 0),
   }
 }
 
