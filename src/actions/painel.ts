@@ -186,13 +186,13 @@ export async function getFunnel(range: FunnelRange): Promise<FunnelData> {
       .eq('store_id', store)
       .eq('status', 'human_active')
       .gte('updated_at', start),
-    // Stage 6 + ciclo — proxy: status closed e updated_at (Onda B usa closed_at).
+    // Stage 6 + ciclo — conversas fechadas no período (closed_at, migration 022).
     supabase
       .from('conversations')
-      .select('created_at, updated_at')
+      .select('created_at, closed_at')
       .eq('store_id', store)
-      .eq('status', 'closed')
-      .gte('updated_at', start),
+      .not('closed_at', 'is', null)
+      .gte('closed_at', start),
   ])
 
   if (leadRes.error) console.error('getFunnel leads error', leadRes.error)
@@ -206,7 +206,7 @@ export async function getFunnel(range: FunnelRange): Promise<FunnelData> {
       : closedRows.reduce(
           (sum, c) =>
             sum +
-            (new Date(c.updated_at).getTime() -
+            (new Date(c.closed_at!).getTime() -
               new Date(c.created_at).getTime()),
           0,
         ) /
