@@ -15,7 +15,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.status = 'closed' AND OLD.status IS DISTINCT FROM 'closed' THEN
     NEW.closed_at = now();
-  ELSIF NEW.status <> 'closed' THEN
+  ELSIF NEW.status <> 'closed' AND OLD.status = 'closed' THEN
     NEW.closed_at = NULL;
   END IF;
   RETURN NEW;
