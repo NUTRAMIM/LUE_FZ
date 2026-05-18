@@ -8,6 +8,7 @@ import {
   formatIntBr,
   dropOffPct,
   captureRatePct,
+  formatLatency,
 } from '../formatters'
 
 // 2026-05-15T18:30:00Z = sexta-feira 15:30 em São Paulo (UTC-3).
@@ -88,5 +89,27 @@ describe('captureRatePct', () => {
 
   it('retorna 0 quando não há sessões', () => {
     expect(captureRatePct(5, 0)).toBe(0)
+  })
+})
+
+describe('formatLatency', () => {
+  it('formata ms como segundos pt-BR com 1 casa', () => {
+    expect(formatLatency(1830)).toBe('1,8s')
+  })
+
+  it('arredonda para 1 casa decimal', () => {
+    expect(formatLatency(940)).toBe('0,9s')
+  })
+
+  it('formata valores acima de 10s', () => {
+    expect(formatLatency(12000)).toBe('12,0s')
+  })
+
+  it('retorna travessão quando não há dado (zero)', () => {
+    expect(formatLatency(0)).toBe('—')
+  })
+
+  it('retorna travessão para valores negativos', () => {
+    expect(formatLatency(-5)).toBe('—')
   })
 })

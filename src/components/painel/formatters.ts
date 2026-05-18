@@ -94,3 +94,10 @@ export function captureRatePct(leads: number, sessions: number): number {
   if (sessions <= 0) return 0
   return (leads / sessions) * 100
 }
+
+// Formata uma latência em ms como rótulo de segundos pt-BR (1830 -> "1,8s").
+// Devolve "—" quando não há amostra (0 ou negativo).
+export function formatLatency(ms: number): string {
+  if (ms <= 0) return '—'
+  return `${(ms / 1000).toFixed(1).replace('.', ',')}s`
+}
