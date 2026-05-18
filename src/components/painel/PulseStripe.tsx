@@ -2,6 +2,7 @@
 
 import { Icon, Chip, type ChipTone } from './Icons'
 import type { PainelPulse } from '@/actions/painel'
+import { formatLatency } from './formatters'
 
 function pad(n: number): string {
   return String(n).padStart(2, '0')
@@ -26,7 +27,7 @@ export function PulseStripe({
       icon: 'msgSq',
       label: 'Sessões IA ativas',
       value: pad(pulse.activeAiSessions),
-      sub: 'IA RESPONDENDO  ·  p95 1,8s',
+      sub: `IA RESPONDENDO  ·  p95 ${formatLatency(pulse.aiLatencyP95Ms)}`,
     },
     {
       tone: 'info',

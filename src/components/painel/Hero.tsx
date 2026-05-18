@@ -2,7 +2,7 @@
 
 import { Icon } from './Icons'
 import type { PainelPulse } from '@/actions/painel'
-import { captureRatePct, formatPercent1 } from './formatters'
+import { captureRatePct, formatPercent1, formatLatency } from './formatters'
 
 const ACTIVITY = [
   { t: '09:42', a: 'vis_4f1c', k: 'sessão iniciada', tag: 'CHAT' },
@@ -95,8 +95,7 @@ export function Hero({
                 className="font-display font-extrabold tabular mt-1.5"
                 style={{ fontSize: '30px', lineHeight: 1 }}
               >
-                1,8
-                <span className="text-brand-300 text-[16px] ml-0.5">s</span>
+                {formatLatency(pulse.aiLatencyP95Ms)}
               </div>
             </div>
           </div>

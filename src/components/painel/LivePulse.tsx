@@ -1,6 +1,7 @@
 'use client'
 
 import type { PainelPulse } from '@/actions/painel'
+import { formatLatency } from './formatters'
 
 export function LivePulse({
   pulse,
@@ -27,7 +28,10 @@ export function LivePulse({
       </span>
       <span className="text-ink-300">·</span>
       <span>
-        IA p95 <span className="text-ink-700 font-semibold">1,8s</span>
+        IA p95{' '}
+        <span className="text-ink-700 font-semibold">
+          {formatLatency(pulse.aiLatencyP95Ms)}
+        </span>
       </span>
       <span className="text-ink-300">·</span>
       <span>
