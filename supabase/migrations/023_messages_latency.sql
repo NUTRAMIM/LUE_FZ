@@ -19,8 +19,12 @@ BEGIN
     ORDER BY created_at DESC
     LIMIT 1;
     IF last_user_at IS NOT NULL THEN
-      NEW.latency_ms =
-        (EXTRACT(EPOCH FROM (NEW.created_at - last_user_at)) * 1000)::INT;
+      NEW.latency_ms = GREATEST(
+        0,
+        (EXTRACT(
+          EPOCH FROM (COALESCE(NEW.created_at, now()) - last_user_at)
+        ) * 1000)::INT
+      );
     END IF;
   END IF;
   RETURN NEW;
