@@ -89,6 +89,7 @@ export interface Database {
           updated_at: string
           store_id: string | null
           last_read_at: string | null
+          closed_at: string | null
         }
         Insert: {
           id?: string
@@ -103,6 +104,7 @@ export interface Database {
           updated_at?: string
           store_id?: string | null
           last_read_at?: string | null
+          closed_at?: string | null
         }
         Update: {
           id?: string
@@ -116,6 +118,7 @@ export interface Database {
           updated_at?: string
           store_id?: string | null
           last_read_at?: string | null
+          closed_at?: string | null
         }
         Relationships: []
       }
@@ -130,6 +133,7 @@ export interface Database {
           message_type: 'text' | 'image' | 'audio'
           media_path: string | null
           store_id: string
+          latency_ms: number | null
         }
         Insert: {
           id?: string
@@ -141,6 +145,7 @@ export interface Database {
           message_type?: 'text' | 'image' | 'audio'
           media_path?: string | null
           store_id?: string
+          latency_ms?: number | null
         }
         Update: {
           id?: string
@@ -151,6 +156,7 @@ export interface Database {
           message_type?: 'text' | 'image' | 'audio'
           media_path?: string | null
           store_id?: string
+          latency_ms?: number | null
         }
         Relationships: []
       }
