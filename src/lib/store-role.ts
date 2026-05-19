@@ -11,6 +11,8 @@ export async function getStoreRole(): Promise<StoreRole> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  // Quem chama getStoreRole já garante a autenticação antes (guarda de página).
+  // Sem usuário, devolve 'owner' apenas como fallback — nunca é usado como gate.
   if (!user) return 'owner'
 
   const { data } = await supabase
