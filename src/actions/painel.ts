@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { rangeStart } from '@/components/painel/formatters'
+import { rangeStart, shortRef } from '@/components/painel/formatters'
 import type { FunnelRange } from '@/components/painel/formatters'
 
 export interface PainelPulse {
@@ -222,4 +222,67 @@ export async function getFunnel(range: FunnelRange): Promise<FunnelData> {
     closed: closedRows.length,
     cycleDays: Math.round(cycleDays * 10) / 10,
   }
+}
+
+export interface ActivityEvent {
+  time: string // ISO timestamp
+  identifier: string // "vis_4f1c" | "#2841"
+  label: string
+  tag: 'CHAT' | 'LEAD'
+}
+
+// Ticker "Atividade ao vivo" do Hero: sessões de chat iniciadas e leads
+// capturados na última hora, mesclados e ordenados do mais recente ao mais
+// antigo. Limitado aos 6 eventos mais recentes.
+export async function getActivityFeed(): Promise<ActivityEvent[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const store = user.id
+  const oneHourAgo = new Date(Date.now() - 3_600_000).toISOString()
+
+  const [convsRes, leadsRes] = await Promise.all([
+    supabase
+      .from('conversations')
+      .select('id, visitor_id, created_at')
+      .eq('store_id', store)
+      .gte('created_at', oneHourAgo)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('leads')
+      .select('id, created_at')
+      .eq('store_id', store)
+      .gte('created_at', oneHourAgo)
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ])
+
+  if (convsRes.error) {
+    console.error('getActivityFeed conversations error', convsRes.error)
+  }
+  if (leadsRes.error) {
+    console.error('getActivityFeed leads error', leadsRes.error)
+  }
+
+  const events: ActivityEvent[] = [
+    ...(convsRes.data ?? []).map((c) => ({
+      time: c.created_at,
+      identifier: `vis_${shortRef(c.visitor_id)}`,
+      label: 'sessão iniciada',
+      tag: 'CHAT' as const,
+    })),
+    ...(leadsRes.data ?? []).map((l) => ({
+      time: l.created_at,
+      identifier: `#${shortRef(l.id)}`,
+      label: 'lead capturado',
+      tag: 'LEAD' as const,
+    })),
+  ]
+
+  events.sort((a, b) => b.time.localeCompare(a.time))
+  return events.slice(0, 6)
 }
