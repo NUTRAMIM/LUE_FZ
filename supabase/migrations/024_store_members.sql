@@ -17,7 +17,8 @@ CREATE INDEX idx_store_members_user ON store_members (user_id);
 -- Seed: cada loja existente vira sua própria dona (store_id = user.id em todo
 -- o projeto). full_name aproveita o store_name.
 INSERT INTO store_members (store_id, user_id, role, full_name)
-SELECT id, id, 'owner', store_name FROM store_settings;
+SELECT id, id, 'owner', store_name FROM store_settings
+ON CONFLICT (store_id, user_id) DO NOTHING;
 
 ALTER TABLE store_members ENABLE ROW LEVEL SECURITY;
 
