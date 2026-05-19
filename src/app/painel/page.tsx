@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getPainelPulse, getFunnel } from '@/actions/painel'
+import { getPainelPulse, getFunnel, getActivityFeed } from '@/actions/painel'
 import {
   formatPainelDate,
   formatPainelClock,
@@ -17,10 +17,18 @@ export default async function PainelPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [initialPulse, initialFunnel] = await Promise.all([
-    getPainelPulse(),
-    getFunnel('month'),
-  ])
+  const [initialPulse, initialFunnel, initialActivity, storeRes] =
+    await Promise.all([
+      getPainelPulse(),
+      getFunnel('month'),
+      getActivityFeed(),
+      supabase
+        .from('store_settings')
+        .select('store_name')
+        .eq('id', user.id)
+        .maybeSingle(),
+    ])
+  const ownerName = storeRes.data?.store_name ?? ''
   const now = new Date()
 
   return (
@@ -28,6 +36,8 @@ export default async function PainelPage() {
       storeId={user.id}
       initialPulse={initialPulse}
       initialFunnel={initialFunnel}
+      initialActivity={initialActivity}
+      ownerName={ownerName}
       dateLabel={formatPainelDate(now)}
       greeting={painelGreeting(now)}
       initialClock={formatPainelClock(now)}

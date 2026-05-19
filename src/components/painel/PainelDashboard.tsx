@@ -1,11 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { PainelPulse, FunnelData } from '@/actions/painel'
+import type { PainelPulse, FunnelData, ActivityEvent } from '@/actions/painel'
 import { getFunnel } from '@/actions/painel'
 import type { FunnelRange } from './formatters'
 import { formatPainelClock } from './formatters'
-import { useVisitorsPresence, usePainelPulse } from '@/lib/realtime-painel'
+import {
+  useVisitorsPresence,
+  usePainelPulse,
+  usePainelActivity,
+} from '@/lib/realtime-painel'
 import { Topbar } from './Topbar'
 import { Hero } from './Hero'
 import { PulseStripe } from './PulseStripe'
@@ -18,6 +22,8 @@ export function PainelDashboard({
   storeId,
   initialPulse,
   initialFunnel,
+  initialActivity,
+  ownerName,
   dateLabel,
   greeting,
   initialClock,
@@ -25,12 +31,15 @@ export function PainelDashboard({
   storeId: string
   initialPulse: PainelPulse
   initialFunnel: FunnelData
+  initialActivity: ActivityEvent[]
+  ownerName: string
   dateLabel: string
   greeting: string
   initialClock: string
 }) {
   const pulse = usePainelPulse(storeId, initialPulse)
   const visitors = useVisitorsPresence(storeId)
+  const activity = usePainelActivity(storeId, initialActivity)
 
   const [range, setRange] = useState<FunnelRange>('month')
   const [funnel, setFunnel] = useState(initialFunnel)
@@ -53,7 +62,13 @@ export function PainelDashboard({
   return (
     <div className="max-w-[1280px] mx-auto px-8 py-7">
       <Topbar dateLabel={dateLabel} />
-      <Hero pulse={pulse} greeting={greeting} clock={clock} />
+      <Hero
+        pulse={pulse}
+        greeting={greeting}
+        clock={clock}
+        activity={activity}
+        ownerName={ownerName}
+      />
       <PulseStripe pulse={pulse} visitors={visitors} />
 
       <section className="mt-10">
