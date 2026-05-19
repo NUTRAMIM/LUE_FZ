@@ -101,3 +101,9 @@ export function formatLatency(ms: number): string {
   if (ms <= 0) return '—'
   return `${(ms / 1000).toFixed(1).replace('.', ',')}s`
 }
+
+// Referência curta de um UUID: os 4 primeiros caracteres do id sem hífens.
+// Ex.: "4f1ca02e-1234-..." -> "4f1c". Usado nos identificadores do ticker.
+export function shortRef(id: string): string {
+  return id.replace(/-/g, '').slice(0, 4)
+}

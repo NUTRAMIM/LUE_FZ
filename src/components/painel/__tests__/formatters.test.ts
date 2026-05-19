@@ -9,6 +9,7 @@ import {
   dropOffPct,
   captureRatePct,
   formatLatency,
+  shortRef,
 } from '../formatters'
 
 // 2026-05-15T18:30:00Z = sexta-feira 15:30 em São Paulo (UTC-3).
@@ -111,5 +112,23 @@ describe('formatLatency', () => {
 
   it('retorna travessão para valores negativos', () => {
     expect(formatLatency(-5)).toBe('—')
+  })
+})
+
+describe('shortRef', () => {
+  it('pega os 4 primeiros caracteres hex de um UUID sem hífens', () => {
+    expect(shortRef('4f1ca02e-1234-5678-9abc-def012345678')).toBe('4f1c')
+  })
+
+  it('funciona quando os 4 primeiros são zeros', () => {
+    expect(shortRef('00001111-2222-3333-4444-555566667777')).toBe('0000')
+  })
+
+  it('devolve a string inteira quando ela é menor que 4', () => {
+    expect(shortRef('abc')).toBe('abc')
+  })
+
+  it('devolve string vazia para entrada vazia', () => {
+    expect(shortRef('')).toBe('')
   })
 })
