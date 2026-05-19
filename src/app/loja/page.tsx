@@ -27,7 +27,7 @@ export default async function LojaPage() {
 
   const base =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-    'http://localhost:3000'
+    'https://lue.fz'
   const baseHost = base.replace(/^https?:\/\//, '')
   const fullUrl = slug ? `${base}/chat/${slug}` : ''
   const qrSvg = slug
