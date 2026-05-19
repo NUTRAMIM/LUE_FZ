@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Icon } from './Icons'
 import type { PainelPulse, ActivityEvent } from '@/actions/painel'
 import {
@@ -105,9 +106,12 @@ export function Hero({
           </div>
 
           <div className="mt-7 flex flex-wrap gap-2.5">
-            <button className="inline-flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-50 transition-colors text-[13px] font-semibold px-4 py-2.5 rounded-xl">
+            <Link
+              href="/leads"
+              className="inline-flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-50 transition-colors text-[13px] font-semibold px-4 py-2.5 rounded-xl"
+            >
               Abrir fila de leads <Icon name="arrow" className="w-4 h-4" />
-            </button>
+            </Link>
             <button className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl ring-1 ring-white/15">
               Ver relatório do dia
             </button>
