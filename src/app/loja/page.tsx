@@ -13,7 +13,7 @@ export default async function LojaPage() {
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
+  if ((await getStoreRole()) !== 'owner') redirect('/leads')
 
   let slug: string | null = null
   if (user) {

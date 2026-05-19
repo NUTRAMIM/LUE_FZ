@@ -17,7 +17,7 @@ export default async function PainelPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
+  if ((await getStoreRole()) !== 'owner') redirect('/leads')
 
   const [initialPulse, initialFunnel, initialActivity, storeRes] =
     await Promise.all([

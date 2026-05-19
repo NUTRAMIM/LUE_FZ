@@ -12,7 +12,7 @@ export default async function EquipePage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
+  if ((await getStoreRole()) !== 'owner') redirect('/leads')
 
   const members = await listStoreMembers()
   return <EquipeView members={members} />

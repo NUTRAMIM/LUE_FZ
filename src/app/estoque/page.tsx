@@ -12,7 +12,7 @@ export default async function EstoquePage() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
+  if ((await getStoreRole()) !== 'owner') redirect('/leads')
 
   const [{ data: productsData, error: productsError }, { data: settings }] = await Promise.all([
     supabase.from('products').select('*').order('name', { ascending: true }),
