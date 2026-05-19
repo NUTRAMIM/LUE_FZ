@@ -58,11 +58,14 @@ export async function markLeadContacted(
   } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Não autenticado.' }
 
-  const { data: member } = await supabase
+  const { data: member, error: memberErr } = await supabase
     .from('store_members')
     .select('full_name')
     .eq('user_id', user.id)
     .maybeSingle()
+  if (memberErr) {
+    console.error('markLeadContacted member lookup error', memberErr)
+  }
 
   const { error } = await supabase
     .from('leads')
