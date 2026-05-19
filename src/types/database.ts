@@ -174,6 +174,10 @@ export interface Database {
           store_id: string | null
           conversation_id: string | null
           cep: string | null
+          interest_summary: string | null
+          contacted_at: string | null
+          contacted_by: string | null
+          contacted_by_name: string | null
         }
         Insert: {
           id?: string
@@ -188,6 +192,10 @@ export interface Database {
           store_id?: string | null
           conversation_id?: string | null
           cep?: string | null
+          interest_summary?: string | null
+          contacted_at?: string | null
+          contacted_by?: string | null
+          contacted_by_name?: string | null
         }
         Update: {
           id?: string
@@ -200,6 +208,10 @@ export interface Database {
           store_id?: string | null
           conversation_id?: string | null
           cep?: string | null
+          interest_summary?: string | null
+          contacted_at?: string | null
+          contacted_by?: string | null
+          contacted_by_name?: string | null
         }
         Relationships: []
       }
