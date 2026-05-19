@@ -31,6 +31,7 @@ export function EquipeView({ members }: { members: MemberRow[] }) {
   }
 
   function handleRemove(memberId: string) {
+    setError(null)
     startTransition(async () => {
       const res = await removeVendor(memberId)
       if (res.ok) router.refresh()
