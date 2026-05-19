@@ -28,6 +28,9 @@ export default async function PainelPage() {
         .eq('id', user.id)
         .maybeSingle(),
     ])
+  if (storeRes.error) {
+    console.error('painel store_settings error', storeRes.error)
+  }
   const ownerName = storeRes.data?.store_name ?? ''
   const now = new Date()
 
