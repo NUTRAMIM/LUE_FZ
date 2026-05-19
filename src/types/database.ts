@@ -294,6 +294,33 @@ export interface Database {
         }
         Relationships: []
       }
+      store_members: {
+        Row: {
+          id: string
+          store_id: string
+          user_id: string
+          role: string
+          full_name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          user_id: string
+          role?: string
+          full_name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          user_id?: string
+          role?: string
+          full_name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
