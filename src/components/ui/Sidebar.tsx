@@ -18,6 +18,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: '/painel', label: 'Painel', iconName: 'trend', ownerOnly: true },
   { href: '/conversas', label: 'Conversas', iconName: 'msgSq', badge: '12' },
+  { href: '/leads', label: 'Leads', iconName: 'inbox' },
   { href: '/estoque', label: 'Estoque', iconName: 'package', ownerOnly: true },
   { href: '/loja', label: 'Loja', iconName: 'store', ownerOnly: true },
   { href: '/equipe', label: 'Equipe', iconName: 'userX', ownerOnly: true },
