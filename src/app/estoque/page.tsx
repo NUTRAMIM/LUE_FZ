@@ -1,4 +1,6 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getStoreRole } from '@/lib/store-role'
 import type { Product } from '@/types/product'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EstoqueClient } from './EstoqueClient'
@@ -9,6 +11,8 @@ export default async function EstoquePage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
   const [{ data: productsData, error: productsError }, { data: settings }] = await Promise.all([
     supabase.from('products').select('*').order('name', { ascending: true }),

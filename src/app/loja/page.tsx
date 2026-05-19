@@ -1,5 +1,7 @@
+import { redirect } from 'next/navigation'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/server'
+import { getStoreRole } from '@/lib/store-role'
 import { Icon } from '@/components/painel/Icons'
 import { LojaCopyButton } from '@/components/loja/LojaCopyButton'
 import { LojaForm } from './LojaForm'
@@ -9,6 +11,9 @@ export default async function LojaPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
   let slug: string | null = null
   if (user) {
@@ -22,7 +27,7 @@ export default async function LojaPage() {
 
   const base =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-    'https://lue.fz'
+    'http://localhost:3000'
   const baseHost = base.replace(/^https?:\/\//, '')
   const fullUrl = slug ? `${base}/chat/${slug}` : ''
   const qrSvg = slug

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getStoreRole } from '@/lib/store-role'
 import { getPainelPulse, getFunnel, getActivityFeed } from '@/actions/painel'
 import {
   formatPainelDate,
@@ -16,6 +17,7 @@ export default async function PainelPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
   const [initialPulse, initialFunnel, initialActivity, storeRes] =
     await Promise.all([
