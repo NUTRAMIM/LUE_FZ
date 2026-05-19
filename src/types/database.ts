@@ -299,7 +299,7 @@ export interface Database {
           id: string
           store_id: string
           user_id: string
-          role: string
+          role: 'owner' | 'agent'
           full_name: string
           created_at: string
         }
@@ -307,7 +307,7 @@ export interface Database {
           id?: string
           store_id: string
           user_id: string
-          role?: string
+          role?: 'owner' | 'agent'
           full_name: string
           created_at?: string
         }
@@ -315,7 +315,7 @@ export interface Database {
           id?: string
           store_id?: string
           user_id?: string
-          role?: string
+          role?: 'owner' | 'agent'
           full_name?: string
           created_at?: string
         }
