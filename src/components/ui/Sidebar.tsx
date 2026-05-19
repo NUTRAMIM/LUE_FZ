@@ -238,7 +238,12 @@ export function Sidebar() {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        // Sem usuário confirmado, falha aberto para dono (igual a getStoreRole).
+        // O Sidebar é cosmético; a guarda real de papel é server-side.
+        if (!cancelled) setIsOwner(true)
+        return
+      }
       const { data } = await supabase
         .from('store_members')
         .select('role')
