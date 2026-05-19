@@ -2,6 +2,10 @@
 -- Troca a RLS baseada em "auth.uid() = store_id" (dono-único) por membership.
 -- A subquery aciona store_members_select_self (user_id = auth.uid()), que é
 -- self-contida — sem recursão.
+--
+-- Nota: leads.store_id e conversations.store_id são nullable. Linhas com
+-- store_id NULL ficam invisíveis sob estas policies (NULL IN (...) => NULL).
+-- É intencional — uma linha sem loja não pertence a nenhuma loja.
 
 -- leads: a policy antiga (auth.role() = 'authenticated') deixava QUALQUER
 -- usuário logado ver todos os leads de todas as lojas. Troca por membership.
