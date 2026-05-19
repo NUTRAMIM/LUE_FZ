@@ -12,13 +12,15 @@ type NavItem = {
   label: string
   iconName: IconName
   badge?: string
+  ownerOnly?: boolean
 }
 
 const NAV: NavItem[] = [
-  { href: '/painel', label: 'Painel', iconName: 'trend' },
+  { href: '/painel', label: 'Painel', iconName: 'trend', ownerOnly: true },
   { href: '/conversas', label: 'Conversas', iconName: 'msgSq', badge: '12' },
-  { href: '/estoque', label: 'Estoque', iconName: 'package' },
-  { href: '/loja', label: 'Loja', iconName: 'store' },
+  { href: '/estoque', label: 'Estoque', iconName: 'package', ownerOnly: true },
+  { href: '/loja', label: 'Loja', iconName: 'store', ownerOnly: true },
+  { href: '/equipe', label: 'Equipe', iconName: 'userX', ownerOnly: true },
 ]
 
 const OPERADORES = [
@@ -227,6 +229,30 @@ function AgenteIA() {
 
 export function Sidebar() {
   const pathname = usePathname()
+  const [isOwner, setIsOwner] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadRole() {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('store_members')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      // Vendedor tem role 'agent'; dono tem 'owner' ou nenhuma linha.
+      if (!cancelled) setIsOwner(data?.role !== 'agent')
+    }
+    loadRole()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const isConversas = pathname?.startsWith('/conversas') ?? false
   const isLoja = pathname?.startsWith('/loja') ?? false
 
@@ -265,7 +291,7 @@ export function Sidebar() {
       <nav className="px-3 flex-1 overflow-y-auto">
         <div className="eyebrow text-ink-400 px-3 mb-2">PRINCIPAL</div>
         <ul className="space-y-1">
-          {NAV.map(({ href, label, iconName, badge }) => {
+          {NAV.filter((item) => isOwner || !item.ownerOnly).map(({ href, label, iconName, badge }) => {
             const active =
               pathname === href || pathname?.startsWith(href + '/')
             return (
