@@ -1,27 +1,31 @@
 'use client'
 
 import { Icon } from './Icons'
-import type { PainelPulse } from '@/actions/painel'
-import { captureRatePct, formatPercent1, formatLatency } from './formatters'
-
-const ACTIVITY = [
-  { t: '09:42', a: 'vis_4f1c', k: 'sessão iniciada', tag: 'CHAT' },
-  { t: '09:39', a: '#2841', k: 'lead capturado', tag: 'LEAD' },
-  { t: '09:36', a: '#2837', k: 'handoff → Camila R.', tag: 'HANDOFF' },
-] as const
+import type { PainelPulse, ActivityEvent } from '@/actions/painel'
+import {
+  captureRatePct,
+  formatPercent1,
+  formatLatency,
+  formatPainelClock,
+} from './formatters'
 
 export function Hero({
   pulse,
   greeting,
   clock,
+  activity,
+  ownerName,
 }: {
   pulse: PainelPulse
   greeting: string
   clock: string
+  activity: ActivityEvent[]
+  ownerName: string
 }) {
   const captureRate = formatPercent1(
     captureRatePct(pulse.leadsToday, pulse.sessionsToday),
   )
+  const hello = ownerName ? `Olá, ${ownerName}.` : 'Olá.'
   return (
     <div className="relative overflow-hidden rounded-3xl text-white hero-surface">
       <div className="hero-grain" />
@@ -50,7 +54,7 @@ export function Hero({
             className="font-display font-extrabold leading-[1.02] tracking-tight mt-3"
             style={{ fontSize: '48px' }}
           >
-            Bem-vinda, Mariana.
+            {hello}
           </div>
           <p className="mt-3.5 text-[15px] text-brand-100/90 max-w-[44ch] leading-relaxed">
             Sua IA capturou{' '}
@@ -120,17 +124,25 @@ export function Hero({
               <span className="eyebrow text-brand-200/80">ÚLT. 1H</span>
             </div>
             <ul className="divide-y divide-white/10">
-              {ACTIVITY.map((e, i) => (
-                <li key={i} className="px-4 py-3 flex items-center gap-3">
+              {activity.length === 0 && (
+                <li className="px-4 py-6 text-center text-[13px] text-brand-200/70">
+                  Sem atividade na última hora
+                </li>
+              )}
+              {activity.map((e) => (
+                <li
+                  key={`${e.tag}-${e.time}-${e.identifier}`}
+                  className="px-4 py-3 flex items-center gap-3"
+                >
                   <span className="eyebrow text-brand-300 tabular w-10 shrink-0">
-                    {e.t}
+                    {formatPainelClock(new Date(e.time))}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] leading-snug truncate">
                       <span className="font-mono font-semibold text-white">
-                        {e.a}
+                        {e.identifier}
                       </span>{' '}
-                      <span className="text-brand-100/80">{e.k}</span>
+                      <span className="text-brand-100/80">{e.label}</span>
                     </div>
                   </div>
                   <span className="eyebrow text-brand-200/70">{e.tag}</span>
