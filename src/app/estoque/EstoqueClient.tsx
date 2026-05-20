@@ -67,11 +67,11 @@ export function EstoqueClient({
     })
   }, [allRows, search, statusFilter])
 
+  // selectedRow ainda existe pra alimentar effectiveMin/status no Details
+  // drawer (esses dois são derivados da listagem; o resto do produto vem
+  // via fetch lazy em getProductDetails dentro do drawer).
   const selectedRow = selectedId
     ? allRows.find(r => r.product.id === selectedId) ?? null
-    : null
-  const editingRow = editingId
-    ? allRows.find(r => r.product.id === editingId) ?? null
     : null
 
   return (
@@ -107,14 +107,14 @@ export function EstoqueClient({
       )}
 
       <ProductDetailsDrawer
-        product={selectedRow?.product ?? null}
+        productId={selectedId}
         effectiveMin={selectedRow?.effectiveMin ?? 0}
         status={selectedRow?.status ?? 'ok'}
         open={selectedId !== null}
         onClose={() => setSelectedId(null)}
       />
       <ProductEditDrawer
-        product={editingRow?.product ?? null}
+        productId={editingId}
         open={editingId !== null}
         onClose={() => setEditingId(null)}
       />

@@ -14,8 +14,16 @@ export default async function EstoquePage() {
   if (!user) redirect('/login')
   if ((await getStoreRole()) !== 'owner') redirect('/leads')
 
+  // F1.1: projeção explícita; colunas pesadas (description, variants,
+  // attributes) ficam pro fetch lazy via getProductDetails quando um drawer
+  // abre.
   const [{ data: productsData, error: productsError }, { data: settings }] = await Promise.all([
-    supabase.from('products').select('*').order('name', { ascending: true }),
+    supabase
+      .from('products')
+      .select(
+        'id, sku, name, category, brand, price, compare_at_price, stock_quantity, stock_min, image_urls, tamanhos, cores',
+      )
+      .order('name', { ascending: true }),
     user
       ? supabase
           .from('store_settings')

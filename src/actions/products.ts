@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getStoreRole } from '@/lib/store-role'
+import type { Product } from '@/types/product'
 
 const MAX_TEXT = 500
 const MAX_DESCRIPTION = 2000
@@ -161,4 +162,38 @@ export async function saveProduct(data: SaveProductInput): Promise<SaveProductRe
 
   revalidatePath('/estoque')
   return { success: true }
+}
+
+export async function getProductDetails(id: string): Promise<Product | null> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Nao autorizado. Faca login novamente.')
+  }
+
+  if ((await getStoreRole()) !== 'owner') {
+    throw new Error('Apenas o dono da loja pode visualizar detalhes do produto.')
+  }
+
+  const cleanId = id.trim().slice(0, 80)
+  if (!cleanId) return null
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', cleanId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (error) {
+    console.error('getProductDetails error:', error)
+    throw new Error('Erro ao carregar produto.')
+  }
+
+  return data ?? null
 }

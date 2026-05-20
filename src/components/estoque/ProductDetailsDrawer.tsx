@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Drawer } from '@/components/ui/Drawer'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
+import { getProductDetails } from '@/actions/products'
 import type { Product } from '@/types/product'
 import type { StockStatus } from '@/lib/stock-status'
 
@@ -16,19 +18,80 @@ function formatBRL(v: number): string {
 }
 
 export function ProductDetailsDrawer({
-  product,
+  productId,
   effectiveMin,
   status,
   open,
   onClose,
 }: {
-  product: Product | null
+  productId: string | null
   effectiveMin: number
   status: StockStatus
   open: boolean
   onClose: () => void
 }) {
-  if (!product) return null
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open || !productId) {
+      setProduct(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    setProduct(null)
+    getProductDetails(productId)
+      .then((p) => {
+        if (cancelled) return
+        if (!p) {
+          setError('Produto nao encontrado para esta loja.')
+        } else {
+          setProduct(p)
+        }
+        setLoading(false)
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        const msg = err instanceof Error ? err.message : 'Erro ao carregar produto.'
+        setError(msg)
+        setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [productId, open])
+
+  if (loading) {
+    return (
+      <Drawer open={open} onClose={onClose} title="Carregando...">
+        <div className="space-y-4 animate-pulse">
+          <div className="h-48 rounded-xl bg-slate-100" />
+          <div className="h-4 w-1/2 rounded bg-slate-100" />
+          <div className="h-4 w-2/3 rounded bg-slate-100" />
+          <div className="h-20 rounded-xl bg-slate-100" />
+          <div className="h-20 rounded-xl bg-slate-100" />
+        </div>
+      </Drawer>
+    )
+  }
+
+  if (error || !product) {
+    if (!open) return null
+    return (
+      <Drawer open={open} onClose={onClose} title="Detalhes do produto">
+        {error ? (
+          <div className="rounded-xl border border-danger/20 bg-danger-soft p-3 text-sm text-danger">
+            {error}
+          </div>
+        ) : null}
+      </Drawer>
+    )
+  }
 
   const cfg = statusConfig[status]
   const images = product.image_urls ?? []
