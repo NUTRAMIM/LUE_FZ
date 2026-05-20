@@ -176,7 +176,7 @@ export function ProductCreateDrawer({
           <Button type="button" variant="secondary" onClick={handleClose} disabled={isPending || uploading}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending || uploading}>
             {isPending ? 'Criando...' : 'Criar produto'}
           </Button>
         </div>
