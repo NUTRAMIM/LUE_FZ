@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { logout } from '@/actions/auth'
 import { Icon, type IconName } from '@/components/painel/Icons'
-import { createClient } from '@/lib/supabase/client'
+import type { StoreRole } from '@/lib/store-role'
 
 type NavItem = {
   href: string
@@ -127,30 +127,8 @@ function NestaPaginaLoja() {
   )
 }
 
-function SuaUrlPublica() {
-  const [slug, setSlug] = useState<string | null>(null)
+function SuaUrlPublica({ slug }: { slug: string | null }) {
   const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase
-        .from('store_settings')
-        .select('chat_slug')
-        .eq('id', user.id)
-        .maybeSingle()
-      if (!cancelled && data?.chat_slug) setSlug(data.chat_slug)
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   async function handleCopy() {
     if (!slug) return
@@ -228,36 +206,17 @@ function AgenteIA() {
   )
 }
 
-export function Sidebar() {
+export function Sidebar({
+  role,
+  slug,
+}: {
+  role: StoreRole
+  slug: string | null
+}) {
   const pathname = usePathname()
-  const [isOwner, setIsOwner] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    async function loadRole() {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        // Sem usuário confirmado, falha aberto para dono (igual a getStoreRole).
-        // O Sidebar é cosmético; a guarda real de papel é server-side.
-        if (!cancelled) setIsOwner(true)
-        return
-      }
-      const { data } = await supabase
-        .from('store_members')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      // Vendedor tem role 'agent'; dono tem 'owner' ou nenhuma linha.
-      if (!cancelled) setIsOwner(data?.role !== 'agent')
-    }
-    loadRole()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  // Fail-open vive em getSidebarData (server-side); aqui o role chega
+  // determinístico via prop.
+  const isOwner = role !== 'agent'
 
   const isConversas = pathname?.startsWith('/conversas') ?? false
   const isLoja = pathname?.startsWith('/loja') ?? false
@@ -331,7 +290,7 @@ export function Sidebar() {
         ) : isLoja ? (
           <>
             <NestaPaginaLoja />
-            <SuaUrlPublica />
+            <SuaUrlPublica slug={slug} />
           </>
         ) : (
           <ProximaNaFila />
