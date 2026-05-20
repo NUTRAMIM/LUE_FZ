@@ -387,6 +387,83 @@ export interface Database {
         }
         Relationships: []
       }
+      store_subscriptions: {
+        Row: {
+          id: string
+          store_id: string
+          plan_id: string
+          provider: 'stripe' | 'mercadopago'
+          status: 'active' | 'past_due' | 'canceled' | 'pending' | 'incomplete'
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          stripe_price_id: string | null
+          mp_customer_id: string | null
+          mp_subscription_id: string | null
+          mp_payment_id: string | null
+          current_period_end: string | null
+          cancel_at_period_end: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          plan_id: string
+          provider: 'stripe' | 'mercadopago'
+          status: 'active' | 'past_due' | 'canceled' | 'pending' | 'incomplete'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_price_id?: string | null
+          mp_customer_id?: string | null
+          mp_subscription_id?: string | null
+          mp_payment_id?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          plan_id?: string
+          provider?: 'stripe' | 'mercadopago'
+          status?: 'active' | 'past_due' | 'canceled' | 'pending' | 'incomplete'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_price_id?: string | null
+          mp_customer_id?: string | null
+          mp_subscription_id?: string | null
+          mp_payment_id?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_events: {
+        Row: {
+          id: string
+          provider: 'stripe' | 'mercadopago'
+          type: string
+          payload: Json
+          processed_at: string
+        }
+        Insert: {
+          id: string
+          provider: 'stripe' | 'mercadopago'
+          type: string
+          payload: Json
+          processed_at?: string
+        }
+        Update: {
+          id?: string
+          provider?: 'stripe' | 'mercadopago'
+          type?: string
+          payload?: Json
+          processed_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
