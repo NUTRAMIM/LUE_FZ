@@ -12,7 +12,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-288, -1344],
+      "position": [
+        -288,
+        -1344
+      ],
       "webhookId": "b9126634-c871-444a-90e7-38909895e06b"
     },
     {
@@ -45,7 +48,10 @@
       "name": "Edit Fields",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [32, -1344]
+      "position": [
+        32,
+        -1344
+      ]
     },
     {
       "parameters": {
@@ -64,7 +70,10 @@
       "name": "Informaçoes da loja1",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [432, -1344],
+      "position": [
+        432,
+        -1344
+      ],
       "credentials": {
         "supabaseApi": {
           "id": "kL2vt2LTVZNYDJZq",
@@ -84,7 +93,10 @@
       "name": "AI Agent2",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [752, -1344]
+      "position": [
+        752,
+        -1344
+      ]
     },
     {
       "parameters": {
@@ -103,7 +115,10 @@
       "name": "OpenAI Chat Model2",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
-      "position": [576, -1104],
+      "position": [
+        576,
+        -1104
+      ],
       "credentials": {
         "openAiApi": {
           "id": "9P4hWIaS93nW5FhK",
@@ -120,7 +135,10 @@
       "name": "Postgres Chat Memory",
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
-      "position": [752, -1104],
+      "position": [
+        752,
+        -1104
+      ],
       "credentials": {
         "postgres": {
           "id": "5LgfkDaHLkpMWYfd",
@@ -158,7 +176,10 @@
       "name": "BUSCAR_PRODUTOS",
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
-      "position": [976, -1168],
+      "position": [
+        976,
+        -1168
+      ],
       "credentials": {
         "supabaseApi": {
           "id": "kL2vt2LTVZNYDJZq",
@@ -176,7 +197,10 @@
       "name": "Embeddings OpenAI2",
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1.2,
-      "position": [1056, -944],
+      "position": [
+        1056,
+        -944
+      ],
       "credentials": {
         "openAiApi": {
           "id": "9P4hWIaS93nW5FhK",
@@ -194,7 +218,10 @@
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
-      "position": [1136, -1344]
+      "position": [
+        1136,
+        -1344
+      ]
     },
     {
       "parameters": {
@@ -208,7 +235,10 @@
       "name": "Lead Analyzer",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [752, -1600]
+      "position": [
+        752,
+        -1600
+      ]
     },
     {
       "parameters": {
@@ -225,7 +255,10 @@
       "name": "OpenAI Chat Model - Lead",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
-      "position": [752, -1820],
+      "position": [
+        752,
+        -1820
+      ],
       "credentials": {
         "openAiApi": {
           "id": "9P4hWIaS93nW5FhK",
@@ -241,7 +274,10 @@
       "name": "Parse Lead",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [976, -1600]
+      "position": [
+        976,
+        -1600
+      ]
     },
     {
       "parameters": {
@@ -272,7 +308,10 @@
       "name": "IF Has Lead Data",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [1200, -1600]
+      "position": [
+        1200,
+        -1600
+      ]
     },
     {
       "parameters": {
@@ -301,7 +340,10 @@
       "name": "Get Lead",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [1424, -1600],
+      "position": [
+        1424,
+        -1600
+      ],
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
@@ -339,7 +381,10 @@
       "name": "IF Lead Exists",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [1648, -1600]
+      "position": [
+        1648,
+        -1600
+      ]
     },
     {
       "parameters": {
@@ -385,7 +430,10 @@
       "name": "Update Lead",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [1872, -1712],
+      "position": [
+        1872,
+        -1712
+      ],
       "credentials": {
         "supabaseApi": {
           "id": "kL2vt2LTVZNYDJZq",
@@ -434,7 +482,165 @@
       "name": "Create Lead",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [1872, -1488],
+      "position": [
+        1872,
+        -1488
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT string_agg(role || ': ' || content, E'\n') AS messages_text FROM (SELECT role, content, created_at FROM messages WHERE conversation_id = '{{ $('Parse Lead').item.json.conversation_id }}' ORDER BY created_at DESC LIMIT 10) sub",
+        "options": {}
+      },
+      "id": "i1a2b3c4-d5e6-4789-0123-456789abcdef",
+      "name": "Get Recent Messages",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2096,
+        -1600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "5LgfkDaHLkpMWYfd",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Mensagens recentes (mais recente primeiro):\n{{ $json.messages_text }}",
+        "options": {
+          "systemMessage": "Você sintetiza o interesse do cliente para o vendedor humano que vai assumir. Em 1-2 frases (até ~200 caracteres), descreva: categoria/tipo de produto procurado, atributos mencionados (cor, tamanho, ocasião, estilo, faixa de preço). Não invente nada. Se a conversa não revelou interesse claro, devolva exatamente null. Sem markdown, sem aspas, sem prefixar com 'O cliente...' — vá direto ao ponto."
+        }
+      },
+      "id": "i2b3c4d5-e6f7-4890-1234-56789abcdef0",
+      "name": "Interest Summarizer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2320,
+        -1600
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "i3c4d5e6-f7a8-4901-2345-6789abcdef01",
+      "name": "OpenAI Chat Model - Interest",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2320,
+        -1820
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "9P4hWIaS93nW5FhK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = String($input.first().json.output ?? '').trim();\nconst cleaned = raw.replace(/^```(?:json)?\\s*|\\s*```$/g, '').trim();\nconst summary = (!cleaned || cleaned.toLowerCase() === 'null') ? null : cleaned;\nreturn [{ json: {\n  interest_summary: summary,\n  conversation_id: $('Parse Lead').item.json.conversation_id,\n  store_id: $('Parse Lead').item.json.store_id,\n  has_summary: !!summary,\n} }];"
+      },
+      "id": "i4d5e6f7-a8b9-4012-3456-789abcdef012",
+      "name": "Parse Interest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        -1600
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "interest-c1",
+              "leftValue": "={{ $json.has_summary }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "i6f7a8b9-c0d1-4234-5678-9abcdef01234",
+      "name": "IF Has Interest",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2656,
+        -1600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "conversation_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.conversation_id }}"
+            },
+            {
+              "keyName": "store_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.store_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "interest_summary",
+              "fieldValue": "={{ $json.interest_summary }}"
+            }
+          ]
+        }
+      },
+      "id": "i5e6f7a8-b9c0-4123-4567-89abcdef0123",
+      "name": "Update Lead Interest",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        -1600
+      ],
       "credentials": {
         "supabaseApi": {
           "id": "kL2vt2LTVZNYDJZq",
@@ -605,6 +811,83 @@
           {
             "node": "BUSCAR_PRODUTOS",
             "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead": {
+      "main": [
+        [
+          {
+            "node": "Get Recent Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead": {
+      "main": [
+        [
+          {
+            "node": "Get Recent Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Messages": {
+      "main": [
+        [
+          {
+            "node": "Interest Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Interest": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Interest Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interest Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Parse Interest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Interest": {
+      "main": [
+        [
+          {
+            "node": "IF Has Interest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has Interest": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Interest",
+            "type": "main",
             "index": 0
           }
         ]
