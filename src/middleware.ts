@@ -25,20 +25,29 @@ const AUTH_PROTECTED = [
 // neste MVP.
 const BILLING_GATED = ['/painel', '/estoque', '/loja', '/conversas'] as const
 
-function ensureVisitorCookie(request: NextRequest, response: NextResponse) {
+function ensureVisitorCookie(request: NextRequest): NextResponse {
   const raw = request.cookies.get(COOKIE_NAME)?.value
-  if (parseVisitorCookieValue(raw)) return
+  if (parseVisitorCookieValue(raw)) {
+    return NextResponse.next({ request })
+  }
   const newId = generateVisitorId()
-  response.cookies.set(COOKIE_NAME, buildVisitorCookieValue(newId), COOKIE_OPTIONS)
+  const value = buildVisitorCookieValue(newId)
+  // Muta o request.cookies pra que o Server Component downstream
+  // (ensureConversation) leia o mesmo visitor_id que mandamos pro browser.
+  // Sem isso, o Server Component vê request sem cookie e gera um id próprio,
+  // divergindo do que o browser recebe — resulta em "trocou de visitante" a
+  // cada refresh.
+  request.cookies.set(COOKIE_NAME, value)
+  const response = NextResponse.next({ request })
+  response.cookies.set(COOKIE_NAME, value, COOKIE_OPTIONS)
+  return response
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (pathname.startsWith('/chat/')) {
-    const response = NextResponse.next({ request })
-    ensureVisitorCookie(request, response)
-    return response
+    return ensureVisitorCookie(request)
   }
 
   let supabaseResponse = NextResponse.next({ request })
@@ -78,11 +87,19 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && needsBilling) {
-    const { data: sub } = await supabase
+    const { data: sub, error: subError } = await supabase
       .from('store_subscriptions')
       .select('status, current_period_end')
       .eq('store_id', user.id)
       .maybeSingle()
+    if (subError) {
+      console.error('middleware billing query error', {
+        message: subError.message,
+        code: subError.code,
+        details: subError.details,
+        hint: subError.hint,
+      })
+    }
     const periodOk =
       !sub?.current_period_end || new Date(sub.current_period_end) > new Date()
     const active = sub?.status === 'active' && periodOk
