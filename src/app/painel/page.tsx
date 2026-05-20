@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getStoreRole } from '@/lib/store-role'
-import { getPainelPulse, getFunnel, getActivityFeed } from '@/actions/painel'
+import {
+  getPainelPulse,
+  getFunnel,
+  getActivityFeed,
+  getKnowledgeGaps,
+  getProductIntent,
+} from '@/actions/painel'
 import {
   formatPainelDate,
   formatPainelClock,
@@ -17,22 +22,26 @@ export default async function PainelPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/leads')
 
-  const [initialPulse, initialFunnel, initialActivity, storeRes] =
-    await Promise.all([
-      getPainelPulse(),
-      getFunnel('month'),
-      getActivityFeed(),
-      supabase
-        .from('store_settings')
-        .select('store_name')
-        .eq('id', user.id)
-        .maybeSingle(),
-    ])
-  if (storeRes.error) {
-    console.error('painel store_settings error', storeRes.error)
-  }
+  const [
+    initialPulse,
+    initialFunnel,
+    initialActivity,
+    gapsRes,
+    intentRes,
+    storeRes,
+  ] = await Promise.all([
+    getPainelPulse(),
+    getFunnel('month'),
+    getActivityFeed(),
+    getKnowledgeGaps(),
+    getProductIntent('month'),
+    supabase
+      .from('store_settings')
+      .select('store_name')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ])
   const ownerName = storeRes.data?.store_name ?? ''
   const now = new Date()
 
@@ -42,6 +51,11 @@ export default async function PainelPage() {
       initialPulse={initialPulse}
       initialFunnel={initialFunnel}
       initialActivity={initialActivity}
+      initialGaps={gapsRes.items}
+      initialGapsTotal={gapsRes.totalPending}
+      initialIntent={intentRes.items}
+      initialIntentTotalProducts={intentRes.totalProducts}
+      initialIntentWithIssues={intentRes.withIssues}
       ownerName={ownerName}
       dateLabel={formatPainelDate(now)}
       greeting={painelGreeting(now)}

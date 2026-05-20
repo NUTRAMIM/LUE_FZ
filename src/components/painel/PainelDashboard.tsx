@@ -1,7 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { PainelPulse, FunnelData, ActivityEvent } from '@/actions/painel'
+import type {
+  PainelPulse,
+  FunnelData,
+  ActivityEvent,
+  KnowledgeGap,
+  ProductIntent,
+} from '@/actions/painel'
 import { getFunnel } from '@/actions/painel'
 import type { FunnelRange } from './formatters'
 import { formatPainelClock } from './formatters'
@@ -23,6 +29,11 @@ export function PainelDashboard({
   initialPulse,
   initialFunnel,
   initialActivity,
+  initialGaps,
+  initialGapsTotal,
+  initialIntent,
+  initialIntentTotalProducts,
+  initialIntentWithIssues,
   ownerName,
   dateLabel,
   greeting,
@@ -32,6 +43,11 @@ export function PainelDashboard({
   initialPulse: PainelPulse
   initialFunnel: FunnelData
   initialActivity: ActivityEvent[]
+  initialGaps: KnowledgeGap[]
+  initialGapsTotal: number
+  initialIntent: ProductIntent[]
+  initialIntentTotalProducts: number
+  initialIntentWithIssues: number
   ownerName: string
   dateLabel: string
   greeting: string
@@ -80,11 +96,18 @@ export function PainelDashboard({
       </section>
 
       <section className="mt-6">
-        <GapsConhecimento />
+        <GapsConhecimento
+          gaps={initialGaps}
+          totalPending={initialGapsTotal}
+        />
       </section>
 
       <section className="mt-6">
-        <IntentCatalogo />
+        <IntentCatalogo
+          items={initialIntent}
+          totalProducts={initialIntentTotalProducts}
+          withIssues={initialIntentWithIssues}
+        />
       </section>
 
       <LivePulse pulse={pulse} visitors={visitors} />
