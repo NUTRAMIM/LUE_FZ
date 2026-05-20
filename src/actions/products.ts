@@ -195,3 +195,67 @@ export async function getProductDetails(id: string): Promise<Product | null> {
 
   return data ?? null
 }
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ALLOWED_IMAGE_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+])
+
+const EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
+export interface UploadProductImageResult {
+  success: boolean
+  url?: string
+  error?: string
+}
+
+export async function uploadProductImage(
+  formData: FormData,
+): Promise<UploadProductImageResult> {
+  const supabase = await createClient()
+
+  const user = await getAuthedUser()
+  if (!user) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+  if ((await getStoreRole()) !== 'owner') {
+    return { success: false, error: 'Apenas o dono da loja pode subir imagens.' }
+  }
+
+  const file = formData.get('file')
+  if (!(file instanceof File)) {
+    return { success: false, error: 'Arquivo invalido.' }
+  }
+  if (!ALLOWED_IMAGE_MIMES.has(file.type)) {
+    return { success: false, error: 'Formato nao suportado. Use JPG, PNG, WEBP ou GIF.' }
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    return { success: false, error: 'Imagem maior que 5MB.' }
+  }
+
+  const ext = EXT_BY_MIME[file.type] ?? 'jpg'
+  const path = `${user.id}/${crypto.randomUUID()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('product-images')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (uploadError) {
+    console.error('uploadProductImage error:', uploadError)
+    return { success: false, error: 'Erro ao subir imagem. Tente novamente.' }
+  }
+
+  const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+  if (!data?.publicUrl) {
+    return { success: false, error: 'Erro ao gerar URL publica.' }
+  }
+  return { success: true, url: data.publicUrl }
+}
