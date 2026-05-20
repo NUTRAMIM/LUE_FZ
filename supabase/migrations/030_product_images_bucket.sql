@@ -13,22 +13,31 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
-CREATE POLICY "product_images_public_read" ON storage.objects FOR SELECT
+DROP POLICY IF EXISTS "product_images_select_public" ON storage.objects;
+DROP POLICY IF EXISTS "product_images_insert_own"    ON storage.objects;
+DROP POLICY IF EXISTS "product_images_update_own"    ON storage.objects;
+DROP POLICY IF EXISTS "product_images_delete_own"    ON storage.objects;
+
+CREATE POLICY "product_images_select_public" ON storage.objects
+  FOR SELECT
   USING (bucket_id = 'product-images');
 
-CREATE POLICY "product_images_owner_insert" ON storage.objects FOR INSERT
+CREATE POLICY "product_images_insert_own" ON storage.objects
+  FOR INSERT
   WITH CHECK (
     bucket_id = 'product-images'
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
-CREATE POLICY "product_images_owner_update" ON storage.objects FOR UPDATE
+CREATE POLICY "product_images_update_own" ON storage.objects
+  FOR UPDATE
   USING (
     bucket_id = 'product-images'
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
-CREATE POLICY "product_images_owner_delete" ON storage.objects FOR DELETE
+CREATE POLICY "product_images_delete_own" ON storage.objects
+  FOR DELETE
   USING (
     bucket_id = 'product-images'
     AND auth.uid()::text = (storage.foldername(name))[1]
