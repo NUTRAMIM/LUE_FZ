@@ -762,6 +762,83 @@
           "name": "LUE FZ"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "products",
+        "returnAll": true,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Edit Fields').item.json.store_id }}"
+            }
+          ]
+        }
+      },
+      "id": "m1a2b3c4-d5e6-4789-fedc-ba9876543210",
+      "name": "Get Catalog",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1136, -1180],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json).filter(p => p && p.id && p.name);\nconst aiOutput = String($('AI Agent2').item.json.output ?? '');\nconst customerMsg = String($('Edit Fields').item.json.chatInput ?? '');\nconst conversation_id = $('Edit Fields').item.json.sessionId;\nconst store_id = $('Edit Fields').item.json.store_id;\n\n// Ordena por tamanho do nome desc para que matches mais específicos ganhem.\nconst products = items.slice().sort((a, b) => b.name.length - a.name.length);\n\nfunction escapeReg(s) { return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); }\n\nfunction findMatches(text, source) {\n  // Substitui faixas já consumidas por espaços para evitar dupla contagem em sobreposição.\n  let buffer = text;\n  const results = [];\n  for (const p of products) {\n    const re = new RegExp(`\\\\b${escapeReg(p.name)}\\\\b`, 'i');\n    if (re.test(buffer)) {\n      results.push({ product_id: p.id, source, store_id, conversation_id });\n      buffer = buffer.replace(new RegExp(`\\\\b${escapeReg(p.name)}\\\\b`, 'gi'), (m) => ' '.repeat(m.length));\n    }\n  }\n  return results;\n}\n\nconst rows = [\n  ...findMatches(aiOutput, 'ai_shown'),\n  ...findMatches(customerMsg, 'customer_asked'),\n];\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "id": "m2b3c4d5-e6f7-4890-edcb-a98765432109",
+      "name": "Match Mentions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, -1180]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "product_mentions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "store_id",
+              "fieldValue": "={{ $json.store_id }}"
+            },
+            {
+              "fieldId": "conversation_id",
+              "fieldValue": "={{ $json.conversation_id }}"
+            },
+            {
+              "fieldId": "product_id",
+              "fieldValue": "={{ $json.product_id }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $json.source }}"
+            }
+          ]
+        }
+      },
+      "id": "m3c4d5e6-f7a8-4901-dcba-987654321098",
+      "name": "Insert Mentions",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1584, -1180],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
     }
   ],
   "connections": {
@@ -885,7 +962,34 @@
       "main": [
         [
           {
+            "node": "Get Catalog",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Catalog": {
+      "main": [
+        [
+          {
+            "node": "Match Mentions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Mentions": {
+      "main": [
+        [
+          {
+            "node": "Insert Mentions",
             "type": "main",
             "index": 0
           }
