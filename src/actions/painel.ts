@@ -286,3 +286,54 @@ export async function getActivityFeed(): Promise<ActivityEvent[]> {
   events.sort((a, b) => b.time.localeCompare(a.time))
   return events.slice(0, 6)
 }
+
+export interface KnowledgeGap {
+  count: number
+  question: string
+  tag: string
+}
+
+// Top 5 perguntas sem resposta agregadas por pergunta (lowercase trim),
+// considerando apenas as não resolvidas (resolved_at IS NULL). Usado pelo
+// painel `GapsConhecimento.tsx`.
+export async function getKnowledgeGaps(): Promise<{
+  items: KnowledgeGap[]
+  totalPending: number
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { items: [], totalPending: 0 }
+
+  const { data, error } = await supabase
+    .from('knowledge_gaps')
+    .select('question, tag')
+    .eq('store_id', user.id)
+    .is('resolved_at', null)
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  if (error) {
+    console.error('getKnowledgeGaps error', error)
+    return { items: [], totalPending: 0 }
+  }
+
+  const rows = data ?? []
+  const buckets = new Map<string, { count: number; question: string; tag: string }>()
+  for (const r of rows) {
+    const key = r.question.toLowerCase().trim()
+    const existing = buckets.get(key)
+    if (existing) {
+      existing.count += 1
+    } else {
+      buckets.set(key, { count: 1, question: r.question, tag: r.tag })
+    }
+  }
+
+  const items = [...buckets.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
+  return { items, totalPending: rows.length }
+}

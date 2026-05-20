@@ -333,6 +333,33 @@ export interface Database {
         }
         Relationships: []
       }
+      knowledge_gaps: {
+        Row: {
+          id: string
+          store_id: string
+          question: string
+          tag: string
+          resolved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          question: string
+          tag?: string
+          resolved_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          question?: string
+          tag?: string
+          resolved_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
