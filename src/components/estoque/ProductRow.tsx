@@ -1,8 +1,8 @@
 'use client'
 
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
-import type { Product } from '@/types/product'
 import type { StockStatus } from '@/lib/stock-status'
+import type { Product } from '@/types/product'
 
 const statusConfig: Record<StockStatus, { label: string; tone: BadgeTone }> = {
   ok: { label: 'OK', tone: 'success' },
@@ -27,15 +27,23 @@ export function ProductRow({
   effectiveMin,
   status,
   onViewDetails,
+  onEdit,
 }: {
   product: Product
   effectiveMin: number
   status: StockStatus
   onViewDetails: () => void
+  onEdit: () => void
 }) {
   const firstImage = product.image_urls?.[0]
   const totalValue = product.stock_quantity * Number(product.price)
   const cfg = statusConfig[status]
+  const variants = [
+    ...(product.tamanhos ?? []).map((value, index) => ({ key: `t-${index}-${value}`, value })),
+    ...(product.cores ?? []).map((value, index) => ({ key: `c-${index}-${value}`, value })),
+  ]
+  const visibleVariants = variants.slice(0, 5)
+  const hiddenVariantCount = variants.length - visibleVariants.length
 
   return (
     <tr className="hover:bg-slate-50">
@@ -49,7 +57,7 @@ export function ProductRow({
             />
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400 text-xs">
-              —
+              -
             </div>
           )}
           <div className="min-w-0">
@@ -64,19 +72,21 @@ export function ProductRow({
       </td>
 
       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
-        {product.category || '—'}
+        {product.category || '-'}
       </td>
 
       <td className="px-4 py-3 text-sm">
         <div className="flex flex-wrap gap-1 max-w-xs">
-          {(product.tamanhos ?? []).map(t => (
-            <Badge key={`t-${t}`} tone="neutral">{t}</Badge>
+          {visibleVariants.map(item => (
+            <Badge key={item.key} tone="neutral">{item.value}</Badge>
           ))}
-          {(product.cores ?? []).map(c => (
-            <Badge key={`c-${c}`} tone="neutral">{c}</Badge>
-          ))}
-          {(!product.tamanhos?.length && !product.cores?.length) && (
-            <span className="text-slate-400">—</span>
+          {hiddenVariantCount > 0 && (
+            <Badge tone="neutral" title={`${hiddenVariantCount} variantes a mais`}>
+              ...
+            </Badge>
+          )}
+          {variants.length === 0 && (
+            <span className="text-slate-400">-</span>
           )}
         </div>
       </td>
@@ -117,10 +127,21 @@ export function ProductRow({
 
       <td className="px-4 py-3 whitespace-nowrap">
         <div className="flex items-center gap-1">
-          <ActionIconButton title="Aumentar" tone="success" disabled>↑</ActionIconButton>
-          <ActionIconButton title="Diminuir" tone="danger" disabled>↓</ActionIconButton>
-          <ActionIconButton title="Editar" tone="info" disabled>✎</ActionIconButton>
-          <ActionIconButton title="Excluir" tone="danger" disabled>🗑</ActionIconButton>
+          <ActionIconButton title="Aumentar" tone="success" disabled>+</ActionIconButton>
+          <ActionIconButton title="Diminuir" tone="danger" disabled>-</ActionIconButton>
+          <ActionIconButton title="Editar" tone="info" onClick={onEdit}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </ActionIconButton>
+          <ActionIconButton title="Excluir" tone="danger" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" />
+              <path d="M8 6V4h8v2" />
+              <path d="M19 6l-1 14H6L5 6" />
+            </svg>
+          </ActionIconButton>
         </div>
       </td>
     </tr>
@@ -147,7 +168,7 @@ function ActionIconButton({
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className={`flex h-8 w-8 items-center justify-center rounded-lg border text-sm disabled:opacity-40 disabled:cursor-not-allowed ${actionPalette[tone]}`}
+      className={`flex h-8 w-8 items-center justify-center rounded-lg border text-sm disabled:cursor-not-allowed disabled:opacity-40 ${actionPalette[tone]}`}
     >
       {children}
     </button>

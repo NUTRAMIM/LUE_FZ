@@ -7,6 +7,7 @@ import { KpiSection } from '@/components/estoque/KpiSection'
 import { FilterBar, type StatusFilter } from '@/components/estoque/FilterBar'
 import { ProductTable, type ProductRowData } from '@/components/estoque/ProductTable'
 import { ProductDetailsDrawer } from '@/components/estoque/ProductDetailsDrawer'
+import { ProductEditDrawer } from '@/components/estoque/ProductEditDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +28,7 @@ export function EstoqueClient({
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   // Pre-compute derived data for all products (status + effectiveMin)
   const allRows: ProductRowData[] = useMemo(() => {
@@ -68,6 +70,9 @@ export function EstoqueClient({
   const selectedRow = selectedId
     ? allRows.find(r => r.product.id === selectedId) ?? null
     : null
+  const editingRow = editingId
+    ? allRows.find(r => r.product.id === editingId) ?? null
+    : null
 
   return (
     <div className="space-y-6">
@@ -85,7 +90,14 @@ export function EstoqueClient({
               // ativado na Leva 2
             }}
           />
-          <ProductTable rows={filteredRows} onViewDetails={id => setSelectedId(id)} />
+          <ProductTable
+            rows={filteredRows}
+            onViewDetails={id => setSelectedId(id)}
+            onEdit={id => {
+              setSelectedId(null)
+              setEditingId(id)
+            }}
+          />
         </>
       ) : (
         <EmptyState
@@ -100,6 +112,11 @@ export function EstoqueClient({
         status={selectedRow?.status ?? 'ok'}
         open={selectedId !== null}
         onClose={() => setSelectedId(null)}
+      />
+      <ProductEditDrawer
+        product={editingRow?.product ?? null}
+        open={editingId !== null}
+        onClose={() => setEditingId(null)}
       />
     </div>
   )

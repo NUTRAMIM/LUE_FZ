@@ -13,9 +13,11 @@ export interface ProductRowData {
 export function ProductTable({
   rows,
   onViewDetails,
+  onEdit,
 }: {
   rows: ProductRowData[]
   onViewDetails: (productId: string) => void
+  onEdit: (productId: string) => void
 }) {
   if (rows.length === 0) {
     return (
@@ -50,6 +52,7 @@ export function ProductTable({
               effectiveMin={r.effectiveMin}
               status={r.status}
               onViewDetails={() => onViewDetails(r.product.id)}
+              onEdit={() => onEdit(r.product.id)}
             />
           ))}
         </tbody>
