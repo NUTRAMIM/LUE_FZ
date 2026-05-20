@@ -360,6 +360,33 @@ export interface Database {
         }
         Relationships: []
       }
+      product_mentions: {
+        Row: {
+          id: string
+          store_id: string
+          conversation_id: string | null
+          product_id: string
+          source: 'ai_shown' | 'customer_asked'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          conversation_id?: string | null
+          product_id: string
+          source: 'ai_shown' | 'customer_asked'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          conversation_id?: string | null
+          product_id?: string
+          source?: 'ai_shown' | 'customer_asked'
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

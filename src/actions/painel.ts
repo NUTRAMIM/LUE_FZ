@@ -337,3 +337,109 @@ export async function getKnowledgeGaps(): Promise<{
 
   return { items, totalPending: rows.length }
 }
+
+export interface ProductIntent {
+  productId: string
+  name: string
+  mentions: number
+  leads: number
+  hasDesc: boolean
+  hasPhoto: boolean
+  status: 'OK' | 'DESC VAZIA' | 'SEM FOTO' | 'STOCK OUT'
+}
+
+// Agrega `product_mentions` por produto no range pedido. `leads` conta
+// conversation_ids distintos com menção do produto E lead capturado naquela
+// conversa. Usado pelo painel `IntentCatalogo.tsx`.
+export async function getProductIntent(
+  range: FunnelRange = 'month',
+): Promise<{ items: ProductIntent[]; totalProducts: number; withIssues: number }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { items: [], totalProducts: 0, withIssues: 0 }
+
+  const store = user.id
+  const start = rangeStart(new Date(), range).toISOString()
+
+  const [mentionsRes, leadsConvsRes, productsRes] = await Promise.all([
+    supabase
+      .from('product_mentions')
+      .select('product_id, conversation_id')
+      .eq('store_id', store)
+      .gte('created_at', start),
+    supabase
+      .from('leads')
+      .select('conversation_id')
+      .eq('store_id', store)
+      .not('conversation_id', 'is', null),
+    supabase
+      .from('products')
+      .select('id, name, description, image_urls, stock_quantity')
+      .eq('user_id', store),
+  ])
+
+  if (mentionsRes.error) console.error('getProductIntent mentions error', mentionsRes.error)
+  if (leadsConvsRes.error) console.error('getProductIntent leads error', leadsConvsRes.error)
+  if (productsRes.error) console.error('getProductIntent products error', productsRes.error)
+
+  const mentions = mentionsRes.data ?? []
+  const leadConvIds = new Set(
+    (leadsConvsRes.data ?? []).map((l) => l.conversation_id),
+  )
+  const products = productsRes.data ?? []
+
+  // Agrega por produto.
+  const perProduct = new Map<
+    string,
+    { mentions: number; leadConvs: Set<string> }
+  >()
+  for (const m of mentions) {
+    let bucket = perProduct.get(m.product_id)
+    if (!bucket) {
+      bucket = { mentions: 0, leadConvs: new Set<string>() }
+      perProduct.set(m.product_id, bucket)
+    }
+    bucket.mentions += 1
+    if (m.conversation_id && leadConvIds.has(m.conversation_id)) {
+      bucket.leadConvs.add(m.conversation_id)
+    }
+  }
+
+  const items: ProductIntent[] = products
+    .filter((p) => perProduct.has(p.id))
+    .map((p) => {
+      const agg = perProduct.get(p.id)!
+      const hasDesc = !!p.description && p.description.trim().length > 0
+      const hasPhoto = Array.isArray(p.image_urls) && p.image_urls.length > 0
+      const stockOut = (p.stock_quantity ?? 0) <= 0
+      const status: ProductIntent['status'] = stockOut
+        ? 'STOCK OUT'
+        : !hasDesc
+          ? 'DESC VAZIA'
+          : !hasPhoto
+            ? 'SEM FOTO'
+            : 'OK'
+      return {
+        productId: p.id,
+        name: p.name,
+        mentions: agg.mentions,
+        leads: agg.leadConvs.size,
+        hasDesc,
+        hasPhoto,
+        status,
+      }
+    })
+    .sort((a, b) => b.mentions - a.mentions)
+    .slice(0, 5)
+
+  const withIssues = products.filter((p) => {
+    const hasDesc = !!p.description && p.description.trim().length > 0
+    const hasPhoto = Array.isArray(p.image_urls) && p.image_urls.length > 0
+    const stockOut = (p.stock_quantity ?? 0) <= 0
+    return stockOut || !hasDesc || !hasPhoto
+  }).length
+
+  return { items, totalProducts: products.length, withIssues }
+}
