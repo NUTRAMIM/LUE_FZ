@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
 import { getStoreRole } from '@/lib/store-role'
+import { generateSku } from '@/lib/sku'
 import type { Product } from '@/types/product'
 
 const MAX_TEXT = 500
@@ -258,4 +259,101 @@ export async function uploadProductImage(
     return { success: false, error: 'Erro ao gerar URL publica.' }
   }
   return { success: true, url: data.publicUrl }
+}
+
+export interface CreateProductInput {
+  name: string
+  description: string
+  price: string
+  stock_quantity: string
+  tamanhos: string[]
+  cores: string[]
+  image_urls: string[]
+}
+
+export interface CreateProductResult {
+  success: boolean
+  error?: string
+  productId?: string
+}
+
+const MAX_SKU_RETRIES = 3
+
+export async function createProduct(
+  data: CreateProductInput,
+): Promise<CreateProductResult> {
+  const supabase = await createClient()
+
+  const user = await getAuthedUser()
+  if (!user) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+  if ((await getStoreRole()) !== 'owner') {
+    return { success: false, error: 'Apenas o dono da loja pode criar produtos.' }
+  }
+
+  const name = sanitizeText(data.name, MAX_TEXT)
+  const description = sanitizeText(data.description, MAX_DESCRIPTION)
+  const price = parseNumber(data.price)
+  const stockQuantity = parseInteger(data.stock_quantity)
+
+  const tamanhos = sanitizeStringList(
+    Array.isArray(data.tamanhos) ? data.tamanhos.join('\n') : '',
+    MAX_LIST_ITEM,
+  )
+  const cores = sanitizeStringList(
+    Array.isArray(data.cores) ? data.cores.join('\n') : '',
+    MAX_LIST_ITEM,
+  )
+  const imageUrls = sanitizeUrlList(
+    Array.isArray(data.image_urls) ? data.image_urls.join('\n') : '',
+  )
+
+  if (!name) return { success: false, error: 'Nome do produto e obrigatorio.' }
+  if (price === null || price < 0 || price > MAX_PRICE) {
+    return { success: false, error: 'Preco invalido.' }
+  }
+  if (stockQuantity === null || stockQuantity < 0 || stockQuantity > MAX_STOCK) {
+    return { success: false, error: 'Quantidade em estoque invalida.' }
+  }
+
+  for (let attempt = 0; attempt < MAX_SKU_RETRIES; attempt++) {
+    const sku = generateSku(name)
+    const { data: inserted, error } = await supabase
+      .from('products')
+      .insert({
+        user_id: user.id,
+        sku,
+        name,
+        description: description || null,
+        price,
+        stock_quantity: stockQuantity,
+        stock_min: 0,
+        tamanhos,
+        cores,
+        image_urls: imageUrls.length ? imageUrls : null,
+      })
+      .select('id')
+      .single()
+
+    if (!error && inserted) {
+      revalidatePath('/estoque')
+      return { success: true, productId: inserted.id }
+    }
+
+    // 23505 = unique_violation (Postgres). Tenta de novo com outro SKU.
+    if (error?.code === '23505' && attempt < MAX_SKU_RETRIES - 1) {
+      continue
+    }
+
+    console.error('createProduct error:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+    })
+    return { success: false, error: 'Erro ao criar produto. Tente novamente.' }
+  }
+
+  return { success: false, error: 'Nao foi possivel gerar SKU unico. Tente novamente.' }
 }
