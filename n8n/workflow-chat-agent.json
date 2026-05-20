@@ -647,6 +647,121 @@
           "name": "LUE FZ"
         }
       }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Mensagem do cliente: {{ $('Edit Fields').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "=Você analisa a mensagem do cliente e detecta perguntas que a loja não consegue responder com as instruções abaixo.\n\nInstruções da loja:\n- Categorias: {{ $('Informaçoes da loja1').item.json.categories }}\n- Pagamento: {{ $('Informaçoes da loja1').item.json.payment_methods }}\n- Entrega: {{ $('Informaçoes da loja1').item.json.delivery_methods }}\n- Outras: {{ $('Informaçoes da loja1').item.json.service_instructions }}\n\nRetorne APENAS JSON puro, sem markdown, no formato:\n{\"is_gap\": true|false, \"question\": \"pergunta normalizada em minúsculas\", \"tag\": \"POLÍTICA DE ENTREGA\"|\"PRAZO\"|\"ATACADO\"|\"SKU INEXISTENTE\"|\"PAGAMENTO\"|\"OUTROS\"}\n\nMarque is_gap=true APENAS se:\n- A mensagem contém pergunta concreta (com '?' ou claramente interrogativa).\n- A resposta NÃO está nas instruções acima.\n- A pergunta NÃO é sobre um produto específico do catálogo (isso é trabalho do vendedor).\n\nMarque is_gap=false se: saudação, comentário, declaração de interesse, pergunta sobre produto/cor/tamanho específico, ou pergunta já coberta pelas instruções acima.\n\nSe is_gap=false, devolva question=\"\" e tag=\"OUTROS\"."
+        }
+      },
+      "id": "g1a2b3c4-d5e6-4789-abcd-ef0123456789",
+      "name": "Gap Detector",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [752, -880]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "g2b3c4d5-e6f7-4890-bcde-f01234567890",
+      "name": "OpenAI Chat Model - Gap",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [752, -660],
+      "credentials": {
+        "openAiApi": {
+          "id": "9P4hWIaS93nW5FhK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = String($input.first().json.output ?? '');\nlet parsed = { is_gap: false, question: '', tag: 'OUTROS' };\ntry {\n  const cleaned = raw.replace(/^```(?:json)?\\s*|\\s*```$/g, '').trim();\n  const obj = JSON.parse(cleaned);\n  parsed = {\n    is_gap: !!obj?.is_gap,\n    question: String(obj?.question ?? '').toLowerCase().trim(),\n    tag: String(obj?.tag ?? 'OUTROS').toUpperCase().trim(),\n  };\n} catch (e) {}\nconst valid = parsed.is_gap && parsed.question.length > 0;\nreturn [{ json: {\n  is_gap: valid,\n  question: parsed.question,\n  tag: parsed.tag,\n  conversation_id: $('Edit Fields').item.json.sessionId,\n  store_id: $('Edit Fields').item.json.store_id,\n} }];"
+      },
+      "id": "g3c4d5e6-f7a8-4901-cdef-012345678901",
+      "name": "Parse Gap",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [976, -880]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "gap-c1",
+              "leftValue": "={{ $json.is_gap }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "g4d5e6f7-a8b9-4012-def0-123456789012",
+      "name": "IF Has Gap",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1200, -880]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "knowledge_gaps",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "store_id",
+              "fieldValue": "={{ $json.store_id }}"
+            },
+            {
+              "fieldId": "conversation_id",
+              "fieldValue": "={{ $json.conversation_id }}"
+            },
+            {
+              "fieldId": "question",
+              "fieldValue": "={{ $json.question }}"
+            },
+            {
+              "fieldId": "tag",
+              "fieldValue": "={{ $json.tag }}"
+            }
+          ]
+        }
+      },
+      "id": "g5e6f7a8-b9c0-4123-ef01-234567890123",
+      "name": "Insert Gap",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1424, -880],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
     }
   ],
   "connections": {
@@ -682,6 +797,11 @@
           },
           {
             "node": "Lead Analyzer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gap Detector",
             "type": "main",
             "index": 0
           }
@@ -887,6 +1007,50 @@
         [
           {
             "node": "Update Lead Interest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Gap": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Gap Detector",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gap Detector": {
+      "main": [
+        [
+          {
+            "node": "Parse Gap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gap": {
+      "main": [
+        [
+          {
+            "node": "IF Has Gap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has Gap": {
+      "main": [
+        [
+          {
+            "node": "Insert Gap",
             "type": "main",
             "index": 0
           }
