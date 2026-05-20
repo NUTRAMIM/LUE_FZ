@@ -65,7 +65,7 @@ export function FilterBar({
         >
           Importar JSON
         </Link>
-        <Button onClick={onAddProduct} disabled>
+        <Button onClick={onAddProduct}>
           + Adicionar Produto
         </Button>
       </div>

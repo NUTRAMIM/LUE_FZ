@@ -8,6 +8,7 @@ import { FilterBar, type StatusFilter } from '@/components/estoque/FilterBar'
 import { ProductTable, type ProductRowData } from '@/components/estoque/ProductTable'
 import { ProductDetailsDrawer } from '@/components/estoque/ProductDetailsDrawer'
 import { ProductEditDrawer } from '@/components/estoque/ProductEditDrawer'
+import { ProductCreateDrawer } from '@/components/estoque/ProductCreateDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,7 @@ export function EstoqueClient({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
 
   // Pre-compute derived data for all products (status + effectiveMin)
   const allRows: ProductRowData[] = useMemo(() => {
@@ -86,9 +88,7 @@ export function EstoqueClient({
             onSearchChange={setSearch}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
-            onAddProduct={() => {
-              // ativado na Leva 2
-            }}
+            onAddProduct={() => setCreating(true)}
           />
           <ProductTable
             rows={filteredRows}
@@ -117,6 +117,10 @@ export function EstoqueClient({
         productId={editingId}
         open={editingId !== null}
         onClose={() => setEditingId(null)}
+      />
+      <ProductCreateDrawer
+        open={creating}
+        onClose={() => setCreating(false)}
       />
     </div>
   )
