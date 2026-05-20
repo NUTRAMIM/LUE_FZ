@@ -93,7 +93,7 @@ function extractVariantOptions(variacoes: FacilZapVariation[]): { cores: string[
 
 type ProductInsert = Database['public']['Tables']['products']['Insert']
 
-function mapProduct(p: FacilZapProduct): ProductInsert {
+function mapProduct(p: FacilZapProduct, userId: string): ProductInsert {
   const hasPromo =
     p.preco_promocional !== null &&
     p.preco_promocional !== undefined &&
@@ -109,6 +109,7 @@ function mapProduct(p: FacilZapProduct): ProductInsert {
       : null
 
   return {
+    user_id: userId,
     sku: String(p.id),
     name: p.nome,
     description: p.descricao ?? null,
@@ -233,14 +234,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     let mapped: ProductInsert
     try {
-      mapped = mapProduct(rawProduct)
+      mapped = mapProduct(rawProduct, user.id)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       errors.push({ sku, error: `Mapping error: ${message}` })
       continue
     }
-
-    mapped.user_id = user.id
 
     // Check whether the row already exists so we can count imported vs updated
     const { data: existing, error: selectError } = await supabase
