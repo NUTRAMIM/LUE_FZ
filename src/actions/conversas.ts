@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 import { signedReadUrl } from '@/lib/chat-media'
 import { visitorName, truncatePreview } from '@/components/conversas/formatters'
 
@@ -31,7 +32,7 @@ export async function getConversations(
   filter: 'active' | 'closed',
 ): Promise<ConversationRow[]> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return []
 
   const status = filter === 'active' ? 'ai_active' : 'closed'
@@ -74,7 +75,7 @@ export async function getMessages(
   conversationId: string,
 ): Promise<MessageRow[]> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return []
 
   const { data, error } = await supabase
@@ -105,7 +106,7 @@ export async function markConversationRead(
   conversationId: string,
 ): Promise<{ success: boolean }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return { success: false }
 
   const { error } = await supabase

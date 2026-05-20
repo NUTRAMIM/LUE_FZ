@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 import { getStoreRole } from '@/lib/store-role'
 import type { Product } from '@/types/product'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function EstoquePage() {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) redirect('/login')
   if ((await getStoreRole()) !== 'owner') redirect('/leads')
 

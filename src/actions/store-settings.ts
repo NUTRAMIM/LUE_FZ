@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 
 const MAX_STORE_NAME_LENGTH = 100
 const MAX_INSTRUCTIONS_LENGTH = 2000
@@ -117,8 +118,8 @@ export async function saveStoreSettings(data: {
 }): Promise<SaveStoreSettingsResult> {
   const supabase = await createClient()
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
+  const user = await getAuthedUser()
+  if (!user) {
     return { success: false, error: 'Não autorizado. Faça login novamente.' }
   }
 

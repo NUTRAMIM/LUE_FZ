@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 import { getStoreRole } from '@/lib/store-role'
 import { Icon } from '@/components/painel/Icons'
 import { LojaCopyButton } from '@/components/loja/LojaCopyButton'
@@ -8,9 +9,7 @@ import { LojaForm } from './LojaForm'
 
 export default async function LojaPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
 
   if (!user) redirect('/login')
   if ((await getStoreRole()) !== 'owner') redirect('/leads')

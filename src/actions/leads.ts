@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 
 export interface LeadRow {
   id: string
@@ -17,9 +18,7 @@ export interface LeadRow {
 // do chamador, seja ele dono ou vendedor.
 export async function getLeads(): Promise<LeadRow[]> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return []
 
   const { data, error } = await supabase
@@ -53,9 +52,7 @@ export async function markLeadContacted(
   leadId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return { ok: false, error: 'Não autenticado.' }
 
   const { data: member, error: memberErr } = await supabase

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAuthedUser } from '@/lib/auth'
 
 export interface MemberRow {
   id: string
@@ -15,9 +16,7 @@ export interface MemberRow {
 // Devolve o id do dono (= store_id) se o chamador for dono; senão null.
 async function ownerStoreId(): Promise<string | null> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return null
 
   const { data } = await supabase

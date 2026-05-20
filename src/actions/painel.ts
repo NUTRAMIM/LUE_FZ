@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 import { rangeStart, shortRef } from '@/components/painel/formatters'
 import type { FunnelRange } from '@/components/painel/formatters'
 
@@ -26,9 +27,7 @@ const EMPTY_PULSE: PainelPulse = {
 
 export async function getPainelPulse(): Promise<PainelPulse> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return EMPTY_PULSE
 
   const store = user.id
@@ -125,9 +124,7 @@ const EMPTY_FUNNEL: FunnelData = {
 
 export async function getFunnel(range: FunnelRange): Promise<FunnelData> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return EMPTY_FUNNEL
 
   const store = user.id
@@ -236,9 +233,7 @@ export interface ActivityEvent {
 // antigo. Limitado aos 6 eventos mais recentes.
 export async function getActivityFeed(): Promise<ActivityEvent[]> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return []
 
   const store = user.id
@@ -301,9 +296,7 @@ export async function getKnowledgeGaps(): Promise<{
   totalPending: number
 }> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return { items: [], totalPending: 0 }
 
   const { data, error } = await supabase
@@ -355,9 +348,7 @@ export async function getProductIntent(
   range: FunnelRange = 'month',
 ): Promise<{ items: ProductIntent[]; totalProducts: number; withIssues: number }> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) return { items: [], totalProducts: 0, withIssues: 0 }
 
   const store = user.id

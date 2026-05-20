@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 
 export type StoreRole = 'owner' | 'agent'
 
@@ -8,9 +9,7 @@ export type StoreRole = 'owner' | 'agent'
 // então a ausência é tratada como 'owner'.
 export async function getStoreRole(): Promise<StoreRole> {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthedUser()
   // Quem chama getStoreRole já garante a autenticação antes (guarda de página).
   // Sem usuário, devolve 'owner' apenas como fallback — nunca é usado como gate.
   if (!user) return 'owner'

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 import { getStoreRole } from '@/lib/store-role'
 import type { Product } from '@/types/product'
 
@@ -83,12 +84,8 @@ function sanitizeUrlList(input: string): string[] {
 export async function saveProduct(data: SaveProductInput): Promise<SaveProductResult> {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
+  const user = await getAuthedUser()
+  if (!user) {
     return { success: false, error: 'Nao autorizado. Faca login novamente.' }
   }
 
@@ -152,7 +149,12 @@ export async function saveProduct(data: SaveProductInput): Promise<SaveProductRe
     .maybeSingle()
 
   if (error) {
-    console.error('saveProduct error:', error)
+    console.error('saveProduct error:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    })
     return { success: false, error: 'Erro ao salvar produto. Tente novamente.' }
   }
 
@@ -167,12 +169,8 @@ export async function saveProduct(data: SaveProductInput): Promise<SaveProductRe
 export async function getProductDetails(id: string): Promise<Product | null> {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
+  const user = await getAuthedUser()
+  if (!user) {
     throw new Error('Nao autorizado. Faca login novamente.')
   }
 

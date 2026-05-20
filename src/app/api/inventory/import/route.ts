@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthedUser } from '@/lib/auth'
 import type { Database } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -142,8 +142,7 @@ function mapProduct(p: FacilZapProduct, userId: string): ProductInsert {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // Authenticate
-  const serverSupabase = await createClient()
-  const { data: { user } } = await serverSupabase.auth.getUser()
+  const user = await getAuthedUser()
   if (!user) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
   }
