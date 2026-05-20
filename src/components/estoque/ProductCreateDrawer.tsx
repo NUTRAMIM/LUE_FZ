@@ -39,6 +39,7 @@ export function ProductCreateDrawer({
   const [tamanhos, setTamanhos] = useState<string[]>([])
   const [cores, setCores] = useState<string[]>([])
   const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
 
   function resetForm() {
     setName('')
@@ -52,7 +53,7 @@ export function ProductCreateDrawer({
   }
 
   function handleClose() {
-    if (isPending) return
+    if (isPending || uploading) return
     resetForm()
     onClose()
   }
@@ -107,7 +108,13 @@ export function ProductCreateDrawer({
           />
         </div>
 
-        <ImageUploader urls={imageUrls} onChange={setImageUrls} onError={setError} />
+        <ImageUploader
+          urls={imageUrls}
+          onChange={setImageUrls}
+          onError={setError}
+          uploading={uploading}
+          onUploadingChange={setUploading}
+        />
 
         <div>
           <Label htmlFor="cp-description">Descricao</Label>
@@ -166,7 +173,7 @@ export function ProductCreateDrawer({
         </section>
 
         <div className="sticky bottom-0 -mx-5 flex justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4">
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={isPending}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={isPending || uploading}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isPending}>
@@ -280,17 +287,20 @@ function ImageUploader({
   urls,
   onChange,
   onError,
+  uploading,
+  onUploadingChange,
 }: {
   urls: string[]
-  onChange: (next: string[]) => void
+  onChange: React.Dispatch<React.SetStateAction<string[]>>
   onError: (msg: string | null) => void
+  uploading: boolean
+  onUploadingChange: (uploading: boolean) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
 
   async function uploadFiles(files: FileList | null) {
     if (!files || files.length === 0) return
-    setUploading(true)
+    onUploadingChange(true)
     onError(null)
     const uploaded: string[] = []
     for (const file of Array.from(files)) {
@@ -303,20 +313,20 @@ function ImageUploader({
       }
       uploaded.push(result.url)
     }
-    if (uploaded.length > 0) onChange([...urls, ...uploaded])
-    setUploading(false)
+    if (uploaded.length > 0) onChange(prev => [...prev, ...uploaded])
+    onUploadingChange(false)
     if (inputRef.current) inputRef.current.value = ''
   }
 
   function remove(url: string) {
-    onChange(urls.filter(u => u !== url))
+    onChange(prev => prev.filter(u => u !== url))
   }
 
   return (
     <div>
       <Label>Fotos</Label>
-      <div
-        onClick={() => inputRef.current?.click()}
+      <label
+        htmlFor="cp-images"
         className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 hover:border-brand-400 hover:bg-brand-50/40"
       >
         <span className="font-semibold">
@@ -324,14 +334,15 @@ function ImageUploader({
         </span>
         <span className="text-xs">JPG, PNG, WEBP ou GIF (máx 5MB cada)</span>
         <input
+          id="cp-images"
           ref={inputRef}
           type="file"
           accept="image/*"
           multiple
-          className="hidden"
+          className="sr-only"
           onChange={e => uploadFiles(e.target.files)}
         />
-      </div>
+      </label>
       {urls.length > 0 && (
         <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
           {urls.map(url => (
@@ -340,7 +351,7 @@ function ImageUploader({
               className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="Produto" className="h-full w-full object-cover" />
+              <img src={url} alt="" className="h-full w-full object-cover" />
               <button
                 type="button"
                 onClick={() => remove(url)}
