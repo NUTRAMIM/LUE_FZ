@@ -241,7 +241,7 @@ export async function uploadProductImage(
     return { success: false, error: 'Imagem maior que 5MB.' }
   }
 
-  const ext = EXT_BY_MIME[file.type] ?? 'jpg'
+  const ext = EXT_BY_MIME[file.type]
   const path = `${user.id}/${crypto.randomUUID()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
