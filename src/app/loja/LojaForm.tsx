@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { saveStoreSettings } from '@/actions/store-settings'
 import { LogoUpload } from '@/components/loja/LogoUpload'
 import { Icon } from '@/components/painel/Icons'
+import type { StoreSettings } from '@/types/store-settings'
 
 const PAYMENT_OPTIONS = [
   'PIX',
@@ -163,86 +163,55 @@ function SectionHeader({
   )
 }
 
-export function LojaForm() {
-  const [userId, setUserId] = useState<string | null>(null)
-  const [storeName, setStoreName] = useState('')
-  const [storeBio, setStoreBio] = useState('')
-  const [logoUrl, setLogoUrl] = useState('')
-  const [sellerPhone, setSellerPhone] = useState('')
-  const [instagramHandle, setInstagramHandle] = useState('')
-  const [serviceSteps, setServiceSteps] = useState<string[]>([])
-  const [serviceInstructions, setServiceInstructions] = useState('')
-  const [paymentMethods, setPaymentMethods] = useState<string[]>([])
-  const [deliveryMethods, setDeliveryMethods] = useState<string[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  const [availableCategories, setAvailableCategories] = useState<string[]>([])
-  const [minOrderEnabled, setMinOrderEnabled] = useState(false)
-  const [minOrderQuantity, setMinOrderQuantity] = useState<string>('')
-  const [minOrderValue, setMinOrderValue] = useState<string>('')
-  const [minOrderLogic, setMinOrderLogic] = useState<'all' | 'any'>('all')
+export function LojaForm({
+  userId,
+  settings,
+  availableCategories,
+}: {
+  userId: string
+  settings: StoreSettings | null
+  availableCategories: string[]
+}) {
+  const [storeName, setStoreName] = useState(settings?.store_name ?? '')
+  const [storeBio, setStoreBio] = useState(settings?.store_bio ?? '')
+  const [logoUrl, setLogoUrl] = useState(settings?.logo_url ?? '')
+  const [sellerPhone, setSellerPhone] = useState(settings?.seller_phone ?? '')
+  const [instagramHandle, setInstagramHandle] = useState(
+    settings?.instagram_handle ?? '',
+  )
+  const [serviceSteps, setServiceSteps] = useState<string[]>(
+    settings?.service_steps ?? [],
+  )
+  const [serviceInstructions, setServiceInstructions] = useState(
+    settings?.service_instructions ?? '',
+  )
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(
+    settings?.payment_methods ?? [],
+  )
+  const [deliveryMethods, setDeliveryMethods] = useState<string[]>(
+    settings?.delivery_methods ?? [],
+  )
+  const [categories, setCategories] = useState<string[]>(
+    settings?.categories ?? [],
+  )
+  const [minOrderEnabled, setMinOrderEnabled] = useState(
+    settings?.min_order_enabled ?? false,
+  )
+  const [minOrderQuantity, setMinOrderQuantity] = useState<string>(
+    settings?.min_order_quantity != null
+      ? String(settings.min_order_quantity)
+      : '',
+  )
+  const [minOrderValue, setMinOrderValue] = useState<string>(
+    settings?.min_order_value != null ? String(settings.min_order_value) : '',
+  )
+  const [minOrderLogic, setMinOrderLogic] = useState<'all' | 'any'>(
+    settings?.min_order_logic === 'any' ? 'any' : 'all',
+  )
 
-  const [initialLoading, setInitialLoading] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-
-  useEffect(() => {
-    async function loadSettings() {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        setInitialLoading(false)
-        return
-      }
-      setUserId(user.id)
-
-      const { data } = await supabase
-        .from('store_settings')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      const { data: products } = await supabase
-        .from('products')
-        .select('category')
-
-      const uniqueCats = [
-        ...new Set(
-          (products ?? [])
-            .map((p) => p.category)
-            .filter((c): c is string => !!c)
-        ),
-      ].sort()
-      setAvailableCategories(uniqueCats)
-
-      if (data) {
-        setStoreName(data.store_name)
-        setServiceSteps(data.service_steps ?? [])
-        setServiceInstructions(data.service_instructions ?? '')
-        setPaymentMethods(data.payment_methods ?? [])
-        setDeliveryMethods(data.delivery_methods ?? [])
-        setCategories(data.categories ?? [])
-        setSellerPhone(data.seller_phone ?? '')
-        setInstagramHandle(data.instagram_handle ?? '')
-        setStoreBio(data.store_bio ?? '')
-        setLogoUrl(data.logo_url ?? '')
-        setMinOrderEnabled(data.min_order_enabled ?? false)
-        setMinOrderQuantity(
-          data.min_order_quantity != null
-            ? String(data.min_order_quantity)
-            : ''
-        )
-        setMinOrderValue(
-          data.min_order_value != null ? String(data.min_order_value) : ''
-        )
-        setMinOrderLogic(data.min_order_logic === 'any' ? 'any' : 'all')
-      }
-      setInitialLoading(false)
-    }
-    loadSettings()
-  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -308,10 +277,6 @@ export function LojaForm() {
       setError(result.error ?? 'Erro desconhecido.')
     }
     setLoading(false)
-  }
-
-  if (initialLoading) {
-    return <p className="text-ink-500 text-sm">Carregando…</p>
   }
 
   const minOrderBothFilled =

@@ -15,15 +15,33 @@ export default async function LojaPage() {
   if (!user) redirect('/login')
   if ((await getStoreRole()) !== 'owner') redirect('/leads')
 
-  let slug: string | null = null
-  if (user) {
-    const { data } = await supabase
+  // F1.4: consolida em 2 queries server-side os fetches que antes rolavam
+  // separados (chat_slug aqui + store_settings/products no useEffect do
+  // LojaForm). LojaForm passa a receber settings/categories via props.
+  const [
+    { data: settings },
+    { data: productCategoryRows },
+  ] = await Promise.all([
+    supabase
       .from('store_settings')
-      .select('chat_slug')
+      .select('*')
       .eq('id', user.id)
-      .maybeSingle()
-    slug = data?.chat_slug ?? null
-  }
+      .maybeSingle(),
+    supabase
+      .from('products')
+      .select('category')
+      .eq('user_id', user.id),
+  ])
+
+  const availableCategories = [
+    ...new Set(
+      (productCategoryRows ?? [])
+        .map((p) => p.category)
+        .filter((c): c is string => !!c),
+    ),
+  ].sort()
+
+  const slug = settings?.chat_slug ?? null
 
   const base =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
@@ -131,7 +149,11 @@ export default async function LojaPage() {
         </div>
       )}
 
-      <LojaForm />
+      <LojaForm
+        userId={user.id}
+        settings={settings ?? null}
+        availableCategories={availableCategories}
+      />
 
       <footer className="mt-2 mb-4 flex items-center justify-between text-[12px] text-ink-400">
         <div className="eyebrow">LUE FZ</div>
