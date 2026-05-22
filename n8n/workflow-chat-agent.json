@@ -210,9 +210,18 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ output: $('AI Agent2').item.json.output }) }}",
-        "options": {}
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ output: $('AI Agent2')?.item?.json?.output ?? '' }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
       },
       "id": "144c2506-459d-4c3c-be7f-0b076139654b",
       "name": "Respond to Webhook",
