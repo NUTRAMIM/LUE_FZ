@@ -41,6 +41,61 @@ function StatusPill({ status }: { status: 'ai_active' | 'closed' }) {
   )
 }
 
+const IMAGE_URL_RE = /https?:\/\/\S+?\.(?:jpe?g|png|webp|gif)(?:\?\S*)?/gi
+
+type Segment = { type: 'text'; value: string } | { type: 'image'; src: string }
+
+function parseSegments(text: string): Segment[] {
+  const segments: Segment[] = []
+  const re = new RegExp(IMAGE_URL_RE.source, IMAGE_URL_RE.flags)
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      const chunk = text.slice(lastIndex, match.index)
+      if (chunk.trim()) segments.push({ type: 'text', value: chunk.trim() })
+    }
+    segments.push({ type: 'image', src: match[0] })
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < text.length) {
+    const tail = text.slice(lastIndex)
+    if (tail.trim()) segments.push({ type: 'text', value: tail.trim() })
+  }
+  if (segments.length === 0 && text) segments.push({ type: 'text', value: text })
+  return segments
+}
+
+function MessageContent({ content }: { content: string }) {
+  const segments = parseSegments(content)
+  return (
+    <div className="flex flex-col gap-1.5">
+      {segments.map((seg, i) =>
+        seg.type === 'text' ? (
+          <p key={`t-${i}`} className="whitespace-pre-wrap break-words">
+            {seg.value}
+          </p>
+        ) : (
+          <a
+            key={`i-${i}-${seg.src}`}
+            href={seg.src}
+            target="_blank"
+            rel="noreferrer"
+            className="block"
+          >
+            <img
+              src={seg.src}
+              alt=""
+              className="rounded-md max-w-[260px] block"
+              loading="lazy"
+            />
+          </a>
+        ),
+      )}
+    </div>
+  )
+}
+
 function MessageBubble({ m }: { m: MessageRow }) {
   const time = new Date(m.created_at).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
@@ -70,7 +125,7 @@ function MessageBubble({ m }: { m: MessageRow }) {
           ) : m.message_type === 'audio' && m.media_url ? (
             <audio controls src={m.media_url} className="max-w-[260px]" />
           ) : (
-            m.content
+            <MessageContent content={m.content} />
           )}
         </div>
         <span className="eyebrow text-ink-400 mb-0.5 tabular shrink-0">{time}</span>
@@ -100,7 +155,7 @@ function MessageBubble({ m }: { m: MessageRow }) {
           ) : m.message_type === 'audio' && m.media_url ? (
             <audio controls src={m.media_url} className="max-w-[260px]" />
           ) : (
-            m.content
+            <MessageContent content={m.content} />
           )}
         </div>
       </div>

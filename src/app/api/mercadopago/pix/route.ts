@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
   const planId = planIdRaw as PlanId
   const plan = PLANS[planId]
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const siteUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
+    'http://localhost:3000'
 
   try {
     const payment = await getMpPayment().create({

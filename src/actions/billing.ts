@@ -23,7 +23,10 @@ const EMPTY_SUBSCRIPTION: SubscriptionState = {
 }
 
 function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  return (
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
+    'http://localhost:3000'
+  )
 }
 
 // Lida tanto com subs sem expiração (raras) quanto com subs expirados —
@@ -48,7 +51,17 @@ export async function getCurrentSubscription(): Promise<SubscriptionState> {
     .maybeSingle()
 
   if (error) {
-    console.error('getCurrentSubscription error', error)
+    const keys = Object.keys(error as object)
+    const asString = (() => {
+      try {
+        return JSON.stringify(error, Object.getOwnPropertyNames(error as object))
+      } catch {
+        return String(error)
+      }
+    })()
+    console.error(
+      `getCurrentSubscription error | type=${typeof error} | name=${(error as Error).name ?? 'none'} | message=${(error as Error).message ?? 'none'} | keys=[${keys.join(',')}] | json=${asString}`,
+    )
     return EMPTY_SUBSCRIPTION
   }
   if (!data) return EMPTY_SUBSCRIPTION

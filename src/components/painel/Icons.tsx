@@ -305,6 +305,18 @@ const I: Record<string, ReactNode> = {
       <line x1="12" y1="16" x2="12.01" y2="16" />
     </g>
   ),
+  creditCard: (
+    <g>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20" />
+    </g>
+  ),
+  switchH: (
+    <g>
+      <path d="M7 7h12M7 7l3-3M7 7l3 3" />
+      <path d="M17 17H5M17 17l-3 3M17 17l-3-3" />
+    </g>
+  ),
 }
 
 export type IconName = keyof typeof I

@@ -24,6 +24,10 @@ const NAV: NavItem[] = [
   { href: '/equipe', label: 'Equipe', iconName: 'userX', ownerOnly: true },
 ]
 
+const NAV_ACCOUNT: NavItem[] = [
+  { href: '/painel/planos', label: 'Planos & assinatura', iconName: 'sparkle', ownerOnly: true },
+]
+
 const OPERADORES = [
   { n: 'Mariana A.', i: 'MA', c: '#A78BFA', s: 'em 3 chats' },
   { n: 'Bruno T.', i: 'BT', c: '#FBBF24', s: 'em 2 chats' },
@@ -280,6 +284,29 @@ export function Sidebar({
             )
           })}
         </ul>
+
+        {isOwner && (
+          <>
+            <div className="eyebrow text-ink-400 px-3 mb-2 mt-6">CONTA</div>
+            <ul className="space-y-1">
+              {NAV_ACCOUNT.map(({ href, label, iconName }) => {
+                const active =
+                  pathname === href || pathname?.startsWith(href + '/')
+                return (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className={`nav-link ${active ? 'active' : ''}`}
+                    >
+                      <Icon name={iconName} className="w-[18px] h-[18px]" />
+                      {label}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
 
         {/* Context-aware bottom widget */}
         {isConversas ? (
