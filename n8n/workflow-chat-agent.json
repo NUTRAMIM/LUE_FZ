@@ -835,6 +835,47 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "mention-valid-c1",
+              "leftValue": "={{ $json.product_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "mention-valid-c2",
+              "leftValue": "={{ $json.store_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "m4d5e6f7-a8b9-4012-cba9-876543210987",
+      "name": "Has Valid Mention",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1472, -1180]
+    },
+    {
+      "parameters": {
         "operation": "insert",
         "tableId": "product_mentions",
         "fieldsUi": {
@@ -862,7 +903,7 @@
       "name": "Insert Mentions",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [1584, -1180],
+      "position": [1696, -1180],
       "credentials": {
         "supabaseApi": {
           "id": "kL2vt2LTVZNYDJZq",
@@ -1027,6 +1068,17 @@
       ]
     },
     "Match Mentions": {
+      "main": [
+        [
+          {
+            "node": "Has Valid Mention",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Valid Mention": {
       "main": [
         [
           {
