@@ -473,7 +473,7 @@
     },
     {
       "parameters": {
-        "operation": "insert",
+        "operation": "create",
         "tableId": "leads",
         "fieldsUi": {
           "fieldValues": [
@@ -758,7 +758,7 @@
     },
     {
       "parameters": {
-        "operation": "insert",
+        "operation": "create",
         "tableId": "knowledge_gaps",
         "fieldsUi": {
           "fieldValues": [
@@ -876,7 +876,7 @@
     },
     {
       "parameters": {
-        "operation": "insert",
+        "operation": "create",
         "tableId": "product_mentions",
         "fieldsUi": {
           "fieldValues": [
