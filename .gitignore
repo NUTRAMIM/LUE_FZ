@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code local config (contains anon key, project ref, local paths)
+.claude/
+
+# stray files from broken tooling paths
+C:Users*
+LUE\ FZ*.html
