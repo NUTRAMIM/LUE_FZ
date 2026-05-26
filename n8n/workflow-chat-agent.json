@@ -238,7 +238,7 @@
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "={{ JSON.stringify({ messages: ($('Basic LLM Chain Splitter')?.item?.json?.output?.messages) ?? [$('AI Agent2')?.item?.json?.output ?? ''] }) }}",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
         "options": {
           "responseHeaders": {
             "entries": [
@@ -1041,6 +1041,88 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [1136, -1180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const splitter = $('Basic LLM Chain Splitter').item.json;\nconst messages = (splitter.output && splitter.output.messages) || splitter.messages || [];\nconst conversation_id = $('Edit Fields').item.json.sessionId;\nconst store_id = $('Edit Fields').item.json.store_id;\nreturn messages\n  .filter(m => typeof m === 'string' && m.trim().length > 0)\n  .map(m => ({ json: { content: m.trim(), conversation_id, store_id } }));"
+      },
+      "id": "sp4d5e6f-7a8b-4901-1234-splitter44444",
+      "name": "Expand Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, -1344]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "sp5e6f7a-8b9c-4012-2345-splitter55555",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1408, -1344]
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $json.content || '';\nconst waitSeconds = Math.min(Math.max(content.length * 0.03, 0.8), 8.0);\nreturn [{ json: { ...$json, waitSeconds } }];"
+      },
+      "id": "sp6f7a8b-9c0d-4123-3456-splitter66666",
+      "name": "Calculate Wait",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1632, -1248]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.waitSeconds }}"
+      },
+      "id": "sp7a8b9c-0d1e-4234-4567-splitter77777",
+      "name": "Wait Typing",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1856, -1248],
+      "webhookId": "9d9bd32c-84d8-43a0-94e0-c4bd06000001"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "conversation_id",
+              "fieldValue": "={{ $json.conversation_id }}"
+            },
+            {
+              "fieldId": "store_id",
+              "fieldValue": "={{ $json.store_id }}"
+            },
+            {
+              "fieldId": "role",
+              "fieldValue": "assistant"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $json.content }}"
+            },
+            {
+              "fieldId": "message_type",
+              "fieldValue": "text"
+            }
+          ]
+        }
+      },
+      "id": "sp8b9c0d-1e2f-4345-5678-splitter88888",
+      "name": "Insert Message",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2080, -1248],
+      "credentials": {
+        "supabaseApi": {
+          "id": "kL2vt2LTVZNYDJZq",
+          "name": "LUE FZ"
+        }
+      }
     }
   ],
   "connections": {
@@ -1219,6 +1301,11 @@
       "main": [
         [
           {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Get Catalog",
             "type": "main",
             "index": 0
@@ -1235,7 +1322,63 @@
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Expand Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Messages": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Calculate Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Wait": {
+      "main": [
+        [
+          {
+            "node": "Wait Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Typing": {
+      "main": [
+        [
+          {
+            "node": "Insert Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
             "type": "main",
             "index": 0
           }
