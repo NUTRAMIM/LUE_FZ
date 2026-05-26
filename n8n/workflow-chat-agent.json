@@ -238,7 +238,7 @@
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "={{ JSON.stringify({ output: $('AI Agent2')?.item?.json?.output ?? '' }) }}",
+        "responseBody": "={{ JSON.stringify({ messages: ($('Basic LLM Chain Splitter')?.item?.json?.output?.messages) ?? [$('AI Agent2')?.item?.json?.output ?? ''] }) }}",
         "options": {
           "responseHeaders": {
             "entries": [
@@ -986,6 +986,56 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [544, -1344]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Mensagem do agente para dividir:\n{{ $('AI Agent2').item.json.output }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Divida a mensagem do agente em uma lista JSON no formato {\"messages\": [\"...\", \"...\"]}. Cada parte deve ter entre 100 e 500 caracteres, quebrada em pontos naturais de conversa (fim de frase ou parágrafo). NUNCA corte palavras. NUNCA produza partes vazias. NÃO invente, NÃO resuma, NÃO traduza, NÃO adicione ou tire formatação. Se a mensagem original já é curta (menos de 200 chars), retorne {\"messages\": [<a mensagem original inteira como uma única parte>]}."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "sp1a2b3c-4d5e-4f67-8901-splitter11111",
+      "name": "Basic LLM Chain Splitter",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [976, -1344]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
+        },
+        "options": {}
+      },
+      "id": "sp2b3c4d-5e6f-4789-9012-splitter22222",
+      "name": "OpenAI Chat Model - Splitter",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [976, -1180],
+      "credentials": {
+        "openAiApi": {
+          "id": "9P4hWIaS93nW5FhK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "sp3c4d5e-6f7a-4890-0123-splitter33333",
+      "name": "Splitter Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [1136, -1180]
     }
   ],
   "connections": {
@@ -1169,8 +1219,41 @@
             "index": 0
           },
           {
+            "node": "Basic LLM Chain Splitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain Splitter": {
+      "main": [
+        [
+          {
             "node": "Respond to Webhook",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Splitter": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain Splitter",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain Splitter",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]
