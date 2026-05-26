@@ -104,19 +104,20 @@ export async function listEquipeData(): Promise<EquipeData> {
     getMaxAgentsForStore(storeId),
   ])
 
-  const members: MemberRow[] = []
-  if (membersRes.data) {
-    for (const m of membersRes.data) {
-      const { data: u } = await admin.auth.admin.getUserById(m.user_id)
-      members.push({
-        id: m.id,
-        userId: m.user_id,
-        fullName: m.full_name,
-        email: u.user?.email ?? '',
-        role: m.role === 'owner' ? 'owner' : 'agent',
-      })
-    }
-  }
+  const members: MemberRow[] = membersRes.data
+    ? await Promise.all(
+        membersRes.data.map(async (m) => {
+          const { data: u } = await admin.auth.admin.getUserById(m.user_id)
+          return {
+            id: m.id,
+            userId: m.user_id,
+            fullName: m.full_name,
+            email: u.user?.email ?? '',
+            role: m.role === 'owner' ? 'owner' : 'agent',
+          }
+        }),
+      )
+    : []
 
   const invites: InviteRow[] = (invitesRes.data ?? []).map((i) => ({
     id: i.id,
