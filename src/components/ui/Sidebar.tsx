@@ -131,16 +131,20 @@ function NestaPaginaLoja() {
   )
 }
 
-function SuaUrlPublica({ slug }: { slug: string | null }) {
+function SuaUrlPublica({
+  slug,
+  appUrl,
+}: {
+  slug: string | null
+  appUrl: string
+}) {
   const [copied, setCopied] = useState(false)
+  const host = appUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
   async function handleCopy() {
     if (!slug) return
-    const base =
-      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-      (typeof window !== 'undefined' ? window.location.origin : '')
     try {
-      await navigator.clipboard.writeText(`${base}/chat/${slug}`)
+      await navigator.clipboard.writeText(`${appUrl}/chat/${slug}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 1400)
     } catch {
@@ -163,8 +167,8 @@ function SuaUrlPublica({ slug }: { slug: string | null }) {
           <span className="live-dot" />
           <span className="eyebrow text-brand-300">SUA URL PÚBLICA</span>
         </div>
-        <div className="text-[12.5px] mt-1.5 text-ink-200 leading-snug">
-          <span className="font-mono text-brand-200">lue.fz/chat/</span>
+        <div className="text-[12.5px] mt-1.5 text-ink-200 leading-snug break-all">
+          <span className="font-mono text-brand-200">{host}/chat/</span>
           <span className="font-mono text-white font-semibold">
             {slug ?? '…'}
           </span>
@@ -213,9 +217,11 @@ function AgenteIA() {
 export function Sidebar({
   role,
   slug,
+  appUrl,
 }: {
   role: StoreRole
   slug: string | null
+  appUrl: string
 }) {
   const pathname = usePathname()
   // Fail-open vive em getSidebarData (server-side); aqui o role chega
@@ -317,7 +323,7 @@ export function Sidebar({
         ) : isLoja ? (
           <>
             <NestaPaginaLoja />
-            <SuaUrlPublica slug={slug} />
+            <SuaUrlPublica slug={slug} appUrl={appUrl} />
           </>
         ) : (
           <ProximaNaFila />

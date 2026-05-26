@@ -2,6 +2,7 @@
 
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
+import { getAppUrl } from '@/lib/app-url'
 import { PLANS, type PlanId } from '@/lib/plans'
 
 export interface SubscriptionState {
@@ -23,10 +24,7 @@ const EMPTY_SUBSCRIPTION: SubscriptionState = {
 }
 
 function siteUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-    'http://localhost:3000'
-  )
+  return getAppUrl()
 }
 
 // Lida tanto com subs sem expiração (raras) quanto com subs expirados —

@@ -59,6 +59,19 @@ function addCustomValue(
   return [...arr, finalValue]
 }
 
+function parseInstagramInput(value: string): string {
+  let v = value.trim()
+  if (!v) return ''
+  // Strip protocol and host so we can keep just the path segment
+  v = v.replace(/^https?:\/\//i, '').replace(/^www\./i, '')
+  v = v.replace(/^(?:m\.|mobile\.)?instagram\.com\//i, '')
+  // First path segment is the handle; drop trailing slashes, query, hash
+  v = v.split(/[/?#]/)[0]
+  // Drop any leading @ (one or many) and filter to allowed chars
+  v = v.replace(/^@+/, '').replace(/[^a-zA-Z0-9._]/g, '')
+  return v.slice(0, 30)
+}
+
 function formatPhone(value: string): string {
   const d = value.replace(/\D/g, '').slice(0, 11)
   if (d.length === 0) return ''
@@ -458,21 +471,23 @@ export function LojaForm({
               <input
                 id="ig"
                 type="text"
-                maxLength={30}
+                maxLength={500}
                 value={instagramHandle}
                 onChange={(e) =>
-                  setInstagramHandle(
-                    e.target.value
-                      .replace(/^@+/, '')
-                      .replace(/[^a-zA-Z0-9._]/g, '')
-                      .slice(0, 30)
-                  )
+                  setInstagramHandle(parseInstagramInput(e.target.value))
                 }
-                placeholder="floricultura.zaira"
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text')
+                  if (/instagram\.com|^\s*@/i.test(pasted)) {
+                    e.preventDefault()
+                    setInstagramHandle(parseInstagramInput(pasted))
+                  }
+                }}
+                placeholder="floricultura.zaira ou cole o link"
               />
             </div>
             <p className="helper mt-1.5">
-              Apenas o handle. Letras, números, ponto e underline.
+              Cole o link do perfil ou digite o @. Salvamos só o handle.
             </p>
           </div>
         </div>

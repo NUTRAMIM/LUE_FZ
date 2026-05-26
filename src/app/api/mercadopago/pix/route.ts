@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getMpPayment } from '@/lib/mercadopago'
 import { createClient } from '@/lib/supabase/server'
+import { getAppUrl } from '@/lib/app-url'
 import { PLANS, type PlanId } from '@/lib/plans'
 
 export const runtime = 'nodejs'
@@ -33,9 +34,7 @@ export async function POST(req: NextRequest) {
   const planId = planIdRaw as PlanId
   const plan = PLANS[planId]
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-    'http://localhost:3000'
+  const siteUrl = getAppUrl()
 
   try {
     const payment = await getMpPayment().create({

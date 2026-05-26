@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getAppUrl } from '@/lib/app-url'
 import { getStoreRole } from '@/lib/store-role'
 import { Icon } from '@/components/painel/Icons'
 import { LojaCopyButton } from '@/components/loja/LojaCopyButton'
@@ -42,9 +43,7 @@ export default async function LojaPage() {
 
   const slug = settings?.chat_slug ?? null
 
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-    'https://lue.fz'
+  const base = getAppUrl()
   const baseHost = base.replace(/^https?:\/\//, '')
   const fullUrl = slug ? `${base}/chat/${slug}` : ''
   const qrSvg = slug

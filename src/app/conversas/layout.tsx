@@ -6,10 +6,10 @@ export default async function ConversasLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { role, slug } = await getSidebarData()
+  const { role, slug, appUrl } = await getSidebarData()
   return (
     <div className="flex min-h-screen">
-      <Sidebar role={role} slug={slug} />
+      <Sidebar role={role} slug={slug} appUrl={appUrl} />
       <main className="flex-1 min-w-0">{children}</main>
     </div>
   )

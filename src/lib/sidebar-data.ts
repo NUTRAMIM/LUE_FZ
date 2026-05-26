@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getAppUrl } from '@/lib/app-url'
 import type { StoreRole } from '@/lib/store-role'
 
 export interface SidebarData {
   role: StoreRole
   slug: string | null
+  appUrl: string
 }
 
 // Dados que a Sidebar precisa pra montar — papel do usuário (filtra itens
@@ -14,9 +16,10 @@ export interface SidebarData {
 // Fail-open pra 'owner' em qualquer erro — preserva semântica antiga da
 // Sidebar (que assumia owner quando o fetch client-side falhava).
 export async function getSidebarData(): Promise<SidebarData> {
+  const appUrl = getAppUrl()
   try {
     const user = await getAuthedUser()
-    if (!user) return { role: 'owner', slug: null }
+    if (!user) return { role: 'owner', slug: null, appUrl }
 
     const supabase = await createClient()
     const [memberRes, settingsRes] = await Promise.all([
@@ -36,9 +39,9 @@ export async function getSidebarData(): Promise<SidebarData> {
       memberRes.data?.role === 'agent' ? 'agent' : 'owner'
     const slug = settingsRes.data?.chat_slug ?? null
 
-    return { role, slug }
+    return { role, slug, appUrl }
   } catch (err) {
     console.error('getSidebarData error', err)
-    return { role: 'owner', slug: null }
+    return { role: 'owner', slug: null, appUrl }
   }
 }
