@@ -1005,7 +1005,8 @@
       "name": "Basic LLM Chain Splitter",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
-      "position": [976, -1344]
+      "position": [976, -1344],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -1030,7 +1031,11 @@
       }
     },
     {
-      "parameters": {},
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"messages\": [\n    \"primeira parte da mensagem dividida pelo splitter\",\n    \"segunda parte com conteúdo adicional\",\n    \"terceira parte se necessário\"\n  ]\n}",
+        "autoFix": true
+      },
       "id": "sp3c4d5e-6f7a-4890-0123-splitter33333",
       "name": "Splitter Output Parser",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
