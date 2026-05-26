@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAuthedUser } from '@/lib/auth'
 import { getStoreRole } from '@/lib/store-role'
-import { listStoreMembers } from '@/actions/equipe'
+import { listEquipeData } from '@/actions/equipe'
 import { EquipeView } from '@/components/equipe/EquipeView'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +11,6 @@ export default async function EquipePage() {
   if (!user) redirect('/login')
   if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
-  const members = await listStoreMembers()
-  return <EquipeView members={members} />
+  const data = await listEquipeData()
+  return <EquipeView data={data} />
 }
