@@ -89,56 +89,68 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
       ) : (
         <div className="card mt-5 divide-y divide-ink-100">
           {shown.map((l) => (
-            <div key={l.id} className="px-5 py-4 flex items-center gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-semibold text-ink-900 truncate">
-                  {l.name}
-                </div>
-                <div className="text-[12.5px] text-ink-500 truncate">
-                  {l.interestSummary || 'Sem resumo de interesse'}
-                </div>
-                {l.contactedAt && (
-                  <div className="eyebrow text-ink-400 mt-1">
-                    CONTATADO
-                    {l.contactedByName ? ` POR ${l.contactedByName}` : ''} ·{' '}
-                    {formatLeadDate(l.contactedAt)}
+            <div key={l.id} className="px-5 py-4 flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold text-ink-900 truncate">
+                    {l.name}
                   </div>
-                )}
-              </div>
-              <div className="text-[12.5px] font-mono text-ink-600 shrink-0">
-                {l.whatsapp}
-              </div>
-              <div className="text-[11.5px] text-ink-400 tabular shrink-0">
-                {formatLeadDate(l.createdAt)}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(l.id)}
-                  aria-expanded={expandedId === l.id}
-                  aria-controls={`lead-details-${l.id}`}
-                  className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 px-2.5 py-1.5 rounded-lg ring-1 ring-ink-200"
-                >
-                  {expandedId === l.id ? 'Ocultar' : 'Ver detalhes'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(l.id, l.whatsapp)}
-                  className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 px-2.5 py-1.5 rounded-lg ring-1 ring-ink-200"
-                >
-                  {copiedId === l.id ? 'Copiado!' : 'Copiar nº'}
-                </button>
-                {!l.contactedAt && (
+                  <div className="text-[12.5px] text-ink-500 truncate">
+                    {l.interestSummary || 'Sem resumo de interesse'}
+                  </div>
+                  {l.contactedAt && (
+                    <div className="eyebrow text-ink-400 mt-1">
+                      CONTATADO
+                      {l.contactedByName ? ` POR ${l.contactedByName}` : ''} ·{' '}
+                      {formatLeadDate(l.contactedAt)}
+                    </div>
+                  )}
+                </div>
+                <div className="text-[12.5px] font-mono text-ink-600 shrink-0">
+                  {l.whatsapp}
+                </div>
+                <div className="text-[11.5px] text-ink-400 tabular shrink-0">
+                  {formatLeadDate(l.createdAt)}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => handleContacted(l.id)}
-                    disabled={pending}
-                    className="text-[12.5px] font-semibold text-white bg-brand-600 hover:bg-brand-700 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+                    onClick={() => toggleExpanded(l.id)}
+                    aria-expanded={expandedId === l.id}
+                    aria-controls={`lead-details-${l.id}`}
+                    className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 px-2.5 py-1.5 rounded-lg ring-1 ring-ink-200"
                   >
-                    Marcar contatado
+                    {expandedId === l.id ? 'Ocultar' : 'Ver detalhes'}
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(l.id, l.whatsapp)}
+                    className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 px-2.5 py-1.5 rounded-lg ring-1 ring-ink-200"
+                  >
+                    {copiedId === l.id ? 'Copiado!' : 'Copiar nº'}
+                  </button>
+                  {!l.contactedAt && (
+                    <button
+                      type="button"
+                      onClick={() => handleContacted(l.id)}
+                      disabled={pending}
+                      className="text-[12.5px] font-semibold text-white bg-brand-600 hover:bg-brand-700 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+                    >
+                      Marcar contatado
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {expandedId === l.id && (
+                <div
+                  id={`lead-details-${l.id}`}
+                  role="region"
+                  className="border-t border-ink-100 pt-4"
+                >
+                  <div className="text-[12.5px] text-ink-500">Detalhes...</div>
+                </div>
+              )}
             </div>
           ))}
         </div>
