@@ -9,6 +9,7 @@ export interface PlanDisplay {
   for: string
   msgs: string
   msgsLimit: number
+  maxAgents: number
   priceMonthly: number
   priceAnnual: number
   cpm: string
@@ -26,6 +27,7 @@ export const PLANS_DISPLAY: PlanDisplay[] = [
     for: 'Pra lojas começando a automatizar o atendimento.',
     msgs: '1.000',
     msgsLimit: 1000,
+    maxAgents: 3,
     priceMonthly: 97,
     priceAnnual: 81,
     cpm: '~R$ 0,09 / mensagem',
@@ -44,6 +46,7 @@ export const PLANS_DISPLAY: PlanDisplay[] = [
     for: 'Pra lojas com tráfego constante e fluxo diário de mensagens.',
     msgs: '5.000',
     msgsLimit: 5000,
+    maxAgents: 5,
     priceMonthly: 247,
     priceAnnual: 207,
     cpm: '~R$ 0,049 / mensagem',
@@ -64,6 +67,7 @@ export const PLANS_DISPLAY: PlanDisplay[] = [
     for: 'Pra operações em escala que dependem do atendimento automatizado.',
     msgs: '20.000',
     msgsLimit: 20000,
+    maxAgents: 10,
     priceMonthly: 597,
     priceAnnual: 497,
     cpm: '~R$ 0,029 / mensagem',
