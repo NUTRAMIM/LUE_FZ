@@ -11,6 +11,8 @@ export interface LeadRow {
   createdAt: string
   contactedAt: string | null
   contactedByName: string | null
+  email: string | null
+  cep: string | null
 }
 
 // Lista os leads da loja. A RLS de membership (leads_select_member, migration
@@ -24,7 +26,7 @@ export async function getLeads(): Promise<LeadRow[]> {
   const { data, error } = await supabase
     .from('leads')
     .select(
-      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name',
+      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name, email, cep',
     )
     .order('created_at', { ascending: false })
     .limit(200)
@@ -41,6 +43,8 @@ export async function getLeads(): Promise<LeadRow[]> {
     createdAt: l.created_at,
     contactedAt: l.contacted_at,
     contactedByName: l.contacted_by_name,
+    email: l.email ?? null,
+    cep: l.cep ?? null,
   }))
 }
 
