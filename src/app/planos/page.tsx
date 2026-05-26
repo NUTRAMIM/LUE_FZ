@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentSubscription } from '@/actions/billing'
+import { getStoreRole } from '@/lib/store-role'
 import { PLANS } from '@/lib/plans'
 import { CheckoutClient } from './CheckoutClient'
 
@@ -20,6 +21,7 @@ export default async function PlanosPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  if ((await getStoreRole()) === 'agent') redirect('/conversas')
 
   const subscription = await getCurrentSubscription()
   if (subscription.isActive) redirect('/painel')

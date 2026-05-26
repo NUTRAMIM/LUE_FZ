@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function EquipePage() {
   const user = await getAuthedUser()
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/leads')
+  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
   const members = await listStoreMembers()
   return <EquipeView members={members} />

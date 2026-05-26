@@ -13,7 +13,7 @@ export default async function LojaPage() {
   const user = await getAuthedUser()
 
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/leads')
+  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
   // F1.4: consolida em 2 queries server-side os fetches que antes rolavam
   // separados (chat_slug aqui + store_settings/products no useEffect do

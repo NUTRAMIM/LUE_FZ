@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getStoreRole } from '@/lib/store-role'
 import {
   getPainelPulse,
   getFunnel,
@@ -21,6 +22,7 @@ export default async function PainelPage() {
   const supabase = await createClient()
   const user = await getAuthedUser()
   if (!user) redirect('/login')
+  if ((await getStoreRole()) === 'agent') redirect('/conversas')
 
   const [
     initialPulse,

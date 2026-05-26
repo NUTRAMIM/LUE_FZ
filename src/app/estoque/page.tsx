@@ -13,7 +13,7 @@ export default async function EstoquePage() {
 
   const user = await getAuthedUser()
   if (!user) redirect('/login')
-  if ((await getStoreRole()) !== 'owner') redirect('/leads')
+  if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
   // F1.1: projeção explícita; colunas pesadas (description, variants,
   // attributes) ficam pro fetch lazy via getProductDetails quando um drawer
