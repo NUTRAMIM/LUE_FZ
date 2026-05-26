@@ -146,6 +146,7 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                 <div
                   id={`lead-details-${l.id}`}
                   role="region"
+                  aria-label={`Detalhes de ${l.name}`}
                   className="border-t border-ink-100 pt-4"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
@@ -155,9 +156,11 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                     </div>
                     <div>
                       <div className="eyebrow text-ink-500">NÚMERO</div>
-                      <div className="text-[13px] text-ink-900 mt-0.5 font-mono">
-                        {l.whatsapp || (
-                          <span className="text-ink-400 font-sans">Não informado</span>
+                      <div className="text-[13px] mt-0.5">
+                        {l.whatsapp ? (
+                          <span className="text-ink-900 font-mono">{l.whatsapp}</span>
+                        ) : (
+                          <span className="text-ink-400">Não informado</span>
                         )}
                       </div>
                     </div>
