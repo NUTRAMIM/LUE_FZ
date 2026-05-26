@@ -46,8 +46,10 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/painel')
     router.refresh()
+    // Reentra em /login com sessão ativa — middleware decide o destino
+    // (agent → /conversas, owner → /painel) num único redirect.
+    router.push('/login')
   }
 
   return (
