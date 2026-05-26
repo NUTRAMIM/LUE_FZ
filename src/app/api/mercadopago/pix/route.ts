@@ -20,6 +20,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
+  // Vendedor não paga — só o dono.
+  const { data: membership } = await supabase
+    .from('store_members')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (membership?.role === 'agent') {
+    return NextResponse.json({ error: 'agent_cannot_pay' }, { status: 403 })
+  }
+
   let body: { plan_id?: string }
   try {
     body = await req.json()

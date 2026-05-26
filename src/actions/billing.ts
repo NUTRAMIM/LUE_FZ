@@ -4,6 +4,7 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
 import { PLANS, type PlanId } from '@/lib/plans'
+import { getActiveStoreId } from '@/lib/active-store'
 
 export interface SubscriptionState {
   isActive: boolean
@@ -42,10 +43,12 @@ export async function getCurrentSubscription(): Promise<SubscriptionState> {
   } = await supabase.auth.getUser()
   if (!user) return EMPTY_SUBSCRIPTION
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) return EMPTY_SUBSCRIPTION
   const { data, error } = await supabase
     .from('store_subscriptions')
     .select('plan_id, provider, status, current_period_end, cancel_at_period_end')
-    .eq('store_id', user.id)
+    .eq('store_id', storeId)
     .maybeSingle()
 
   if (error) {
@@ -82,6 +85,16 @@ export async function createCheckoutSession(planId: PlanId): Promise<CheckoutRes
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: 'unauthorized' }
+
+  // Vendedor (agent) não paga — só o dono assina.
+  const { data: membership } = await supabase
+    .from('store_members')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (membership?.role === 'agent') {
+    return { error: 'agent_cannot_pay' }
+  }
 
   const plan = PLANS[planId]
   if (!plan) return { error: 'unknown_plan' }
