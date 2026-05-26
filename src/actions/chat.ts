@@ -188,15 +188,26 @@ export async function sendMessage(
     })
 
     if (res && res.ok) {
-      const data = (await res
-        .json()
-        .catch(() => null)) as { output?: string } | null
-      const output = data?.output?.trim()
-      if (output) {
+      const data = (await res.json().catch(() => null)) as
+        | { messages?: string[]; output?: string }
+        | null
+      const parts =
+        Array.isArray(data?.messages) && data.messages.length > 0
+          ? data.messages
+          : data?.output
+            ? [data.output]
+            : []
+      for (let i = 0; i < parts.length; i++) {
+        const content = (parts[i] ?? '').trim()
+        if (!content) continue
+        if (i > 0) {
+          const waitMs = Math.min(Math.max(content.length * 30, 800), 8000)
+          await new Promise((r) => setTimeout(r, waitMs))
+        }
         await admin.from('messages').insert({
           conversation_id: conv.id,
           role: 'assistant',
-          content: output,
+          content,
           message_type: 'text',
         })
       }
