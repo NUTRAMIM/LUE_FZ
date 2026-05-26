@@ -148,7 +148,52 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                   role="region"
                   className="border-t border-ink-100 pt-4"
                 >
-                  <div className="text-[12.5px] text-ink-500">Detalhes...</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <div>
+                      <div className="eyebrow text-ink-500">NOME</div>
+                      <div className="text-[13px] text-ink-900 mt-0.5">{l.name}</div>
+                    </div>
+                    <div>
+                      <div className="eyebrow text-ink-500">NÚMERO</div>
+                      <div className="text-[13px] text-ink-900 mt-0.5 font-mono">
+                        {l.whatsapp || (
+                          <span className="text-ink-400 font-sans">Não informado</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="eyebrow text-ink-500">EMAIL</div>
+                      <div className="text-[13px] mt-0.5">
+                        {l.email ? (
+                          <span className="text-ink-900">{l.email}</span>
+                        ) : (
+                          <span className="text-ink-400">Não informado</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="eyebrow text-ink-500">CEP</div>
+                      <div className="text-[13px] mt-0.5">
+                        {l.cep ? (
+                          <span className="text-ink-900">{l.cep}</span>
+                        ) : (
+                          <span className="text-ink-400">Não informado</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="eyebrow text-ink-500">RESUMO DE INTERESSE</div>
+                      <div className="text-[13px] mt-0.5">
+                        {l.interestSummary ? (
+                          <span className="text-ink-900 whitespace-pre-wrap">
+                            {l.interestSummary}
+                          </span>
+                        ) : (
+                          <span className="text-ink-400">Não informado</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
