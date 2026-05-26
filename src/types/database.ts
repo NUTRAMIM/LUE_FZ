@@ -333,6 +333,42 @@ export interface Database {
         }
         Relationships: []
       }
+      store_invites: {
+        Row: {
+          id: string
+          store_id: string
+          email: string
+          full_name: string
+          token: string
+          invited_by: string
+          expires_at: string
+          accepted_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          email: string
+          full_name: string
+          token: string
+          invited_by: string
+          expires_at: string
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          email?: string
+          full_name?: string
+          token?: string
+          invited_by?: string
+          expires_at?: string
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       knowledge_gaps: {
         Row: {
           id: string
