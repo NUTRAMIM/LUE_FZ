@@ -18,6 +18,7 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
   const [tab, setTab] = useState<'novos' | 'contatados'>('novos')
   const [pending, startTransition] = useTransition()
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const novos = leads.filter((l) => !l.contactedAt)
   const contatados = leads.filter((l) => l.contactedAt)
@@ -38,6 +39,10 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
     } catch {
       // clipboard indisponível — ignora
     }
+  }
+
+  function toggleExpanded(id: string) {
+    setExpandedId((current) => (current === id ? null : id))
   }
 
   return (
