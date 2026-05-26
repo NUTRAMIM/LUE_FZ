@@ -114,6 +114,15 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
+                  onClick={() => toggleExpanded(l.id)}
+                  aria-expanded={expandedId === l.id}
+                  aria-controls={`lead-details-${l.id}`}
+                  className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 px-2.5 py-1.5 rounded-lg ring-1 ring-ink-200"
+                >
+                  {expandedId === l.id ? 'Ocultar' : 'Ver detalhes'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleCopy(l.id, l.whatsapp)}
                   className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 px-2.5 py-1.5 rounded-lg ring-1 ring-ink-200"
                 >
