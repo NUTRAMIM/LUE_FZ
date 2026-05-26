@@ -187,12 +187,37 @@ export async function sendMessage(
       ...(mediaUrl ? { media_url: mediaUrl } : {}),
     })
 
-    if (!res || !res.ok) {
-      console.error('dispatchToN8n non-ok', res?.status)
+    if (res && res.ok) {
+      const data = (await res.json().catch(() => null)) as
+        | { output?: string; messages?: string[]; ok?: boolean }
+        | null
+      // Three response shapes supported:
+      //   {output: "..."} — n8n returns the agent's full text (simple flow)
+      //   {messages: [...]} — n8n returns split chunks for the app to space out
+      //   {ok: true} — n8n inserts assistant rows itself (no-op here)
+      const parts =
+        Array.isArray(data?.messages) && data.messages.length > 0
+          ? data.messages
+          : data?.output
+            ? [data.output]
+            : []
+      for (let i = 0; i < parts.length; i++) {
+        const content = (parts[i] ?? '').trim()
+        if (!content) continue
+        if (i > 0) {
+          const waitMs = Math.min(Math.max(content.length * 30, 800), 8000)
+          await new Promise((r) => setTimeout(r, waitMs))
+        }
+        await admin.from('messages').insert({
+          conversation_id: conv.id,
+          role: 'assistant',
+          content,
+          message_type: 'text',
+        })
+      }
+    } else if (res) {
+      console.error('dispatchToN8n non-ok', res.status)
     }
-    // n8n now inserts assistant messages directly into the messages table
-    // (loop with Wait Typing inside the workflow). Realtime delivers each
-    // insert to ChatClient. The app no longer parses the response body.
   } catch (e) {
     console.error('dispatchToN8n threw', e)
     await admin.from('messages').insert({
