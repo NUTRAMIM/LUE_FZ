@@ -8,8 +8,6 @@ import {
   parseVisitorCookieValue,
 } from '@/lib/visitor-cookie'
 
-// Rotas que exigem usuário logado (qualquer um — sem checagem de billing).
-// Inclui /planos pra a gente saber quem é o usuário ao montar checkout.
 const AUTH_PROTECTED = [
   '/painel',
   '/estoque',
@@ -20,9 +18,6 @@ const AUTH_PROTECTED = [
   '/planos',
 ] as const
 
-// Rotas que exigem assinatura ativa. Subset de AUTH_PROTECTED. /equipe e
-// /leads ficam de fora propositalmente — billing-gating não se aplica a eles
-// neste MVP.
 const BILLING_GATED = ['/painel', '/estoque', '/loja', '/conversas'] as const
 
 function ensureVisitorCookie(request: NextRequest): NextResponse {
@@ -32,11 +27,6 @@ function ensureVisitorCookie(request: NextRequest): NextResponse {
   }
   const newId = generateVisitorId()
   const value = buildVisitorCookieValue(newId)
-  // Muta o request.cookies pra que o Server Component downstream
-  // (ensureConversation) leia o mesmo visitor_id que mandamos pro browser.
-  // Sem isso, o Server Component vê request sem cookie e gera um id próprio,
-  // divergindo do que o browser recebe — resulta em "trocou de visitante" a
-  // cada refresh.
   request.cookies.set(COOKIE_NAME, value)
   const response = NextResponse.next({ request })
   response.cookies.set(COOKIE_NAME, value, COOKIE_OPTIONS)
@@ -46,8 +36,14 @@ function ensureVisitorCookie(request: NextRequest): NextResponse {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Chat público mantém o cookie de visitante.
   if (pathname.startsWith('/chat/')) {
     return ensureVisitorCookie(request)
+  }
+
+  // Página de aceite de convite é pública — vendedor sem conta abre aqui.
+  if (pathname.startsWith('/convite/')) {
+    return NextResponse.next({ request })
   }
 
   let supabaseResponse = NextResponse.next({ request })
@@ -86,11 +82,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Resolve membership uma vez — usado pelo billing-gate e pelo redirect
+  // pós-login. Owner que não configurou a loja não tem row e cai no
+  // fallback (storeId = user.id).
+  let membership: { store_id: string; role: 'owner' | 'agent' } | null = null
+  if (user) {
+    const { data } = await supabase
+      .from('store_members')
+      .select('store_id, role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    membership = data ?? null
+  }
+
   if (user && needsBilling) {
+    const storeId = membership?.store_id ?? user.id
     const { data: sub, error: subError } = await supabase
       .from('store_subscriptions')
       .select('status, current_period_end')
-      .eq('store_id', user.id)
+      .eq('store_id', storeId)
       .maybeSingle()
     if (subError) {
       console.error('middleware billing query error', {
@@ -110,9 +120,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Pós-login: destino depende do role. Centraliza o redirect aqui em vez
+  // de no /login (que hoje força /painel pra todo mundo).
   if (user && pathname === '/login') {
+    const role = membership?.role === 'agent' ? 'agent' : 'owner'
     const url = request.nextUrl.clone()
-    url.pathname = '/painel'
+    url.pathname = role === 'agent' ? '/conversas' : '/painel'
     return NextResponse.redirect(url)
   }
 
