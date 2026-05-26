@@ -39,6 +39,12 @@
               "name": "store_id",
               "value": "={{ $json.body.id_loja }}",
               "type": "string"
+            },
+            {
+              "id": "b9f5a4c2-2345-5678-9012-bcdef0123456",
+              "name": "id_mensagem",
+              "value": "={{ $json.body.id_mensagem }}",
+              "type": "string"
             }
           ]
         },
@@ -105,7 +111,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "={{ $('Edit Fields').item.json.chatInput }}",
+        "text": "={{ $('Buffer Check').item.json.chatInput }}",
         "options": {
           "systemMessage": "=# Você\nAssistente da loja {{ $('Informaçoes da loja1').item.json.store_name }}. Trata o cliente por \"você\". Descobre a intenção antes de oferecer produto.\n\n# A loja\nCategorias: {{ $('Informaçoes da loja1').item.json.categories }}\nPagamento: {{ $('Informaçoes da loja1').item.json.payment_methods }}\nEntrega: {{ $('Informaçoes da loja1').item.json.delivery_methods }}\nInstruções: {{ $('Informaçoes da loja1').item.json.service_instructions }}\nContato do vendedor: {{ $('Informaçoes da loja1').item.json.seller_phone }}\nInstagram da loja: @{{ $('Informaçoes da loja1').item.json.instagram_handle }}\n\n# Como você fala\nTexto corrido, jeito conversa. ZERO markdown na resposta: nunca use **, #, - ou lista numerada.\n\nVaria aberturas — nunca repete a mesma frase de saudação entre mensagens. Após \"não\" claro do cliente, acolhe sem reformular oferta.\n\nFala sobre os produtos e sobre o cliente — nunca sobre o que você está fazendo internamente (procurar, filtrar, mudar categoria, etc).\nExemplo ruim: \"Não vieram opções diferentes, posso mudar de categoria ou mostrar outro estilo\"\nExemplo bom: \"Os tops que eu tenho são só esses dois. Mas tenho uns croppeds que combinam — olha:\"\n\n# Buscar produtos (tool BUSCAR_PRODUTOS)\nUse sempre que o cliente perguntar disponibilidade, preço, tamanho, cor, comparação. Aceita linguagem natural (\"blusa azul P\"). NUNCA invente produto, preço, tamanho, cor ou estoque.\n\nParâmetros:\n- Consulta: o pedido em linguagem natural\n- `category`: a categoria EXATA da lista da loja acima (pedido vago → string vazia)\n\nQuando a tool não traz nada novo (todos resultados já estão em \"Já mostrado\", ou veio vazio):\n1. Escolha entre as Categorias da loja a mais próxima do pedido original.\n2. Chame BUSCAR_PRODUTOS lá, sem avisar o cliente.\n3. Mostre o resultado com transição natural (\"Dessa pegada tô só com esses. Mas tenho croppeds que combinam — olha:\").\n4. Se essa segunda categoria também esgotar, fala honesto: \"Pra essa pegada hoje tô limitado. Quer ver [outra categoria]?\"\n\nNUNCA pergunte permissão (\"quer que eu procure?\"). Decida e aja.\n\n# Já mostrado nesta conversa\n{{ $('Get Shown Products').item.json.shown_list || '(nenhum)' }}\n\nNão repita esses produtos. Exceção: se o cliente pedir explicitamente um deles pelo nome.\n\n# Mostrar produto\nMáximo 3 produtos por mensagem. Antes, uma frase curta natural (\"achei isso\", \"olha esses dois\"). Cada produto em bloco de linhas separadas:\n\nNome do produto\nR$ XX\nTamanhos: P, M, G\nCores: rosa, branco\nhttps://link\n\nOmita campo vazio.\n\n# Lead\nQuando o cliente demonstrar intenção de compra/reserva (\"quero comprar\", \"vou levar\", \"reserva pra mim\", \"como faço pra fechar\"), peça os três dados de uma vez, em uma frase corrida natural.\n\nExemplo: \"Show, vou anotar. Pra te conectar com a gente, manda seu nome, WhatsApp e email?\"\n\nQuando o cliente compartilhar nome E WhatsApp (mesmo que falte o email), na mesma mensagem em que confirmar os dados avise que um vendedor vai entrar em contato e ofereça os contatos da loja como alternativa para ele falar direto.\n\nExemplo: \"Anotei, {nome}. Um vendedor vai entrar em contato em breve. Se preferir falar direto, é WhatsApp {seller_phone} ou Instagram @{instagram_handle}.\"\n\nNÃO peça os dados antes da intenção de compra. NÃO peça um por vez. NÃO repita os contatos da loja em todas as mensagens — só na que o cliente acabou de compartilhar nome e número."
         }
@@ -256,7 +262,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "={{ $('Edit Fields').item.json.chatInput }}",
+        "text": "={{ $('Buffer Check').item.json.chatInput }}",
         "options": {
           "systemMessage": "Você é um extrator de informações pessoais. Analise a mensagem do cliente e identifique se ele compartilhou algum destes dados:\n\n- nome (próprio do cliente, ex: \"meu nome é João\", \"sou a Maria\")\n- telefone (WhatsApp ou fixo — qualquer número com >= 10 dígitos)\n- email\n- cep (formato 00000-000 ou 00000000)\n\nRetorne APENAS um JSON puro, sem markdown e sem texto adicional, no formato:\n{\"nome\": \"João\" ou null, \"telefone\": \"5511999999999\" ou null, \"email\": \"x@y.com\" ou null, \"cep\": \"01310-100\" ou null}\n\nSe nada foi compartilhado, retorne:\n{\"nome\": null, \"telefone\": null, \"email\": null, \"cep\": null}\n\nNormalize:\n- telefone: somente dígitos, com código do país (Brasil = 55).\n- cep: formato 00000-000.\n- nome: capitalizado (\"João\", não \"joão\")."
         }
@@ -681,7 +687,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Mensagem do cliente: {{ $('Edit Fields').item.json.chatInput }}",
+        "text": "=Mensagem do cliente: {{ $('Buffer Check').item.json.chatInput }}",
         "options": {
           "systemMessage": "=Você analisa a mensagem do cliente e detecta perguntas que a loja não consegue responder com as instruções abaixo.\n\nInstruções da loja:\n- Categorias: {{ $('Informaçoes da loja1').item.json.categories }}\n- Pagamento: {{ $('Informaçoes da loja1').item.json.payment_methods }}\n- Entrega: {{ $('Informaçoes da loja1').item.json.delivery_methods }}\n- Outras: {{ $('Informaçoes da loja1').item.json.service_instructions }}\n\nRetorne APENAS JSON puro, sem markdown, no formato:\n{\"is_gap\": true|false, \"question\": \"pergunta normalizada em minúsculas\", \"tag\": \"POLÍTICA DE ENTREGA\"|\"PRAZO\"|\"ATACADO\"|\"SKU INEXISTENTE\"|\"PAGAMENTO\"|\"OUTROS\"}\n\nMarque is_gap=true APENAS se:\n- A mensagem contém pergunta concreta (com '?' ou claramente interrogativa).\n- A resposta NÃO está nas instruções acima.\n- A pergunta NÃO é sobre um produto específico do catálogo (isso é trabalho do vendedor).\n\nMarque is_gap=false se: saudação, comentário, declaração de interesse, pergunta sobre produto/cor/tamanho específico, ou pergunta já coberta pelas instruções acima.\n\nSe is_gap=false, devolva question=\"\" e tag=\"OUTROS\"."
         }
@@ -825,7 +831,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all().map(i => i.json).filter(p => p && p.id && p.name);\nconst aiOutput = String($('AI Agent2').item.json.output ?? '');\nconst customerMsg = String($('Edit Fields').item.json.chatInput ?? '');\nconst conversation_id = $('Edit Fields').item.json.sessionId;\nconst store_id = $('Edit Fields').item.json.store_id;\n\n// Ordena por tamanho do nome desc para que matches mais específicos ganhem.\nconst products = items.slice().sort((a, b) => b.name.length - a.name.length);\n\nfunction escapeReg(s) { return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); }\n\nfunction findMatches(text, source) {\n  // Substitui faixas já consumidas por espaços para evitar dupla contagem em sobreposição.\n  let buffer = text;\n  const results = [];\n  for (const p of products) {\n    const re = new RegExp(`\\\\b${escapeReg(p.name)}\\\\b`, 'i');\n    if (re.test(buffer)) {\n      results.push({ product_id: p.id, source, store_id, conversation_id });\n      buffer = buffer.replace(new RegExp(`\\\\b${escapeReg(p.name)}\\\\b`, 'gi'), (m) => ' '.repeat(m.length));\n    }\n  }\n  return results;\n}\n\nconst rows = [\n  ...findMatches(aiOutput, 'ai_shown'),\n  ...findMatches(customerMsg, 'customer_asked'),\n];\n\nreturn rows.map(r => ({ json: r }));"
+        "jsCode": "const items = $input.all().map(i => i.json).filter(p => p && p.id && p.name);\nconst aiOutput = String($('AI Agent2').item.json.output ?? '');\nconst customerMsg = String($('Buffer Check').item.json.chatInput ?? '');\nconst conversation_id = $('Edit Fields').item.json.sessionId;\nconst store_id = $('Edit Fields').item.json.store_id;\n\n// Ordena por tamanho do nome desc para que matches mais específicos ganhem.\nconst products = items.slice().sort((a, b) => b.name.length - a.name.length);\n\nfunction escapeReg(s) { return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); }\n\nfunction findMatches(text, source) {\n  // Substitui faixas já consumidas por espaços para evitar dupla contagem em sobreposição.\n  let buffer = text;\n  const results = [];\n  for (const p of products) {\n    const re = new RegExp(`\\\\b${escapeReg(p.name)}\\\\b`, 'i');\n    if (re.test(buffer)) {\n      results.push({ product_id: p.id, source, store_id, conversation_id });\n      buffer = buffer.replace(new RegExp(`\\\\b${escapeReg(p.name)}\\\\b`, 'gi'), (m) => ' '.repeat(m.length));\n    }\n  }\n  return results;\n}\n\nconst rows = [\n  ...findMatches(aiOutput, 'ai_shown'),\n  ...findMatches(customerMsg, 'customer_asked'),\n];\n\nreturn rows.map(r => ({ json: r }));"
       },
       "id": "m2b3c4d5-e6f7-4890-edcb-a98765432109",
       "name": "Match Mentions",
@@ -910,6 +916,76 @@
           "name": "LUE FZ"
         }
       }
+    },
+    {
+      "parameters": {
+        "amount": 7
+      },
+      "id": "b1a2c3d4-e5f6-4789-0123-abcdef111111",
+      "name": "Wait Buffer",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [160, -1344],
+      "webhookId": "3f2f3ccc-a4fe-4d64-90f4-bde11b9b1111"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, content, created_at FROM messages WHERE conversation_id = '{{ $('Edit Fields').item.json.sessionId }}' AND role = 'user' AND created_at >= now() - interval '8 seconds' ORDER BY created_at ASC",
+        "options": {}
+      },
+      "id": "b2a3c4d5-e6f7-4890-1234-bcdef0222222",
+      "name": "Get User Messages in Window",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [288, -1344],
+      "credentials": {
+        "postgres": {
+          "id": "5LgfkDaHLkpMWYfd",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json).filter(m => m && m.id);\nconst myMessageId = $('Edit Fields').item.json.id_mensagem;\nconst originalInput = $('Edit Fields').item.json.chatInput;\n\nif (items.length === 0) {\n  return [{ json: { should_process: true, chatInput: originalInput } }];\n}\n\nconst latest = items[items.length - 1];\nif (latest.id !== myMessageId) {\n  return [{ json: { should_process: false } }];\n}\n\nconst joined = items.map(m => m.content).join('\\n');\nreturn [{ json: { should_process: true, chatInput: joined } }];"
+      },
+      "id": "b3a4c5d6-e7f8-4901-2345-cdef01333333",
+      "name": "Buffer Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [416, -1344]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "buffer-should-process",
+              "leftValue": "={{ $json.should_process }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b4a5c6d7-e8f9-4012-3456-def012444444",
+      "name": "IF Should Process",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [544, -1344]
     }
   ],
   "connections": {
@@ -925,6 +1001,50 @@
       ]
     },
     "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Wait Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Buffer": {
+      "main": [
+        [
+          {
+            "node": "Get User Messages in Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Messages in Window": {
+      "main": [
+        [
+          {
+            "node": "Buffer Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer Check": {
+      "main": [
+        [
+          {
+            "node": "IF Should Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Should Process": {
       "main": [
         [
           {
