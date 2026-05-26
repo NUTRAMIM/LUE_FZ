@@ -56,7 +56,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   const bubbleMaxWidth = hasImage ? 'max-w-[88%] sm:max-w-sm' : 'max-w-[75%]'
 
   return (
-    <div className={`my-1 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`mb-0.5 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
         className={`${bubbleMaxWidth} rounded-lg px-3 py-2 shadow-sm ${
           isUser ? 'bg-[#DCF8C6]' : 'bg-white'

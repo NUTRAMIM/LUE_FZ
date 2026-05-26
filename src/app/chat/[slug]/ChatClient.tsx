@@ -29,9 +29,28 @@ type Action =
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'add':
+    case 'add': {
       if (state.messages.some((m) => m.id === action.message.id)) return state
+      // Realtime entrega o INSERT da mensagem do user antes do server action
+      // retornar (o action espera n8n responder). Se encontrarmos uma temp- do
+      // mesmo conteúdo, trocamos no lugar pra evitar a bolha duplicada visível
+      // no intervalo entre INSERT e replaceTemp.
+      if (action.message.role === 'user') {
+        const dupTempIdx = state.messages.findIndex(
+          (m) =>
+            m.id.startsWith('temp-') &&
+            m.role === 'user' &&
+            m.message_type === action.message.message_type &&
+            m.content === action.message.content,
+        )
+        if (dupTempIdx !== -1) {
+          const next = state.messages.slice()
+          next[dupTempIdx] = action.message
+          return { ...state, messages: next }
+        }
+      }
       return { ...state, messages: [...state.messages, action.message] }
+    }
     case 'replaceTemp':
       if (state.messages.some((m) => m.id === action.realId)) {
         return {
@@ -155,7 +174,6 @@ export function ChatClient({
       <MessageList messages={state.messages} scrollAnchorRef={scrollAnchor} />
       <ChatInput
         slug={slug}
-        conversationId={conversationId}
         sending={state.sending}
         onSending={(sending) => dispatch({ type: 'sending', sending })}
         onError={(error) => dispatch({ type: 'error', error })}
