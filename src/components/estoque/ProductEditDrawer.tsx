@@ -83,6 +83,7 @@ export function ProductEditDrawer({
   }, [productId, open])
 
   function handleClose() {
+    if (isPending || uploading) return
     setError(null)
     onClose()
   }
