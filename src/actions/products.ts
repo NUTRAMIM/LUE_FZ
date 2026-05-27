@@ -6,7 +6,7 @@ import { getAuthedUser } from '@/lib/auth'
 import { getStoreRole } from '@/lib/store-role'
 import { generateSku } from '@/lib/sku'
 import type { Product } from '@/types/product'
-import { MAX_PRODUCT_IMAGES } from '@/components/estoque/ImageUploader'
+import { MAX_PRODUCT_IMAGES } from '@/lib/inventory/constants'
 
 const MAX_TEXT = 500
 const MAX_DESCRIPTION = 2000

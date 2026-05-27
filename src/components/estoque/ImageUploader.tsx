@@ -4,8 +4,9 @@
 import { useRef } from 'react'
 import { uploadProductImage } from '@/actions/products'
 import { Label } from '@/components/ui/Input'
+import { MAX_PRODUCT_IMAGES } from '@/lib/inventory/constants'
 
-export const MAX_PRODUCT_IMAGES = 3
+export { MAX_PRODUCT_IMAGES }
 
 type Props = {
   urls: string[]
