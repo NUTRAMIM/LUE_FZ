@@ -58,8 +58,8 @@ export function FunilCaptura({
   )
 
   return (
-    <div className="card p-6">
-      <div className="flex items-end justify-between mb-5">
+    <div className="card p-5 sm:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <div className="eyebrow text-ink-500">PIPELINE</div>
           <h2
@@ -90,7 +90,7 @@ export function FunilCaptura({
         {stages.map((s) => (
           <li
             key={s.stage}
-            className="grid grid-cols-[14px_1fr_72px_56px] items-center gap-3"
+            className="grid grid-cols-[10px_1fr_56px_64px] sm:grid-cols-[14px_1fr_72px_56px] items-center gap-2 sm:gap-3"
           >
             <span
               className="w-2.5 h-2.5 rounded-full"
@@ -130,7 +130,7 @@ export function FunilCaptura({
 
       <div className="mt-4 pt-4 border-t border-ink-100">
         <div className="eyebrow text-ink-400 mb-3">DROP-OFF ENTRE ETAPAS</div>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {stages.slice(1).map((s, i) => (
             <div
               key={s.stage}
@@ -145,7 +145,7 @@ export function FunilCaptura({
         </div>
       </div>
 
-      <div className="mt-6 pt-5 border-t border-ink-100 grid grid-cols-3 gap-6">
+      <div className="mt-6 pt-5 border-t border-ink-100 grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6">
         <div>
           <div className="eyebrow text-ink-500">TAXA VIS → LEAD</div>
           <div

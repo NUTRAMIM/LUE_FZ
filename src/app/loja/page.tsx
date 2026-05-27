@@ -56,14 +56,13 @@ export default async function LojaPage() {
     : null
 
   return (
-    <div className="max-w-[920px] mx-auto px-8 py-7">
+    <div className="max-w-[920px] mx-auto px-4 sm:px-6 md:px-8 py-5 md:py-7">
       {/* Topbar */}
-      <div className="flex items-end justify-between mb-7 gap-4">
+      <div className="flex flex-col gap-4 mb-6 md:mb-7 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="eyebrow text-ink-500">CONFIGURAÇÕES · LOJA</div>
           <h1
-            className="font-display font-bold text-ink-900 tracking-tight mt-1.5"
-            style={{ fontSize: 26, lineHeight: 1.1 }}
+            className="font-display font-bold text-ink-900 tracking-tight mt-1.5 text-[22px] md:text-[26px] leading-tight"
           >
             Configurações da loja
           </h1>
@@ -73,7 +72,7 @@ export default async function LojaPage() {
           </p>
         </div>
         {slug && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 md:shrink-0">
             <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-success-700 bg-success-50 ring-1 ring-success-100 px-2 py-1 rounded-md">
               <span className="live-dot" /> Publicado
             </span>
@@ -92,8 +91,8 @@ export default async function LojaPage() {
 
       {/* URL Card */}
       {slug ? (
-        <section className="url-card p-6 mb-6">
-          <div className="flex items-start gap-5">
+        <section className="url-card p-4 sm:p-6 mb-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5">
                 <span
@@ -110,10 +109,10 @@ export default async function LojaPage() {
                 Compartilhe nas redes sociais. Seus clientes conversam direto
                 com o agente de IA.
               </p>
-              <div className="url-pill">
-                <span className="text-brand-400">{baseHost}/chat/</span>
-                <span className="slug">{slug}</span>
-                <div className="ml-auto flex items-center gap-1.5">
+              <div className="url-pill flex-wrap gap-y-2">
+                <span className="text-brand-400 break-all">{baseHost}/chat/</span>
+                <span className="slug break-all">{slug}</span>
+                <div className="basis-full sm:basis-auto sm:ml-auto flex items-center gap-1.5">
                   <LojaCopyButton value={fullUrl} />
                   <a
                     href={fullUrl}
@@ -130,7 +129,7 @@ export default async function LojaPage() {
             </div>
 
             {qrSvg && (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-2 self-start">
                 <div
                   className="qr-tile"
                   aria-label="QR code do link da loja"

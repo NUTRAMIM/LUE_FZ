@@ -38,7 +38,7 @@ export default async function EstoquePage() {
   const defaultStockMin = settings?.default_stock_min ?? 5
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <PageHeader
         title="Controle de Estoque"
         subtitle="Gerencie o estoque de todos os produtos"

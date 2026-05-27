@@ -11,7 +11,7 @@ export function LivePulse({
   visitors: number
 }) {
   return (
-    <div className="mt-12 -mx-8 px-8 py-3 border-t border-ink-100 bg-ink-50/60 font-mono text-[12px] text-ink-500 flex items-center gap-2 flex-wrap">
+    <div className="mt-12 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-3 border-t border-ink-100 bg-ink-50/60 font-mono text-[12px] text-ink-500 flex items-center gap-2 flex-wrap">
       <span className="live-dot" />
       <span className="font-semibold text-ink-700">LIVE</span>
       <span className="text-ink-300">·</span>

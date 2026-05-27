@@ -39,7 +39,7 @@ export function Hero({
         style={{ width: 340, height: 340, right: -80, top: -100 }}
       />
 
-      <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10 p-8 md:p-10">
+      <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 md:gap-10 p-5 sm:p-7 md:p-10">
         <div className="min-w-0">
           <div className="flex items-center gap-2 eyebrow text-brand-200">
             <span
@@ -52,12 +52,11 @@ export function Hero({
             {greeting} · {clock}
           </div>
           <div
-            className="font-display font-extrabold leading-[1.02] tracking-tight mt-3"
-            style={{ fontSize: '48px' }}
+            className="font-display font-extrabold leading-[1.02] tracking-tight mt-3 text-[32px] sm:text-[40px] md:text-[48px]"
           >
             {hello}
           </div>
-          <p className="mt-3.5 text-[15px] text-brand-100/90 max-w-[44ch] leading-relaxed">
+          <p className="mt-3.5 text-[14px] sm:text-[15px] text-brand-100/90 max-w-[44ch] leading-relaxed">
             Sua IA capturou{' '}
             <span className="font-semibold text-white">
               {pulse.leadsWeek} leads esta semana
@@ -73,32 +72,29 @@ export function Hero({
             .
           </p>
 
-          <div className="mt-7 flex items-stretch gap-7">
-            <div>
-              <div className="eyebrow text-brand-200">CAPTURADOS HOJE</div>
+          <div className="mt-6 md:mt-7 grid grid-cols-3 gap-4 sm:gap-6 md:flex md:items-stretch md:gap-7">
+            <div className="min-w-0">
+              <div className="eyebrow text-brand-200 truncate">CAPTURADOS HOJE</div>
               <div
-                className="font-display font-extrabold tabular mt-1.5"
-                style={{ fontSize: '30px', lineHeight: 1 }}
+                className="font-display font-extrabold tabular mt-1.5 text-[22px] sm:text-[26px] md:text-[30px] leading-none"
               >
                 {pulse.leadsToday}
               </div>
             </div>
-            <div className="w-px bg-white/15" />
-            <div>
-              <div className="eyebrow text-brand-200">TAXA DE CAPTURA</div>
+            <div className="hidden md:block w-px bg-white/15" />
+            <div className="min-w-0 border-l border-white/15 pl-4 sm:pl-6 md:border-l-0 md:pl-0">
+              <div className="eyebrow text-brand-200 truncate">TAXA DE CAPTURA</div>
               <div
-                className="font-display font-extrabold tabular mt-1.5"
-                style={{ fontSize: '30px', lineHeight: 1 }}
+                className="font-display font-extrabold tabular mt-1.5 text-[22px] sm:text-[26px] md:text-[30px] leading-none"
               >
                 {captureRate}
               </div>
             </div>
-            <div className="w-px bg-white/15" />
-            <div>
-              <div className="eyebrow text-brand-200">LATÊNCIA IA · p95</div>
+            <div className="hidden md:block w-px bg-white/15" />
+            <div className="min-w-0 border-l border-white/15 pl-4 sm:pl-6 md:border-l-0 md:pl-0">
+              <div className="eyebrow text-brand-200 truncate">LATÊNCIA · p95</div>
               <div
-                className="font-display font-extrabold tabular mt-1.5"
-                style={{ fontSize: '30px', lineHeight: 1 }}
+                className="font-display font-extrabold tabular mt-1.5 text-[22px] sm:text-[26px] md:text-[30px] leading-none"
               >
                 {formatLatency(pulse.aiLatencyP95Ms)}
               </div>

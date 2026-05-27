@@ -167,27 +167,30 @@ export function ConversasView({ storeId, initialActive }: ConversasViewProps) {
     closed.find((c) => c.id === selectedId) ??
     null
 
+  const hasSelection = selectedId !== null
+
   return (
     <>
-      <div className="px-6 pt-6 pb-4 border-b border-ink-200 bg-white/70 backdrop-blur sticky top-0 z-10">
+      <div
+        className={`px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-ink-200 bg-white/70 backdrop-blur sticky top-0 z-10 ${
+          hasSelection ? 'hidden md:block' : ''
+        }`}
+      >
         <div className="flex items-center justify-between">
-          <div>
+          <div className="min-w-0">
             <div className="eyebrow text-ink-500 flex items-center gap-2">
               <span>OPERAÇÃO</span>
               <span className="text-ink-300">/</span>
               <span className="text-brand-600">CONVERSAS</span>
             </div>
-            <h1
-              className="font-display font-bold text-ink-900 tracking-tight mt-1 flex items-baseline gap-3"
-              style={{ fontSize: '24px' }}
-            >
+            <h1 className="font-display font-bold text-ink-900 tracking-tight mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[20px] sm:text-[24px]">
               Conversas
-              <span className="text-ink-400 font-medium text-[16px]">·</span>
-              <span className="text-ink-500 font-medium text-[15px]">
+              <span className="text-ink-400 font-medium text-[14px] sm:text-[16px]">·</span>
+              <span className="text-ink-500 font-medium text-[13px] sm:text-[15px]">
                 {active.length} ativa{active.length === 1 ? '' : 's'}
                 {totalUnread > 0 && ` · ${totalUnread} não lidas`}
               </span>
-              <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-success-700 bg-success-50 ring-1 ring-success-100 px-2 py-0.5 rounded-md ml-1">
+              <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-success-700 bg-success-50 ring-1 ring-success-100 px-2 py-0.5 rounded-md">
                 <span className="live-dot" /> ao vivo
               </span>
             </h1>
@@ -195,22 +198,27 @@ export function ConversasView({ storeId, initialActive }: ConversasViewProps) {
         </div>
       </div>
 
-      <div className="px-6 py-5 grid gap-4" style={{ gridTemplateColumns: '340px 1fr' }}>
-        <ChatRail
-          active={active}
-          closed={closed}
-          closedExpanded={closedExpanded}
-          onToggleClosed={() => setClosedExpanded((v) => !v)}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          query={query}
-          onQueryChange={setQuery}
-        />
-        <FullChat
-          conversation={selected}
-          messages={messages}
-          loading={loadingMessages}
-        />
+      <div className="px-3 sm:px-6 py-3 sm:py-5 grid gap-4 md:grid-cols-[340px_1fr]">
+        <div className={hasSelection ? 'hidden md:block' : 'block'}>
+          <ChatRail
+            active={active}
+            closed={closed}
+            closedExpanded={closedExpanded}
+            onToggleClosed={() => setClosedExpanded((v) => !v)}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            query={query}
+            onQueryChange={setQuery}
+          />
+        </div>
+        <div className={hasSelection ? 'block' : 'hidden md:block'}>
+          <FullChat
+            conversation={selected}
+            messages={messages}
+            loading={loadingMessages}
+            onBack={() => setSelectedId(null)}
+          />
+        </div>
       </div>
     </>
   )

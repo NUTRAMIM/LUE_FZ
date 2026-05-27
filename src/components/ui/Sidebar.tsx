@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { logout } from '@/actions/auth'
 import { Icon, type IconName } from '@/components/painel/Icons'
 import type { StoreRole } from '@/lib/store-role'
@@ -34,39 +34,6 @@ const OPERADORES = [
   { n: 'Camila R.', i: 'CR', c: '#34D399', s: 'em 4 chats' },
   { n: 'Diego P.', i: 'DP', c: '#60A5FA', s: 'ocioso' },
 ]
-
-function ProximaNaFila() {
-  return (
-    <div className="mt-6 mx-1 p-3.5 rounded-2xl bg-ink-900 text-white relative overflow-hidden">
-      <div
-        aria-hidden
-        className="absolute -top-10 -right-10 w-32 h-32 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(167,139,250,0.30), transparent 65%)',
-        }}
-      />
-      <div className="relative">
-        <div className="flex items-center gap-2">
-          <span className="live-dot" />
-          <span className="eyebrow text-brand-300">PRÓXIMA NA FILA</span>
-        </div>
-        <div className="mt-2.5 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-brand-400 font-display font-bold text-brand-950 text-[11px] flex items-center justify-center">
-            RC
-          </div>
-          <div className="min-w-0">
-            <div className="text-[13px] font-semibold truncate">Renata Costa</div>
-            <div className="text-[11.5px] text-ink-300 tabular">aguardando há 8m</div>
-          </div>
-        </div>
-        <button className="mt-3 w-full bg-white text-ink-900 hover:bg-brand-100 transition-colors text-[12.5px] font-semibold py-2 rounded-lg">
-          Assumir conversa
-        </button>
-      </div>
-    </div>
-  )
-}
 
 function OperadoresOnline() {
   return (
@@ -214,33 +181,30 @@ function AgenteIA() {
   )
 }
 
-export function Sidebar({
+function SidebarBody({
   role,
   slug,
   appUrl,
+  pathname,
+  onNavigate,
 }: {
   role: StoreRole
   slug: string | null
   appUrl: string
+  pathname: string | null
+  onNavigate?: () => void
 }) {
-  const pathname = usePathname()
-  // Fail-open vive em getSidebarData (server-side); aqui o role chega
-  // determinístico via prop.
   const isOwner = role !== 'agent'
-
   const isConversas = pathname?.startsWith('/conversas') ?? false
   const isLoja = pathname?.startsWith('/loja') ?? false
 
   return (
-    <aside
-      className="w-64 shrink-0 bg-white border-r border-ink-200 flex flex-col"
-      style={{ height: '100vh', position: 'sticky', top: 0 }}
-    >
+    <>
       {/* Brand */}
-      <div className="px-6 pt-7 pb-6 flex items-center gap-3">
+      <div className="px-6 pt-6 pb-5 md:pt-7 md:pb-6 flex items-center gap-3 shrink-0">
         <div
           className="font-display font-extrabold tracking-tight leading-none"
-          style={{ fontSize: 32 }}
+          style={{ fontSize: 30 }}
         >
           <span className="lue-l">L</span>
           <span className="text-ink-900">UE</span>
@@ -249,7 +213,7 @@ export function Sidebar({
       </div>
 
       {/* Org switcher */}
-      <button className="mx-3 mb-5 p-3 rounded-2xl bg-ink-50 hover:bg-ink-100 transition-colors flex items-center gap-3 text-left">
+      <button className="mx-3 mb-5 p-3 rounded-2xl bg-ink-50 hover:bg-ink-100 transition-colors flex items-center gap-3 text-left shrink-0">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center font-display font-bold text-white text-[13px]">
           FZ
         </div>
@@ -271,7 +235,11 @@ export function Sidebar({
               pathname === href || pathname?.startsWith(href + '/')
             return (
               <li key={href}>
-                <Link href={href} className={`nav-link ${active ? 'active' : ''}`}>
+                <Link
+                  href={href}
+                  onClick={onNavigate}
+                  className={`nav-link ${active ? 'active' : ''}`}
+                >
                   <Icon name={iconName} className="w-[18px] h-[18px]" />
                   {label}
                   {badge && (
@@ -302,6 +270,7 @@ export function Sidebar({
                   <li key={href}>
                     <Link
                       href={href}
+                      onClick={onNavigate}
                       className={`nav-link ${active ? 'active' : ''}`}
                     >
                       <Icon name={iconName} className="w-[18px] h-[18px]" />
@@ -325,13 +294,11 @@ export function Sidebar({
             <NestaPaginaLoja />
             <SuaUrlPublica slug={slug} appUrl={appUrl} />
           </>
-        ) : (
-          <ProximaNaFila />
-        )}
+        ) : null}
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-ink-200">
+      <div className="p-3 border-t border-ink-200 shrink-0">
         <div className="flex items-center gap-3 px-2 py-1.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-300 to-brand-500 font-display font-bold text-white flex items-center justify-center text-[11px]">
             MA
@@ -353,6 +320,132 @@ export function Sidebar({
           </form>
         </div>
       </div>
-    </aside>
+    </>
+  )
+}
+
+export function Sidebar({
+  role,
+  slug,
+  appUrl,
+}: {
+  role: StoreRole
+  slug: string | null
+  appUrl: string
+}) {
+  const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [lastPath, setLastPath] = useState(pathname)
+
+  // Fecha drawer ao navegar — set-state-em-render é a forma React-idiomática
+  // de zerar estado quando uma prop/valor reativo muda.
+  if (lastPath !== pathname) {
+    setLastPath(pathname)
+    if (mobileOpen) setMobileOpen(false)
+  }
+
+  // Trava scroll do body enquanto o drawer mobile está aberto
+  useEffect(() => {
+    if (!mobileOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileOpen])
+
+  return (
+    <>
+      {/* Mobile topbar — só visível abaixo de md */}
+      <header className="md:hidden sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-ink-200 px-4 py-3 shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Abrir menu"
+          aria-expanded={mobileOpen}
+          className="-ml-1.5 p-1.5 rounded-lg text-ink-700 hover:bg-ink-50 active:bg-ink-100"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div
+          className="font-display font-extrabold leading-none"
+          style={{ fontSize: 22 }}
+        >
+          <span className="lue-l">L</span>
+          <span className="text-ink-900">UE</span>
+        </div>
+        <div className="ml-auto eyebrow text-ink-400">FZ</div>
+      </header>
+
+      {/* Desktop sidebar — sticky */}
+      <aside
+        className="hidden md:flex md:sticky md:top-0 md:w-64 md:h-screen md:shrink-0 bg-white border-r border-ink-200 flex-col"
+      >
+        <SidebarBody
+          role={role}
+          slug={slug}
+          appUrl={appUrl}
+          pathname={pathname}
+        />
+      </aside>
+
+      {/* Mobile drawer — só renderiza quando aberto */}
+      {mobileOpen && (
+        <>
+          <div
+            aria-hidden
+            onClick={() => setMobileOpen(false)}
+            className="md:hidden fixed inset-0 z-40 bg-black/40"
+          />
+          <aside
+            role="dialog"
+            aria-label="Menu"
+            className="md:hidden fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] bg-white border-r border-ink-200 flex flex-col shadow-xl"
+            style={{ height: '100dvh' }}
+          >
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fechar menu"
+              className="absolute top-3 right-3 w-8 h-8 rounded-lg text-ink-500 hover:text-ink-900 hover:bg-ink-100 flex items-center justify-center z-10"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </button>
+            <SidebarBody
+              role={role}
+              slug={slug}
+              appUrl={appUrl}
+              pathname={pathname}
+              onNavigate={() => setMobileOpen(false)}
+            />
+          </aside>
+        </>
+      )}
+    </>
   )
 }

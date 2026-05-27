@@ -120,7 +120,7 @@ export function ChatRail({
   const closedFiltered = closed.filter((c) => matchesQuery(c, query))
 
   return (
-    <div className="card flex flex-col" style={{ height: 'calc(100vh - 138px)' }}>
+    <div className="card flex flex-col h-[calc(100dvh-180px)] md:h-[calc(100vh-138px)]">
       <div className="px-3.5 pt-3.5 pb-2 border-b border-ink-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-display font-bold text-ink-900 text-[15px]">

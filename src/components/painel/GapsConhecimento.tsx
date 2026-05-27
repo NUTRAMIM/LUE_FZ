@@ -12,7 +12,7 @@ export function GapsConhecimento({
 }) {
   return (
     <div className="card p-0 h-full flex flex-col">
-      <div className="flex items-end justify-between px-6 pt-6 pb-5">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5">
         <div>
           <div className="eyebrow text-ink-500">RAG · GAPS DE CONHECIMENTO</div>
           <h2
@@ -37,7 +37,7 @@ export function GapsConhecimento({
           {gaps.map((g) => (
             <li
               key={g.question}
-              className="px-6 py-3 flex items-center gap-3"
+              className="px-5 sm:px-6 py-3 flex items-center gap-3"
             >
               <span className="font-mono tabular text-[12px] font-semibold text-brand-700 bg-brand-50 ring-1 ring-brand-100 px-1.5 py-0.5 rounded-md min-w-[42px] text-center">
                 {g.count}×
@@ -51,7 +51,7 @@ export function GapsConhecimento({
         </ul>
       )}
 
-      <div className="px-6 py-4 border-t border-ink-100 bg-ink-50/40">
+      <div className="px-5 sm:px-6 py-4 border-t border-ink-100 bg-ink-50/40">
         <button className="w-full inline-flex items-center justify-center gap-2 text-[13px] font-semibold text-ink-900 bg-white ring-1 ring-ink-200 hover:ring-brand-300 hover:text-brand-700 px-4 py-2.5 rounded-xl">
           <Icon name="sparkle" className="w-4 h-4" />
           Completar respostas no catálogo

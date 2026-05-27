@@ -46,7 +46,7 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto px-8 py-7">
+    <div className="max-w-[1100px] mx-auto px-4 sm:px-6 md:px-8 py-5 md:py-7">
       <div className="eyebrow text-ink-500">PIPELINE</div>
       <h1
         className="font-display font-bold text-ink-900 tracking-tight mt-1"
@@ -89,9 +89,9 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
       ) : (
         <div className="card mt-5 divide-y divide-ink-100">
           {shown.map((l) => (
-            <div key={l.id} className="px-5 py-4 flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <div className="min-w-0 flex-1">
+            <div key={l.id} className="px-4 sm:px-5 py-4 flex flex-col gap-4">
+              <div className="flex flex-wrap items-start gap-x-4 gap-y-2 sm:items-center">
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                   <div className="text-[14px] font-semibold text-ink-900 truncate">
                     {l.name}
                   </div>
@@ -112,7 +112,7 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                 <div className="text-[11.5px] text-ink-400 tabular shrink-0">
                   {formatLeadDate(l.createdAt)}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 basis-full sm:basis-auto sm:shrink-0">
                   <button
                     type="button"
                     onClick={() => toggleExpanded(l.id)}

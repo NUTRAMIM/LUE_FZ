@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Sora, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -26,6 +26,12 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "LUE — Painel do Operador",
   description: "Painel do operador LUE: estoque, loja e conversas.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

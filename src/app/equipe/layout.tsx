@@ -8,7 +8,7 @@ export default async function EquipeLayout({
 }) {
   const { role, slug, appUrl } = await getSidebarData()
   return (
-    <div className="flex min-h-screen">
+    <div className="flex flex-col md:flex-row md:min-h-screen">
       <Sidebar role={role} slug={slug} appUrl={appUrl} />
       <main className="flex-1 min-w-0">{children}</main>
     </div>

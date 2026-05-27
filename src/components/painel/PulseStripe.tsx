@@ -46,8 +46,8 @@ export function PulseStripe({
   ]
 
   return (
-    <section className="mt-10">
-      <div className="flex items-end justify-between mb-4">
+    <section className="mt-8 md:mt-10">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div>
           <div className="eyebrow text-ink-500">OPERAÇÃO · TEMPO REAL</div>
           <h2
@@ -69,7 +69,7 @@ export function PulseStripe({
 
       <div className="card grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-ink-100 overflow-hidden">
         {cards.map((q) => (
-          <div key={q.label} className="p-6 relative">
+          <div key={q.label} className="p-5 sm:p-6 relative">
             <div className="flex items-center gap-2.5">
               <Chip tone={q.tone} name={q.icon} />
               <span className="text-[13px] font-semibold text-ink-700">
@@ -77,8 +77,7 @@ export function PulseStripe({
               </span>
             </div>
             <div
-              className="mt-4 font-display font-extrabold tabular text-ink-900 leading-none"
-              style={{ fontSize: '56px' }}
+              className="mt-4 font-display font-extrabold tabular text-ink-900 leading-none text-[42px] sm:text-[48px] md:text-[56px]"
             >
               {q.value}
             </div>

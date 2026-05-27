@@ -359,10 +359,7 @@ export default async function PainelPlanosPage() {
           {/* Interactive: toggle + 3 cards + compare + FAQ */}
           <PlanosInteractive currentPlanId={currentPlanId} />
 
-          <footer className="mt-10 mb-4 flex items-center justify-between text-[11.5px] text-ink-500 font-mono">
-            <div className="eyebrow">
-              PREÇOS EM BRL · COBRANÇA RECORRENTE VIA MERCADO PAGO · CANCELE QUANDO QUISER
-            </div>
+          <footer className="mt-10 mb-4 flex items-center justify-end text-[11.5px] text-ink-500 font-mono">
             <div className="eyebrow">LUE FZ · v0.4.0</div>
           </footer>
         </div>

@@ -262,6 +262,9 @@ export interface Database {
           min_order_quantity: number | null
           min_order_value: number | null
           min_order_logic: 'all' | 'any'
+          inventory_source_url: string | null
+          inventory_last_synced_at: string | null
+          inventory_last_error: string | null
         }
         Insert: {
           id: string
@@ -283,6 +286,9 @@ export interface Database {
           min_order_quantity?: number | null
           min_order_value?: number | null
           min_order_logic?: 'all' | 'any'
+          inventory_source_url?: string | null
+          inventory_last_synced_at?: string | null
+          inventory_last_error?: string | null
         }
         Update: {
           id?: string
@@ -303,6 +309,9 @@ export interface Database {
           min_order_quantity?: number | null
           min_order_value?: number | null
           min_order_logic?: 'all' | 'any'
+          inventory_source_url?: string | null
+          inventory_last_synced_at?: string | null
+          inventory_last_error?: string | null
         }
         Relationships: []
       }

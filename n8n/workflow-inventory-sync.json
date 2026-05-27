@@ -1,0 +1,71 @@
+{
+  "name": "LUE FZ - Inventory Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 */2 * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-e5f6-4789-9abc-def012345678",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        0
+      ],
+      "notesInFlow": true,
+      "notes": "Roda 04:00 BRT (07:00 UTC) a cada 2 dias"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LUE_FZ_BASE_URL}}/api/inventory/cron-sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.INVENTORY_CRON_SECRET}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "b2c3d4e5-f6a7-4890-abcd-ef0123456789",
+      "name": "Call cron-sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call cron-sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1"
+}

@@ -12,6 +12,7 @@ interface FullChatProps {
   conversation: ConversationRow | null
   messages: MessageRow[]
   loading: boolean
+  onBack?: () => void
 }
 
 const STATUS = {
@@ -163,13 +164,10 @@ function MessageBubble({ m }: { m: MessageRow }) {
   )
 }
 
-export function FullChat({ conversation, messages, loading }: FullChatProps) {
+export function FullChat({ conversation, messages, loading, onBack }: FullChatProps) {
   if (!conversation) {
     return (
-      <div
-        className="card flex flex-col items-center justify-center"
-        style={{ height: 'calc(100vh - 138px)' }}
-      >
+      <div className="card hidden md:flex flex-col items-center justify-center h-[calc(100vh-138px)]">
         <div className="text-[14px] text-ink-500">
           Selecione uma conversa pra visualizar.
         </div>
@@ -183,24 +181,41 @@ export function FullChat({ conversation, messages, loading }: FullChatProps) {
   const elapsed = formatRelativeTime(t.created_at)
 
   return (
-    <div
-      className="card flex flex-col overflow-hidden"
-      style={{ height: 'calc(100vh - 138px)' }}
-    >
-      <div className="flex items-center gap-4 px-5 py-3.5 border-b border-ink-100 bg-white">
+    <div className="card flex flex-col overflow-hidden h-[calc(100dvh-120px)] md:h-[calc(100vh-138px)]">
+      <div className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-ink-100 bg-white">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Voltar para a lista"
+            className="md:hidden -ml-1 w-9 h-9 shrink-0 rounded-lg text-ink-700 hover:bg-ink-50 active:bg-ink-100 flex items-center justify-center"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
+        )}
         <div className="relative shrink-0">
           <div
-            className="w-11 h-11 rounded-full font-display font-bold text-white text-[14px] flex items-center justify-center"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full font-display font-bold text-white text-[13px] sm:text-[14px] flex items-center justify-center"
             style={{ background: bg }}
           >
             {initials}
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <h2
-              className="font-display font-bold text-ink-900 truncate"
-              style={{ fontSize: '17px' }}
+              className="font-display font-bold text-ink-900 truncate text-[15px] sm:text-[17px]"
             >
               {t.visitor_name}
             </h2>
@@ -224,7 +239,7 @@ export function FullChat({ conversation, messages, loading }: FullChatProps) {
       </div>
 
       <div
-        className="flex-1 overflow-y-auto px-5 py-5 space-y-3"
+        className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 sm:py-5 space-y-3"
         style={{ background: '#FAFAFD' }}
       >
         {loading ? (
@@ -251,7 +266,7 @@ export function FullChat({ conversation, messages, loading }: FullChatProps) {
         )}
       </div>
 
-      <div className="border-t border-ink-100 px-5 py-3.5 bg-gradient-to-r from-brand-50 to-brand-100/40 flex items-center gap-3">
+      <div className="border-t border-ink-100 px-3 sm:px-5 py-3 sm:py-3.5 bg-gradient-to-r from-brand-50 to-brand-100/40 flex items-center gap-3">
         <span className="chip chip-brand">
           <Icon name="sparkle" className="w-4 h-4" />
         </span>

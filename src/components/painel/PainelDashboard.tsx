@@ -76,7 +76,7 @@ export function PainelDashboard({
   }
 
   return (
-    <div className="max-w-[1280px] mx-auto px-8 py-7">
+    <div className="max-w-[1280px] mx-auto px-4 sm:px-6 md:px-8 py-5 md:py-7">
       <Topbar dateLabel={dateLabel} />
       <Hero
         pulse={pulse}

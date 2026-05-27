@@ -29,7 +29,7 @@ export function IntentCatalogo({
 }) {
   return (
     <div className="card p-0">
-      <div className="flex items-end justify-between px-6 pt-6 pb-5">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5">
         <div>
           <div className="eyebrow text-ink-500">INTENT · MAIO</div>
           <h2
@@ -81,7 +81,7 @@ export function IntentCatalogo({
         </div>
       )}
 
-      <div className="px-6 py-4 border-t border-ink-100 bg-ink-50/40 flex items-center justify-between">
+      <div className="px-5 sm:px-6 py-4 border-t border-ink-100 bg-ink-50/40 flex flex-wrap items-center justify-between gap-3">
         <span className="eyebrow text-ink-500">
           {totalProducts} produtos no catálogo · {withIssues} com algum problema
         </span>
