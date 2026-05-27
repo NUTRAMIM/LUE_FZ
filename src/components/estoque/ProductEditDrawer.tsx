@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Drawer } from '@/components/ui/Drawer'
 import { Input, Label } from '@/components/ui/Input'
+import { ImageUploader, MAX_PRODUCT_IMAGES } from './ImageUploader'
 import type { Product } from '@/types/product'
 
 function formatOptionalNumber(value: unknown): string {
@@ -27,9 +28,6 @@ function listToText(values: string[] | null): string {
   return (values ?? []).join(', ')
 }
 
-function urlsToText(values: string[] | null): string {
-  return (values ?? []).join('\n')
-}
 
 export function ProductEditDrawer({
   productId,
@@ -45,18 +43,23 @@ export function ProductEditDrawer({
   const [error, setError] = useState<string | null>(null)
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(false)
+  const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (!open || !productId) {
       setProduct(null)
       setError(null)
       setLoading(false)
+      setImageUrls([])
+      setUploading(false)
       return
     }
     let cancelled = false
     setLoading(true)
     setError(null)
     setProduct(null)
+    setImageUrls([])
     getProductDetails(productId)
       .then((p) => {
         if (cancelled) return
@@ -64,6 +67,7 @@ export function ProductEditDrawer({
           setError('Produto nao encontrado para esta loja.')
         } else {
           setProduct(p)
+          setImageUrls(p.image_urls ?? [])
         }
         setLoading(false)
       })
@@ -87,6 +91,13 @@ export function ProductEditDrawer({
     if (!product) return
     setError(null)
 
+    if (imageUrls.length > MAX_PRODUCT_IMAGES) {
+      setError(
+        `Máximo de ${MAX_PRODUCT_IMAGES} imagens. Remova ${imageUrls.length - MAX_PRODUCT_IMAGES} para salvar.`,
+      )
+      return
+    }
+
     const payload: SaveProductInput = {
       id: product.id,
       sku: String(formData.get('sku') ?? ''),
@@ -100,7 +111,7 @@ export function ProductEditDrawer({
       stock_min: String(formData.get('stock_min') ?? ''),
       tamanhos: String(formData.get('tamanhos') ?? ''),
       cores: String(formData.get('cores') ?? ''),
-      image_urls: String(formData.get('image_urls') ?? ''),
+      image_urls: imageUrls.join('\n'),
     }
 
     startTransition(async () => {
@@ -219,23 +230,28 @@ export function ProductEditDrawer({
             </div>
           </section>
 
-          <div>
-            <Label htmlFor="image_urls">URLs das imagens</Label>
-            <textarea
-              id="image_urls"
-              name="image_urls"
-              defaultValue={urlsToText(product.image_urls)}
-              rows={4}
-              placeholder="https://..."
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 transition-all duration-150 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100"
+          <div className="space-y-3">
+            <ImageUploader
+              urls={imageUrls}
+              onChange={setImageUrls}
+              onError={setError}
+              uploading={uploading}
+              onUploadingChange={setUploading}
+              inputId="ep-images"
             />
+            {imageUrls.length > MAX_PRODUCT_IMAGES && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                Este produto tem {imageUrls.length} imagens. O limite agora é {MAX_PRODUCT_IMAGES} —
+                remova as extras antes de salvar.
+              </div>
+            )}
           </div>
 
           <div className="sticky bottom-0 -mx-5 flex justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4">
-            <Button type="button" variant="secondary" onClick={handleClose} disabled={isPending}>
+            <Button type="button" variant="secondary" onClick={handleClose} disabled={isPending || uploading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || uploading}>
               {isPending ? 'Salvando...' : 'Salvar produto'}
             </Button>
           </div>
