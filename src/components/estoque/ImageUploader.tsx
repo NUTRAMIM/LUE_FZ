@@ -54,8 +54,9 @@ export function ImageUploader({
 
     if (uploaded.length > 0) onChange(prev => [...prev, ...uploaded])
     if (dropped > 0 && uploaded.length === accepted.length) {
+      const sentVerb = uploaded.length === 1 ? 'foi enviada' : 'foram enviadas'
       onError(
-        `Limite de ${maxImages} imagens. Apenas ${uploaded.length} foram enviadas.`,
+        `Limite de ${maxImages} imagens. ${uploaded.length} ${sentVerb}; as demais foram ignoradas.`,
       )
     }
 
@@ -109,8 +110,9 @@ export function ImageUploader({
               <button
                 type="button"
                 onClick={() => remove(url)}
+                disabled={uploading}
                 aria-label="Remover imagem"
-                className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-xs font-bold text-slate-700 shadow hover:bg-white"
+                className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-xs font-bold text-slate-700 shadow hover:bg-white disabled:opacity-50"
               >
                 ×
               </button>
