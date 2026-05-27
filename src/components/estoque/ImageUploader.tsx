@@ -52,7 +52,7 @@ export function ImageUploader({
     }
 
     if (uploaded.length > 0) onChange(prev => [...prev, ...uploaded])
-    if (dropped > 0) {
+    if (dropped > 0 && uploaded.length === accepted.length) {
       onError(
         `Limite de ${maxImages} imagens. Apenas ${uploaded.length} foram enviadas.`,
       )
@@ -90,6 +90,7 @@ export function ImageUploader({
             type="file"
             accept="image/*"
             multiple
+            disabled={uploading}
             className="sr-only"
             onChange={e => uploadFiles(e.target.files)}
           />
