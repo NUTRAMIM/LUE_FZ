@@ -6,6 +6,7 @@ import { getAuthedUser } from '@/lib/auth'
 import { getStoreRole } from '@/lib/store-role'
 import { generateSku } from '@/lib/sku'
 import type { Product } from '@/types/product'
+import { MAX_PRODUCT_IMAGES } from '@/components/estoque/ImageUploader'
 
 const MAX_TEXT = 500
 const MAX_DESCRIPTION = 2000
@@ -72,14 +73,16 @@ function sanitizeStringList(input: string, maxItemLength: number): string[] {
 }
 
 function sanitizeUrlList(input: string): string[] {
-  return sanitizeStringList(input, MAX_URL).filter(url => {
-    try {
-      const parsed = new URL(url)
-      return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-    } catch {
-      return false
-    }
-  })
+  return sanitizeStringList(input, MAX_URL)
+    .filter(url => {
+      try {
+        const parsed = new URL(url)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
+    })
+    .slice(0, MAX_PRODUCT_IMAGES)
 }
 
 export async function saveProduct(data: SaveProductInput): Promise<SaveProductResult> {
