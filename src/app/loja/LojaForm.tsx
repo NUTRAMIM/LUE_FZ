@@ -9,7 +9,9 @@ import {
   MAX_FAQ_ITEMS,
   MAX_FAQ_QUESTION_LENGTH,
   MAX_FAQ_ANSWER_LENGTH,
+  MAX_DISCOUNT_CUSTOM_LENGTH,
   type FaqItem,
+  type DiscountType,
 } from '@/lib/store-settings-sanitize'
 
 const PAYMENT_OPTIONS = [
@@ -229,6 +231,16 @@ export function LojaForm({
   )
   const [faq, setFaq] = useState<FaqItem[]>(settings?.faq ?? [])
 
+  const [discountType, setDiscountType] = useState<DiscountType | null>(
+    settings?.discount_type ?? null,
+  )
+  const [discountValue, setDiscountValue] = useState<string>(
+    settings?.discount_value != null ? String(settings.discount_value) : '',
+  )
+  const [discountCustom, setDiscountCustom] = useState(
+    settings?.discount_custom ?? '',
+  )
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -292,9 +304,12 @@ export function LojaForm({
       faq: faq.filter(
         (p) => p.pergunta.trim() !== '' && p.resposta.trim() !== '',
       ),
-      discount_type: null,
-      discount_value: null,
-      discount_custom: '',
+      discount_type: discountType,
+      discount_value:
+        discountType && discountType !== 'custom' && discountValue.trim() !== ''
+          ? parseFloat(discountValue)
+          : null,
+      discount_custom: discountType === 'custom' ? discountCustom : '',
     })
 
     if (result.success) {
@@ -782,6 +797,103 @@ export function LojaForm({
                     Pelo menos um dos campos acima é obrigatório quando o
                     pedido mínimo está ativado.
                   </p>
+
+                  <div className="h-px bg-ink-100" />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="eyebrow text-ink-500">
+                        DESCONTO DE ATACADO (OPCIONAL)
+                      </p>
+                      {discountType !== null && (
+                        <button
+                          type="button"
+                          className="text-[12px] font-semibold text-ink-400 hover:text-ink-700 transition-colors"
+                          onClick={() => setDiscountType(null)}
+                        >
+                          Sem desconto
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          ['percent_piece', '% por preço da peça'],
+                          ['percent_order', '% por preço do pedido'],
+                          ['fixed_piece', 'Valor fixo por peça'],
+                          ['custom', 'Personalizado'],
+                        ] as Array<[DiscountType, string]>
+                      ).map(([value, label]) => (
+                        <label
+                          key={value}
+                          className="flex items-center gap-2.5 p-2.5 rounded-lg border border-ink-200 hover:border-brand-200 cursor-pointer text-[12.5px] text-ink-800 font-medium"
+                        >
+                          <input
+                            type="radio"
+                            name="discountType"
+                            className="radio"
+                            checked={discountType === value}
+                            onChange={() => setDiscountType(value)}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+
+                    {(discountType === 'percent_piece' ||
+                      discountType === 'percent_order') && (
+                      <div
+                        className="flex items-center gap-2 mt-3"
+                        style={{ maxWidth: 200 }}
+                      >
+                        <input
+                          className="input"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.01}
+                          value={discountValue}
+                          onChange={(e) => setDiscountValue(e.target.value)}
+                          placeholder="10"
+                        />
+                        <span className="text-[13px] text-ink-500 font-medium">
+                          %
+                        </span>
+                      </div>
+                    )}
+
+                    {discountType === 'fixed_piece' && (
+                      <div
+                        className="flex items-center gap-2 mt-3"
+                        style={{ maxWidth: 200 }}
+                      >
+                        <span className="text-[13px] text-ink-500 font-medium">
+                          R$
+                        </span>
+                        <input
+                          className="input"
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={discountValue}
+                          onChange={(e) => setDiscountValue(e.target.value)}
+                          placeholder="5,00"
+                        />
+                      </div>
+                    )}
+
+                    {discountType === 'custom' && (
+                      <input
+                        className="input mt-3"
+                        type="text"
+                        maxLength={MAX_DISCOUNT_CUSTOM_LENGTH}
+                        value={discountCustom}
+                        onChange={(e) => setDiscountCustom(e.target.value)}
+                        placeholder="Ex: 5% acima de 20 peças, 8% acima de 50"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
