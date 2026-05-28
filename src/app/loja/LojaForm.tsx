@@ -282,6 +282,10 @@ export function LojaForm({
       min_order_quantity: cleanQty,
       min_order_value: cleanValue,
       min_order_logic: minOrderLogic,
+      faq: [],
+      discount_type: null,
+      discount_value: null,
+      discount_custom: '',
     })
 
     if (result.success) {
