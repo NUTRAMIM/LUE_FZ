@@ -5,6 +5,12 @@ import { saveStoreSettings } from '@/actions/store-settings'
 import { LogoUpload } from '@/components/loja/LogoUpload'
 import { Icon } from '@/components/painel/Icons'
 import type { StoreSettings } from '@/types/store-settings'
+import {
+  MAX_FAQ_ITEMS,
+  MAX_FAQ_QUESTION_LENGTH,
+  MAX_FAQ_ANSWER_LENGTH,
+  type FaqItem,
+} from '@/lib/store-settings-sanitize'
 
 const PAYMENT_OPTIONS = [
   'PIX',
@@ -221,6 +227,7 @@ export function LojaForm({
   const [minOrderLogic, setMinOrderLogic] = useState<'all' | 'any'>(
     settings?.min_order_logic === 'any' ? 'any' : 'all',
   )
+  const [faq, setFaq] = useState<FaqItem[]>(settings?.faq ?? [])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -282,7 +289,9 @@ export function LojaForm({
       min_order_quantity: cleanQty,
       min_order_value: cleanValue,
       min_order_logic: minOrderLogic,
-      faq: [],
+      faq: faq.filter(
+        (p) => p.pergunta.trim() !== '' && p.resposta.trim() !== '',
+      ),
       discount_type: null,
       discount_value: null,
       discount_custom: '',
@@ -575,10 +584,98 @@ export function LojaForm({
         </div>
       </section>
 
+      {/* ── Seção · Conhecimento (FAQ) ───────── */}
+      <section className="card p-6" id="sec-conhecimento">
+        <SectionHeader
+          step="04 · CONHECIMENTO"
+          title="Perguntas e respostas"
+          description="Cadastre dúvidas frequentes e a resposta que o agente deve usar."
+          toneIcon="sparkle"
+          tone="brand"
+        />
+
+        <div className="space-y-4">
+          {faq.length === 0 && (
+            <p className="text-[13px] text-ink-400">
+              Nenhuma pergunta cadastrada ainda.
+            </p>
+          )}
+
+          {faq.map((item, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl border border-ink-200 p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="eyebrow text-ink-500">PERGUNTA {idx + 1}</span>
+                <button
+                  type="button"
+                  className="text-[12px] font-semibold text-ink-400 hover:text-[#DC2626] transition-colors"
+                  onClick={() => setFaq(faq.filter((_, i) => i !== idx))}
+                >
+                  Remover
+                </button>
+              </div>
+
+              <div>
+                <label className="label" style={{ fontSize: 12 }}>
+                  Pergunta
+                </label>
+                <input
+                  className="input"
+                  type="text"
+                  maxLength={MAX_FAQ_QUESTION_LENGTH}
+                  value={item.pergunta}
+                  onChange={(e) =>
+                    setFaq(
+                      faq.map((p, i) =>
+                        i === idx ? { ...p, pergunta: e.target.value } : p,
+                      ),
+                    )
+                  }
+                  placeholder="Ex: Vocês fazem troca?"
+                />
+              </div>
+
+              <div>
+                <label className="label" style={{ fontSize: 12 }}>
+                  Resposta
+                </label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  maxLength={MAX_FAQ_ANSWER_LENGTH}
+                  value={item.resposta}
+                  onChange={(e) =>
+                    setFaq(
+                      faq.map((p, i) =>
+                        i === idx ? { ...p, resposta: e.target.value } : p,
+                      ),
+                    )
+                  }
+                  placeholder="Ex: Sim, em até 7 dias com a etiqueta."
+                />
+              </div>
+            </div>
+          ))}
+
+          {faq.length < MAX_FAQ_ITEMS && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setFaq([...faq, { pergunta: '', resposta: '' }])}
+            >
+              <Icon name="plus" className="w-4 h-4" />
+              Adicionar pergunta
+            </button>
+          )}
+        </div>
+      </section>
+
       {/* ── Seção 4 · Operação ───────── */}
       <section className="card p-6" id="sec-operacao">
         <SectionHeader
-          step="04 · OPERAÇÃO"
+          step="05 · OPERAÇÃO"
           title="Operação"
           description="Regras de compra, pagamento e entrega."
           toneIcon="package"
