@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ConviteForm } from './ConviteForm'
 
@@ -37,9 +38,13 @@ async function resolveStatus(token: string): Promise<Status> {
 function MessageCard({
   title,
   body,
+  actionHref,
+  actionLabel,
 }: {
   title: string
   body: string
+  actionHref?: string
+  actionLabel?: string
 }) {
   return (
     <div className="bg-brand-mesh relative flex min-h-screen items-center justify-center px-4 py-10">
@@ -48,6 +53,14 @@ function MessageCard({
           {title}
         </h1>
         <p className="mt-2 text-sm text-slate-600">{body}</p>
+        {actionHref && actionLabel && (
+          <Link
+            href={actionHref}
+            className="bg-brand-600 hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-400 mt-6 inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white shadow-[0_6px_18px_-6px_rgba(124,58,237,0.55)] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            {actionLabel}
+          </Link>
+        )}
       </div>
     </div>
   )
@@ -72,8 +85,10 @@ export default async function ConvitePage({
   if (status.kind === 'used') {
     return (
       <MessageCard
-        title="Convite já usado"
-        body="Esse link já foi aceito. Se você precisa de acesso, peça outro pro dono da loja."
+        title="Você já tem conta"
+        body="Esse convite já foi aceito e sua conta de vendedor já existe. Entre com seu email e a senha que você definiu pra acessar o painel."
+        actionHref="/login"
+        actionLabel="Ir para o login"
       />
     )
   }

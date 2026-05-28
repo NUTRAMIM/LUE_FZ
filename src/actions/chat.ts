@@ -18,6 +18,7 @@ export interface ChatBootstrap {
   conversationId: string
   storeId: string
   storeName: string
+  storeLogoUrl: string | null
   messages: Array<{
     id: string
     role: 'user' | 'assistant' | 'operator' | 'system'
@@ -50,7 +51,7 @@ async function resolveStoreBySlug(slug: string) {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('store_settings')
-    .select('id, store_name, chat_slug')
+    .select('id, store_name, chat_slug, logo_url')
     .eq('chat_slug', slug)
     .maybeSingle()
   if (error) {
@@ -115,6 +116,7 @@ export async function ensureConversation(slug: string): Promise<ChatBootstrap> {
     conversationId: conversation.id,
     storeId: store.id,
     storeName: store.store_name,
+    storeLogoUrl: store.logo_url ?? null,
     messages,
   }
 }

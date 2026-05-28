@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthedUser } from '@/lib/auth'
 import { getMaxAgentsForStore } from '@/lib/plan-limits'
+import { isLivePendingInvite } from '@/lib/invite-status'
 import { getAppUrl } from '@/lib/app-url'
 
 const INVITE_TTL_DAYS = 7
@@ -187,6 +188,25 @@ export async function createInvite(input: {
 
   if (await emailExistsInAuth(email)) {
     return { ok: false, error: 'Esse email já tem conta no LUE.' }
+  }
+
+  // Resíduo de convite antigo (já aceito ou expirado) pro mesmo email bateria
+  // no UNIQUE(store_id, email) e bloquearia o reconvite com mensagem errada.
+  // Só um convite vivo e pendente deve barrar; o resto é limpo.
+  const { data: existingInvite } = await admin
+    .from('store_invites')
+    .select('id, accepted_at, expires_at')
+    .eq('store_id', storeId)
+    .eq('email', email)
+    .maybeSingle()
+  if (existingInvite) {
+    if (isLivePendingInvite(existingInvite)) {
+      return {
+        ok: false,
+        error: 'Já existe um convite pendente pra esse email.',
+      }
+    }
+    await admin.from('store_invites').delete().eq('id', existingInvite.id)
   }
 
   const token = randomBytes(32).toString('base64url')

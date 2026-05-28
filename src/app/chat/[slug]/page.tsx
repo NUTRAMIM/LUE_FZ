@@ -17,6 +17,7 @@ export default async function ChatPage({
       storeId={bootstrap.storeId}
       conversationId={bootstrap.conversationId}
       storeName={bootstrap.storeName}
+      storeLogoUrl={bootstrap.storeLogoUrl}
       initialMessages={bootstrap.messages}
     />
   )

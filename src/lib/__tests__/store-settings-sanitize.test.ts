@@ -4,6 +4,7 @@ import {
   sanitizeDiscountType,
   sanitizeDiscountValue,
   normalizeDiscount,
+  mergeFaqAnswer,
   MAX_FAQ_ITEMS,
   MAX_FAQ_QUESTION_LENGTH,
   MAX_FAQ_ANSWER_LENGTH,
@@ -146,5 +147,50 @@ describe('normalizeDiscount', () => {
       discount_value: 0,
       discount_custom: '',
     })
+  })
+})
+
+describe('mergeFaqAnswer', () => {
+  it('adiciona nova pergunta quando não existe', () => {
+    const r = mergeFaqAnswer([], 'Fazem troca?', 'Sim, em 7 dias')
+    expect(r.error).toBeUndefined()
+    expect(r.faq).toEqual([{ pergunta: 'Fazem troca?', resposta: 'Sim, em 7 dias' }])
+  })
+
+  it('substitui a resposta quando a pergunta já existe (case-insensitive)', () => {
+    const current = [{ pergunta: 'Fazem troca?', resposta: 'resposta antiga' }]
+    const r = mergeFaqAnswer(current, 'fazem TROCA?', 'resposta nova')
+    expect(r.error).toBeUndefined()
+    expect(r.faq).toEqual([{ pergunta: 'Fazem troca?', resposta: 'resposta nova' }])
+  })
+
+  it('retorna error faq_full quando há 30 itens e a pergunta é nova', () => {
+    const current = Array.from({ length: 30 }, (_, i) => ({
+      pergunta: `q${i}`,
+      resposta: 'a',
+    }))
+    const r = mergeFaqAnswer(current, 'pergunta nova', 'resposta')
+    expect(r.error).toBe('faq_full')
+    expect(r.faq).toHaveLength(30)
+  })
+
+  it('substitui mesmo com 30 itens quando a pergunta já existe', () => {
+    const current = Array.from({ length: 30 }, (_, i) => ({
+      pergunta: `q${i}`,
+      resposta: 'a',
+    }))
+    const r = mergeFaqAnswer(current, 'q5', 'resposta nova')
+    expect(r.error).toBeUndefined()
+    expect(r.faq).toHaveLength(30)
+    expect(r.faq[5]).toEqual({ pergunta: 'q5', resposta: 'resposta nova' })
+  })
+
+  it('limpa HTML e corta tamanho da resposta', () => {
+    const r = mergeFaqAnswer([], 'Pergunta?', '<b>oi</b>')
+    expect(r.faq[0].resposta).toBe('oi')
+  })
+
+  it('tolera faq atual inválido (null) e nada faz se resposta vazia', () => {
+    expect(mergeFaqAnswer(null, 'q', '   ').faq).toEqual([])
   })
 })

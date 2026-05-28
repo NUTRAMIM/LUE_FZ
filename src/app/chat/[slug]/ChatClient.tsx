@@ -76,12 +76,14 @@ export function ChatClient({
   storeId,
   conversationId,
   storeName,
+  storeLogoUrl,
   initialMessages,
 }: {
   slug: string
   storeId: string
   conversationId: string
   storeName: string
+  storeLogoUrl: string | null
   initialMessages: ChatMessage[]
 }) {
   const [state, dispatch] = useReducer(reducer, {
@@ -170,7 +172,7 @@ export function ChatClient({
 
   return (
     <div className="flex h-dvh flex-col bg-[#ECE5DD]">
-      <ChatHeader storeName={storeName} />
+      <ChatHeader storeName={storeName} logoUrl={storeLogoUrl} />
       <MessageList messages={state.messages} scrollAnchorRef={scrollAnchor} />
       <ChatInput
         slug={slug}
