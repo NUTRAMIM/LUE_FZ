@@ -19,7 +19,7 @@ const VALID_DISCOUNT_TYPES: DiscountType[] = [
   'custom',
 ]
 
-function cleanText(input: unknown, maxLength: number): string {
+export function cleanText(input: unknown, maxLength: number): string {
   if (typeof input !== 'string') return ''
   return input.replace(/<[^>]*>/g, '').trim().slice(0, maxLength)
 }
@@ -81,4 +81,35 @@ export function normalizeDiscount(
     value = 100
   }
   return { discount_type: type, discount_value: value, discount_custom: '' }
+}
+
+export interface MergeFaqResult {
+  faq: FaqItem[]
+  error?: 'faq_full'
+}
+
+export function mergeFaqAnswer(
+  currentFaq: unknown,
+  pergunta: string,
+  resposta: string,
+): MergeFaqResult {
+  const base = sanitizeFaq(currentFaq)
+  const p = cleanText(pergunta, MAX_FAQ_QUESTION_LENGTH)
+  const r = cleanText(resposta, MAX_FAQ_ANSWER_LENGTH)
+  if (p === '' || r === '') return { faq: base }
+
+  const key = p.toLowerCase()
+  const idx = base.findIndex((item) => item.pergunta.toLowerCase() === key)
+  if (idx >= 0) {
+    const next = base.map((item, i) =>
+      i === idx ? { pergunta: item.pergunta, resposta: r } : item,
+    )
+    return { faq: next }
+  }
+
+  if (base.length >= MAX_FAQ_ITEMS) {
+    return { faq: base, error: 'faq_full' }
+  }
+
+  return { faq: [...base, { pergunta: p, resposta: r }] }
 }
