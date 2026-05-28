@@ -118,4 +118,33 @@ describe('normalizeDiscount', () => {
       discount_custom: '',
     })
   })
+
+  it('numeric type with null/invalid value falls back to no discount', () => {
+    expect(normalizeDiscount('fixed_piece', null, '')).toEqual({
+      discount_type: null,
+      discount_value: null,
+      discount_custom: '',
+    })
+    expect(normalizeDiscount('percent_piece', NaN, '')).toEqual({
+      discount_type: null,
+      discount_value: null,
+      discount_custom: '',
+    })
+  })
+
+  it('keeps exact percent boundary of 100', () => {
+    expect(normalizeDiscount('percent_piece', 100, '')).toEqual({
+      discount_type: 'percent_piece',
+      discount_value: 100,
+      discount_custom: '',
+    })
+  })
+
+  it('keeps zero as a valid fixed value', () => {
+    expect(normalizeDiscount('fixed_piece', 0, '')).toEqual({
+      discount_type: 'fixed_piece',
+      discount_value: 0,
+      discount_custom: '',
+    })
+  })
 })

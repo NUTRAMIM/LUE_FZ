@@ -74,11 +74,10 @@ export function normalizeDiscount(
     }
   }
   let value = sanitizeDiscountValue(rawValue)
-  if (
-    (type === 'percent_piece' || type === 'percent_order') &&
-    value !== null &&
-    value > 100
-  ) {
+  if (value === null) {
+    return { discount_type: null, discount_value: null, discount_custom: '' }
+  }
+  if ((type === 'percent_piece' || type === 'percent_order') && value > 100) {
     value = 100
   }
   return { discount_type: type, discount_value: value, discount_custom: '' }

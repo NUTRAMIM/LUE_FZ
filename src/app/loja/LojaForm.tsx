@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { saveStoreSettings } from '@/actions/store-settings'
 import { LogoUpload } from '@/components/loja/LogoUpload'
 import { Icon } from '@/components/painel/Icons'
@@ -10,7 +10,6 @@ import {
   MAX_FAQ_QUESTION_LENGTH,
   MAX_FAQ_ANSWER_LENGTH,
   MAX_DISCOUNT_CUSTOM_LENGTH,
-  type FaqItem,
   type DiscountType,
 } from '@/lib/store-settings-sanitize'
 
@@ -229,7 +228,14 @@ export function LojaForm({
   const [minOrderLogic, setMinOrderLogic] = useState<'all' | 'any'>(
     settings?.min_order_logic === 'any' ? 'any' : 'all',
   )
-  const [faq, setFaq] = useState<FaqItem[]>(settings?.faq ?? [])
+  const faqIdRef = useRef(settings?.faq?.length ?? 0)
+  const [faq, setFaq] = useState(() =>
+    (settings?.faq ?? []).map((p, i) => ({
+      id: i,
+      pergunta: p.pergunta,
+      resposta: p.resposta,
+    })),
+  )
 
   const [discountType, setDiscountType] = useState<DiscountType | null>(
     settings?.discount_type ?? null,
@@ -301,9 +307,9 @@ export function LojaForm({
       min_order_quantity: cleanQty,
       min_order_value: cleanValue,
       min_order_logic: minOrderLogic,
-      faq: faq.filter(
-        (p) => p.pergunta.trim() !== '' && p.resposta.trim() !== '',
-      ),
+      faq: faq
+        .filter((p) => p.pergunta.trim() !== '' && p.resposta.trim() !== '')
+        .map((p) => ({ pergunta: p.pergunta, resposta: p.resposta })),
       discount_type: discountType,
       discount_value:
         discountType && discountType !== 'custom' && discountValue.trim() !== ''
@@ -618,7 +624,7 @@ export function LojaForm({
 
           {faq.map((item, idx) => (
             <div
-              key={idx}
+              key={item.id}
               className="rounded-xl border border-ink-200 p-4 space-y-3"
             >
               <div className="flex items-center justify-between">
@@ -626,7 +632,7 @@ export function LojaForm({
                 <button
                   type="button"
                   className="text-[12px] font-semibold text-ink-400 hover:text-[#DC2626] transition-colors"
-                  onClick={() => setFaq(faq.filter((_, i) => i !== idx))}
+                  onClick={() => setFaq(faq.filter((p) => p.id !== item.id))}
                 >
                   Remover
                 </button>
@@ -643,8 +649,8 @@ export function LojaForm({
                   value={item.pergunta}
                   onChange={(e) =>
                     setFaq(
-                      faq.map((p, i) =>
-                        i === idx ? { ...p, pergunta: e.target.value } : p,
+                      faq.map((p) =>
+                        p.id === item.id ? { ...p, pergunta: e.target.value } : p,
                       ),
                     )
                   }
@@ -663,8 +669,8 @@ export function LojaForm({
                   value={item.resposta}
                   onChange={(e) =>
                     setFaq(
-                      faq.map((p, i) =>
-                        i === idx ? { ...p, resposta: e.target.value } : p,
+                      faq.map((p) =>
+                        p.id === item.id ? { ...p, resposta: e.target.value } : p,
                       ),
                     )
                   }
@@ -678,7 +684,12 @@ export function LojaForm({
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setFaq([...faq, { pergunta: '', resposta: '' }])}
+              onClick={() =>
+                setFaq([
+                  ...faq,
+                  { id: faqIdRef.current++, pergunta: '', resposta: '' },
+                ])
+              }
             >
               <Icon name="plus" className="w-4 h-4" />
               Adicionar pergunta
