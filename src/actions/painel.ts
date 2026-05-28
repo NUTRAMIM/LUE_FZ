@@ -395,7 +395,14 @@ export async function answerKnowledgeGap(input: {
       .from('knowledge_gaps')
       .update({ resolved_at: new Date().toISOString() })
       .in('id', ids)
-    if (resErr) console.error('answerKnowledgeGap resolve error', resErr)
+    if (resErr) {
+      console.error('answerKnowledgeGap resolve error', resErr)
+      return {
+        success: false,
+        error:
+          'A resposta foi salva no FAQ, mas não consegui marcar a pergunta como resolvida. Tente novamente.',
+      }
+    }
   }
 
   return { success: true, resolvedCount: ids.length }
