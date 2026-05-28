@@ -1,4 +1,10 @@
-export function ChatHeader({ storeName }: { storeName: string }) {
+export function ChatHeader({
+  storeName,
+  logoUrl,
+}: {
+  storeName: string
+  logoUrl?: string | null
+}) {
   const initials = storeName
     .split(/\s+/)
     .map((w) => w[0])
