@@ -265,6 +265,10 @@ export interface Database {
           inventory_source_url: string | null
           inventory_last_synced_at: string | null
           inventory_last_error: string | null
+          faq: Array<{ pergunta: string; resposta: string }>
+          discount_type: 'percent_piece' | 'percent_order' | 'fixed_piece' | 'custom' | null
+          discount_value: number | null
+          discount_custom: string | null
         }
         Insert: {
           id: string
@@ -289,6 +293,10 @@ export interface Database {
           inventory_source_url?: string | null
           inventory_last_synced_at?: string | null
           inventory_last_error?: string | null
+          faq?: Array<{ pergunta: string; resposta: string }>
+          discount_type?: 'percent_piece' | 'percent_order' | 'fixed_piece' | 'custom' | null
+          discount_value?: number | null
+          discount_custom?: string | null
         }
         Update: {
           id?: string
@@ -312,6 +320,10 @@ export interface Database {
           inventory_source_url?: string | null
           inventory_last_synced_at?: string | null
           inventory_last_error?: string | null
+          faq?: Array<{ pergunta: string; resposta: string }>
+          discount_type?: 'percent_piece' | 'percent_order' | 'fixed_piece' | 'custom' | null
+          discount_value?: number | null
+          discount_custom?: string | null
         }
         Relationships: []
       }
