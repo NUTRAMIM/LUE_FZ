@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
 import { rangeStart, shortRef } from '@/components/painel/formatters'
 import type { FunnelRange } from '@/components/painel/formatters'
+import { mergeFaqAnswer } from '@/lib/store-settings-sanitize'
 
 export interface PainelPulse {
   leadsWeek: number
@@ -329,6 +330,75 @@ export async function getKnowledgeGaps(): Promise<{
     .slice(0, 5)
 
   return { items, totalPending: rows.length }
+}
+
+export interface AnswerGapResult {
+  success: boolean
+  resolvedCount?: number
+  error?: string
+}
+
+export async function answerKnowledgeGap(input: {
+  question: string
+  answer: string
+}): Promise<AnswerGapResult> {
+  const supabase = await createClient()
+  const user = await getAuthedUser()
+  if (!user) return { success: false, error: 'Não autorizado.' }
+
+  const question = (input.question ?? '').trim()
+  const answer = (input.answer ?? '').trim()
+  if (!question) return { success: false, error: 'Pergunta inválida.' }
+  if (!answer) return { success: false, error: 'Informe uma resposta.' }
+
+  const { data: row, error: readErr } = await supabase
+    .from('store_settings')
+    .select('faq')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (readErr) {
+    console.error('answerKnowledgeGap read error', readErr)
+    return { success: false, error: 'Erro ao salvar. Tente novamente.' }
+  }
+
+  const merged = mergeFaqAnswer(row?.faq, question, answer)
+  if (merged.error === 'faq_full') {
+    return {
+      success: false,
+      error:
+        'Limite de 30 perguntas no FAQ atingido. Remova alguma no menu Loja antes.',
+    }
+  }
+
+  const { error: updErr } = await supabase
+    .from('store_settings')
+    .update({ faq: merged.faq })
+    .eq('id', user.id)
+  if (updErr) {
+    console.error('answerKnowledgeGap update error', updErr)
+    return { success: false, error: 'Erro ao salvar. Tente novamente.' }
+  }
+
+  const { data: gapRows } = await supabase
+    .from('knowledge_gaps')
+    .select('id, question')
+    .eq('store_id', user.id)
+    .is('resolved_at', null)
+
+  const target = question.toLowerCase()
+  const ids = (gapRows ?? [])
+    .filter((g) => g.question.toLowerCase().trim() === target)
+    .map((g) => g.id)
+
+  if (ids.length > 0) {
+    const { error: resErr } = await supabase
+      .from('knowledge_gaps')
+      .update({ resolved_at: new Date().toISOString() })
+      .in('id', ids)
+    if (resErr) console.error('answerKnowledgeGap resolve error', resErr)
+  }
+
+  return { success: true, resolvedCount: ids.length }
 }
 
 export interface ProductIntent {
