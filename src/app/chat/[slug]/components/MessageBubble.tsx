@@ -1,41 +1,21 @@
+'use client'
+
+import { useState } from 'react'
 import type { ChatMessage } from '../ChatClient'
+import { parseSegments, groupConsecutiveImages } from './message-segments'
+import { ImageCarousel } from './ImageCarousel'
+import { ImageLightbox } from './ImageLightbox'
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-const IMAGE_URL_RE =
-  /https?:\/\/\S+?\.(?:jpe?g|png|webp|gif)(?:\?\S*)?/gi
-
-type Segment = { type: 'text'; value: string } | { type: 'image'; src: string }
-
-function parseSegments(text: string): { segments: Segment[]; hasImage: boolean } {
-  const segments: Segment[] = []
-  const re = new RegExp(IMAGE_URL_RE.source, IMAGE_URL_RE.flags)
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-  let hasImage = false
-  while ((match = re.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      const chunk = text.slice(lastIndex, match.index)
-      if (chunk.trim()) segments.push({ type: 'text', value: chunk.trim() })
-    }
-    segments.push({ type: 'image', src: match[0] })
-    hasImage = true
-    lastIndex = match.index + match[0].length
-  }
-  if (lastIndex < text.length) {
-    const tail = text.slice(lastIndex)
-    if (tail.trim()) segments.push({ type: 'text', value: tail.trim() })
-  }
-  if (segments.length === 0 && text) segments.push({ type: 'text', value: text })
-  return { segments, hasImage }
-}
-
 export function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
+
+  const [lightbox, setLightbox] = useState<{ srcs: string[]; index: number } | null>(null)
 
   if (isSystem) {
     return (
@@ -48,11 +28,14 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   }
 
   const content = message.content ?? ''
+  const isTypedImage = message.message_type === 'image'
+
   const { segments, hasImage } =
-    content && message.message_type !== 'image'
+    content && !isTypedImage
       ? parseSegments(content)
       : { segments: content ? [{ type: 'text' as const, value: content }] : [], hasImage: false }
 
+  const renderItems = groupConsecutiveImages(segments)
   const bubbleMaxWidth = hasImage ? 'max-w-[88%] sm:max-w-sm' : 'max-w-[75%]'
 
   return (
@@ -62,7 +45,8 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           isUser ? 'bg-[#DCF8C6]' : 'bg-white'
         }`}
       >
-        {message.message_type === 'image' && message.media_url && (
+        {/* Mídia legítima (mensagem do tipo image/audio com media_url) — comportamento atual preservado */}
+        {isTypedImage && message.media_url && (
           <a
             href={message.media_url}
             target="_blank"
@@ -80,35 +64,58 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
         {message.message_type === 'audio' && message.media_url && (
           <audio controls src={message.media_url} className="max-w-full" />
         )}
-        {segments.map((seg, i) =>
-          seg.type === 'text' ? (
-            <p
-              key={`t-${i}`}
-              className="whitespace-pre-wrap break-words text-sm text-gray-900"
-            >
-              {seg.value}
-            </p>
-          ) : (
-            <a
-              key={`i-${i}-${seg.src}`}
-              href={seg.src}
-              target="_blank"
-              rel="noreferrer"
-              className="my-1 block"
-            >
-              <img
-                src={seg.src}
-                alt=""
-                className="max-h-80 w-full rounded object-cover"
-                loading="lazy"
-              />
-            </a>
-          ),
-        )}
+
+        {/* Texto + imagens detectadas no content */}
+        {renderItems.map((item, i) => {
+          if (item.type === 'text') {
+            return (
+              <p
+                key={`t-${i}`}
+                className="whitespace-pre-wrap break-words text-sm text-gray-900"
+              >
+                {item.value}
+              </p>
+            )
+          }
+          if (item.type === 'image') {
+            return (
+              <button
+                type="button"
+                key={`i-${i}-${item.src}`}
+                onClick={() => setLightbox({ srcs: [item.src], index: 0 })}
+                className="my-1 block w-full"
+              >
+                <img
+                  src={item.src}
+                  alt=""
+                  className="max-h-80 w-full rounded object-cover"
+                  loading="lazy"
+                />
+              </button>
+            )
+          }
+          // imageGroup
+          return (
+            <ImageCarousel
+              key={`g-${i}`}
+              srcs={item.srcs}
+              onImageClick={(index) => setLightbox({ srcs: item.srcs, index })}
+            />
+          )
+        })}
+
         <p className="mt-1 text-right text-[10px] text-gray-500">
           {formatTime(message.created_at)}
         </p>
       </div>
+
+      {lightbox && (
+        <ImageLightbox
+          srcs={lightbox.srcs}
+          startIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </div>
   )
 }
