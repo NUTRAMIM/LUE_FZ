@@ -75,11 +75,7 @@ export function ImageLightbox({ srcs, startIndex, onClose }: ImageLightboxProps)
       </button>
 
       {multiple ? (
-        <div
-          className="h-full w-full overflow-hidden"
-          ref={emblaRef}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="h-full w-full overflow-hidden" ref={emblaRef}>
           <div className="flex h-full">
             {srcs.map((src, i) => (
               <div
@@ -90,6 +86,7 @@ export function ImageLightbox({ srcs, startIndex, onClose }: ImageLightboxProps)
                   src={src}
                   alt=""
                   className="max-h-[90vh] max-w-[95vw] object-contain"
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             ))}
