@@ -113,7 +113,7 @@ export function MessageBubble({
 
         <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-gray-500">
           <span>{formatTime(message.created_at)}</span>
-          {isUser && <TickIcon state={tickState} />}
+          <TickIcon state={isUser ? tickState : 'blue'} />
         </p>
       </div>
 

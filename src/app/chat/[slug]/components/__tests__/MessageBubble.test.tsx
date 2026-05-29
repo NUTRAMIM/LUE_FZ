@@ -48,13 +48,13 @@ describe('MessageBubble tick rendering', () => {
     expect((tick as HTMLElement).style.color).toBe('rgb(52, 183, 241)')
   })
 
-  it("renders no tick when role='assistant'", () => {
+  it("renders fixed blue tick when role='assistant' regardless of tickState", () => {
     const { container } = render(
-      <MessageBubble message={baseMsg({ role: 'assistant' })} tickState="blue" />,
+      <MessageBubble message={baseMsg({ role: 'assistant' })} tickState="clock" />,
     )
-    expect(container.querySelector('[aria-label="lida"]')).toBeNull()
-    expect(container.querySelector('[aria-label="entregue"]')).toBeNull()
-    expect(container.querySelector('[aria-label="enviando"]')).toBeNull()
+    const tick = container.querySelector('[aria-label="lida"]')
+    expect(tick).not.toBeNull()
+    expect((tick as HTMLElement).style.color).toBe('rgb(52, 183, 241)')
   })
 
   it("renders system bubble with no tick and no time", () => {
