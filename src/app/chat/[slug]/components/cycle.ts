@@ -96,7 +96,7 @@ export function cycleReducer(
       }
       const elapsed = action.now - cycle.startedAt
       if (elapsed >= TICK_BLUE_MS) {
-        return { cycle, releaseAI: action.msg }
+        return { cycle: null, releaseAI: action.msg }
       }
       return {
         cycle: { ...cycle, pendingAI: action.msg },

@@ -233,7 +233,7 @@ describe('cycleReducer / holdOrRelease', () => {
     expect(res.cycle?.pendingAI).toBe(msg)
   })
 
-  it('releases when elapsed >= TICK_BLUE_MS', () => {
+  it('releases and clears cycle when elapsed >= TICK_BLUE_MS', () => {
     const existing: Cycle = {
       startedAt: 1000,
       userMsgIds: ['a'],
@@ -246,7 +246,7 @@ describe('cycleReducer / holdOrRelease', () => {
       now: 1000 + TICK_BLUE_MS,
     })
     expect(res.releaseAI).toBe(msg)
-    expect(res.cycle).toBe(existing)
+    expect(res.cycle).toBeNull()
   })
 
   it('replaces pendingAI when one already exists', () => {
