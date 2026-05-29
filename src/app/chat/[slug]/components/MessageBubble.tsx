@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { ChatMessage } from '../ChatClient'
+import type { TickState } from './cycle'
 import { parseSegments, groupConsecutiveImages } from './message-segments'
 import { ImageCarousel } from './ImageCarousel'
 import { ImageLightbox } from './ImageLightbox'
@@ -11,7 +12,13 @@ function formatTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-export function MessageBubble({ message }: { message: ChatMessage }) {
+export function MessageBubble({
+  message,
+  tickState = 'idle',
+}: {
+  message: ChatMessage
+  tickState?: TickState
+}) {
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
 
@@ -104,8 +111,9 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           )
         })}
 
-        <p className="mt-1 text-right text-[10px] text-gray-500">
-          {formatTime(message.created_at)}
+        <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-gray-500">
+          <span>{formatTime(message.created_at)}</span>
+          {isUser && <TickIcon state={tickState} />}
         </p>
       </div>
 
@@ -117,5 +125,58 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
         />
       )}
     </div>
+  )
+}
+
+function TickIcon({ state }: { state: TickState }) {
+  if (state === 'clock') {
+    return (
+      <span className="text-gray-500" aria-label="enviando">
+        <ClockSvg />
+      </span>
+    )
+  }
+  const color = state === 'blue' || state === 'idle' ? '#34B7F1' : '#8696A0'
+  const label = state === 'blue' || state === 'idle' ? 'lida' : 'entregue'
+  return (
+    <span style={{ color }} aria-label={label}>
+      <DoubleCheckSvg />
+    </span>
+  )
+}
+
+function ClockSvg() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="6.5" />
+      <path d="M8 4.5V8L10.5 9.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function DoubleCheckSvg() {
+  return (
+    <svg
+      viewBox="0 0 18 12"
+      width="14"
+      height="10"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M1 6.5L4 9.5L10 2" />
+      <path d="M9 9.5L17 2" />
+    </svg>
   )
 }
