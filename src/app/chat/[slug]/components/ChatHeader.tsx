@@ -1,9 +1,11 @@
 export function ChatHeader({
   storeName,
   logoUrl,
+  isTyping = false,
 }: {
   storeName: string
   logoUrl?: string | null
+  isTyping?: boolean
 }) {
   const initials = storeName
     .split(/\s+/)
@@ -27,7 +29,9 @@ export function ChatHeader({
       )}
       <div className="flex flex-col">
         <span className="text-base font-medium leading-tight">{storeName}</span>
-        <span className="text-xs leading-tight text-white/80">online</span>
+        <span className="text-xs leading-tight text-white/80">
+          {isTyping ? 'digitando...' : 'online'}
+        </span>
       </div>
     </header>
   )
