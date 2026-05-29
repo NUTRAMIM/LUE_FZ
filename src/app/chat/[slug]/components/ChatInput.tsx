@@ -29,7 +29,7 @@ export function ChatInput({
 
   async function handleSend() {
     const trimmed = text.trim()
-    if (!trimmed || sending) return
+    if (!trimmed) return
     onSending(true)
     onError(null)
 
@@ -61,7 +61,7 @@ export function ChatInput({
     onSending(false)
   }
 
-  const canSend = text.trim().length > 0 && !sending
+  const canSend = text.trim().length > 0
 
   return (
     <footer
