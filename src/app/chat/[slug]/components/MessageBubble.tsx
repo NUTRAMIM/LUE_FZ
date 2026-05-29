@@ -157,7 +157,7 @@ function ClockSvg() {
       strokeWidth="1.5"
       aria-hidden="true"
     >
-      <circle cx="8" cy="8" r="6.5" />
+      <rect x="1.5" y="1.5" width="13" height="13" rx="3" ry="3" />
       <path d="M8 4.5V8L10.5 9.5" strokeLinecap="round" />
     </svg>
   )
