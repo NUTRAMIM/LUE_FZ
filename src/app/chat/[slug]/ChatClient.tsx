@@ -37,6 +37,10 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'add': {
       if (state.messages.some((m) => m.id === action.message.id)) return state
+      // Realtime entrega o INSERT da msg do user antes do server action
+      // retornar (o action espera n8n responder). Se encontrarmos uma temp-
+      // do mesmo conteúdo, trocamos no lugar pra evitar a bolha duplicada
+      // visível no intervalo entre INSERT e replaceTemp.
       if (action.message.role === 'user') {
         const dupTempIdx = state.messages.findIndex(
           (m) =>
@@ -96,6 +100,7 @@ export function ChatClient({
 
   const [cycle, setCycle] = useState<Cycle | null>(null)
   const cycleRef = useRef<Cycle | null>(null)
+  // espelho mutável de cycle pra dispatchCycle ler sem stale closure
   cycleRef.current = cycle
 
   const [now, setNow] = useState<number>(() => Date.now())
@@ -111,6 +116,7 @@ export function ChatClient({
     }
   }, [])
 
+  // 500ms = metade do menor threshold (3s do relógio); garante transição visível sem custo grande
   useEffect(() => {
     if (cycle === null) return
     const id = setInterval(() => {
@@ -168,6 +174,8 @@ export function ChatClient({
             created_at: row.created_at,
           }
 
+          // findIndex pega o tempId mais antigo com esse content (FIFO).
+          // Assume INSERTs chegam na ordem dos sends — verdadeiro pro Supabase realtime.
           if (row.role === 'user') {
             const idx = pendingTempsRef.current.findIndex(
               (p) => p.content === row.content,
