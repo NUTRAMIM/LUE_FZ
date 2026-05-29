@@ -136,6 +136,7 @@ function TickIcon({ state }: { state: TickState }) {
       </span>
     )
   }
+  // idle = blue: mensagens já no banco (carregadas no load) ficam como "lidas".
   const color = state === 'blue' || state === 'idle' ? '#34B7F1' : '#8696A0'
   const label = state === 'blue' || state === 'idle' ? 'lida' : 'entregue'
   return (
