@@ -1,13 +1,20 @@
 import type { RefObject } from 'react'
 import type { ChatMessage } from '../ChatClient'
 import { MessageBubble } from './MessageBubble'
+import { tickStateFor, type Cycle } from './cycle'
 
 export function MessageList({
   messages,
   scrollAnchorRef,
+  cycle,
+  now,
+  isTyping,
 }: {
   messages: ChatMessage[]
   scrollAnchorRef: RefObject<HTMLDivElement | null>
+  cycle: Cycle | null
+  now: number
+  isTyping: boolean
 }) {
   return (
     <div
@@ -24,9 +31,28 @@ export function MessageList({
         </p>
       )}
       {messages.map((m) => (
-        <MessageBubble key={m.id} message={m} />
+        <MessageBubble
+          key={m.id}
+          message={m}
+          tickState={tickStateFor(m.id, cycle, now)}
+        />
       ))}
+      {isTyping && <TypingBubble />}
       <div ref={scrollAnchorRef} />
+    </div>
+  )
+}
+
+function TypingBubble() {
+  return (
+    <div className="mb-0.5 flex justify-start" aria-label="digitando">
+      <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
+        <span className="typing">
+          <span />
+          <span />
+          <span />
+        </span>
+      </div>
     </div>
   )
 }
