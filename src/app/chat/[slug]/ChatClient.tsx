@@ -100,8 +100,10 @@ export function ChatClient({
 
   const [cycle, setCycle] = useState<Cycle | null>(null)
   const cycleRef = useRef<Cycle | null>(null)
-  // espelho mutável de cycle pra dispatchCycle ler sem stale closure
-  cycleRef.current = cycle
+  // espelho mutável de cycle pra dispatchCycle ler sem stale closure (sincroniza pós-render)
+  useEffect(() => {
+    cycleRef.current = cycle
+  }, [cycle])
 
   const [now, setNow] = useState<number>(() => Date.now())
 
