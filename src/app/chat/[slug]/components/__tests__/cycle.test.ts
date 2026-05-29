@@ -6,7 +6,9 @@ import {
   TICK_GRAY_MS,
   TICK_BLUE_MS,
   type Cycle,
+  cycleReducer,
 } from '../cycle'
+import type { ChatMessage } from '../../ChatClient'
 
 const baseCycle = (overrides: Partial<Cycle> = {}): Cycle => ({
   startedAt: 1000,
@@ -70,9 +72,6 @@ describe('isTypingActive', () => {
     expect(isTypingActive(baseCycle(), 1_000_000_000)).toBe(true)
   })
 })
-
-import { cycleReducer } from '../cycle'
-import type { ChatMessage } from '../../ChatClient'
 
 const aiMsg = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'ai-1',
