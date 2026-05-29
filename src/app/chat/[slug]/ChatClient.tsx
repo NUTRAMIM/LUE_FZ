@@ -11,6 +11,11 @@ import {
   type Cycle,
   type CycleAction,
 } from './components/cycle'
+import {
+  splitAIMessage,
+  delayForSegment,
+  type AISegment,
+} from './components/ai-split'
 
 export interface ChatMessage {
   id: string
@@ -19,6 +24,13 @@ export interface ChatMessage {
   message_type: 'text' | 'image' | 'audio'
   media_url: string | null
   created_at: string
+}
+
+interface AIQueue {
+  segments: AISegment[]
+  segIdx: number
+  nextEmitAt: number
+  sourceMsg: ChatMessage
 }
 
 interface State {
@@ -105,29 +117,91 @@ export function ChatClient({
     cycleRef.current = cycle
   }, [cycle])
 
+  const [aiQueue, setAiQueue] = useState<AIQueue | null>(null)
+  const aiQueueRef = useRef<AIQueue | null>(null)
+  useEffect(() => {
+    aiQueueRef.current = aiQueue
+  }, [aiQueue])
+
   const [now, setNow] = useState<number>(() => Date.now())
 
   const pendingTempsRef = useRef<Array<{ tempId: string; content: string }>>([])
 
-  const dispatchCycle = useCallback((action: CycleAction) => {
-    const res = cycleReducer(cycleRef.current, action)
-    cycleRef.current = res.cycle
-    setCycle(res.cycle)
-    if (res.releaseAI) {
-      dispatch({ type: 'add', message: res.releaseAI })
+  const enqueueAI = useCallback((msg: ChatMessage) => {
+    const segments = splitAIMessage(msg.content)
+    if (segments.length === 0) {
+      // empty msg, nothing to render
+      return
     }
+    if (segments.length === 1) {
+      // single segment: emit immediately, no queue overhead
+      const seg = segments[0]
+      const adjusted: ChatMessage = { ...msg, content: seg.content }
+      dispatch({ type: 'add', message: adjusted })
+      return
+    }
+    const now = Date.now()
+    const queue: AIQueue = {
+      segments,
+      segIdx: 0,
+      nextEmitAt: now + delayForSegment(segments[0]),
+      sourceMsg: msg,
+    }
+    aiQueueRef.current = queue
+    setAiQueue(queue)
+  }, [])
+
+  const dispatchCycle = useCallback(
+    (action: CycleAction) => {
+      const res = cycleReducer(cycleRef.current, action)
+      cycleRef.current = res.cycle
+      setCycle(res.cycle)
+      if (res.releaseAI) {
+        enqueueAI(res.releaseAI)
+      }
+    },
+    [enqueueAI],
+  )
+
+  const processAIQueue = useCallback((now: number) => {
+    const q = aiQueueRef.current
+    if (!q) return
+    if (now < q.nextEmitAt) return
+
+    const seg = q.segments[q.segIdx]
+    const adjusted: ChatMessage = {
+      ...q.sourceMsg,
+      id: `${q.sourceMsg.id}-seg-${q.segIdx}`,
+      content: seg.content,
+    }
+    dispatch({ type: 'add', message: adjusted })
+
+    const nextIdx = q.segIdx + 1
+    if (nextIdx >= q.segments.length) {
+      aiQueueRef.current = null
+      setAiQueue(null)
+      return
+    }
+    const next: AIQueue = {
+      ...q,
+      segIdx: nextIdx,
+      nextEmitAt: now + delayForSegment(q.segments[nextIdx]),
+    }
+    aiQueueRef.current = next
+    setAiQueue(next)
   }, [])
 
   // 500ms = metade do menor threshold (3s do relógio); garante transição visível sem custo grande
   useEffect(() => {
-    if (cycle === null) return
+    if (cycle === null && aiQueue === null) return
     const id = setInterval(() => {
       const n = Date.now()
       setNow(n)
       dispatchCycle({ type: 'tickElapsed', now: n })
+      processAIQueue(n)
     }, 500)
     return () => clearInterval(id)
-  }, [cycle, dispatchCycle])
+  }, [cycle, aiQueue, dispatchCycle, processAIQueue])
 
   const visitorKeyRef = useRef(crypto.randomUUID())
 
@@ -229,7 +303,7 @@ export function ChatClient({
     }
   }, [storeId])
 
-  const isTyping = isTypingActive(cycle, now)
+  const isTyping = isTypingActive(cycle, now) || aiQueue !== null
 
   const scrollAnchor = useRef<HTMLDivElement>(null)
   useEffect(() => {
