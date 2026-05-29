@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { sendMessage } from '@/actions/chat'
 import type { ChatMessage } from '../ChatClient'
 
@@ -26,6 +26,16 @@ export function ChatInput({
   onCycleCancel: (tempId: string) => void
 }) {
   const [text, setText] = useState('')
+
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   async function handleSend() {
     const trimmed = text.trim()
@@ -61,6 +71,13 @@ export function ChatInput({
     onSending(false)
   }
 
+  function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (isDesktop && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
   const canSend = text.trim().length > 0
 
   return (
@@ -71,6 +88,7 @@ export function ChatInput({
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={handleKey}
         rows={1}
         placeholder="Mensagem"
         className="max-h-32 flex-1 resize-none rounded-2xl bg-gray-100 px-4 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
