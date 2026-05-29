@@ -11,6 +11,9 @@ export function ChatInput({
   onError,
   onLocalAdd,
   onReplaceTemp,
+  onCycleStart,
+  onCycleRename,
+  onCycleCancel,
 }: {
   slug: string
   sending: boolean
@@ -18,6 +21,9 @@ export function ChatInput({
   onError: (e: string | null) => void
   onLocalAdd: (m: ChatMessage) => void
   onReplaceTemp: (tempId: string, realId: string) => void
+  onCycleStart: (tempId: string, content: string) => void
+  onCycleRename: (tempId: string, realId: string) => void
+  onCycleCancel: (tempId: string) => void
 }) {
   const [text, setText] = useState('')
 
@@ -36,6 +42,7 @@ export function ChatInput({
       media_url: null,
       created_at: new Date().toISOString(),
     })
+    onCycleStart(tempId, trimmed)
     setText('')
 
     const result = await sendMessage({
@@ -45,18 +52,13 @@ export function ChatInput({
     })
 
     if (!result.success) {
+      onCycleCancel(tempId)
       onError(result.error ?? 'Erro ao enviar.')
     } else if (result.messageId) {
       onReplaceTemp(tempId, result.messageId)
+      onCycleRename(tempId, result.messageId)
     }
     onSending(false)
-  }
-
-  function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
   }
 
   const canSend = text.trim().length > 0 && !sending
@@ -69,7 +71,6 @@ export function ChatInput({
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={handleKey}
         rows={1}
         placeholder="Mensagem"
         className="max-h-32 flex-1 resize-none rounded-2xl bg-gray-100 px-4 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
