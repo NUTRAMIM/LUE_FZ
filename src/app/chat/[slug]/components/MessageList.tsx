@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import type { ChatMessage } from '../ChatClient'
 import { MessageBubble } from './MessageBubble'
 import { tickStateFor, type Cycle } from './cycle'
+import { groupMessagesByDay } from './group-by-day'
 
 export function MessageList({
   messages,
@@ -16,6 +17,8 @@ export function MessageList({
   now: number
   isTyping: boolean
 }) {
+  const groups = groupMessagesByDay(messages, now)
+
   return (
     <div
       className="flex-1 overflow-y-auto px-3 py-2"
@@ -30,15 +33,30 @@ export function MessageList({
           Comece a conversa enviando uma mensagem.
         </p>
       )}
-      {messages.map((m) => (
-        <MessageBubble
-          key={m.id}
-          message={m}
-          tickState={tickStateFor(m.id, cycle, now)}
-        />
+      {groups.map((g) => (
+        <div key={g.label + '-' + g.messages[0].id}>
+          <DateSeparator label={g.label} />
+          {g.messages.map((m) => (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              tickState={tickStateFor(m.id, cycle, now)}
+            />
+          ))}
+        </div>
       ))}
       {isTyping && <TypingBubble />}
       <div ref={scrollAnchorRef} />
+    </div>
+  )
+}
+
+function DateSeparator({ label }: { label: string }) {
+  return (
+    <div className="my-2 flex justify-center">
+      <span className="rounded-md bg-white/85 px-3 py-1 text-[11px] font-medium text-gray-600 shadow-sm">
+        {label}
+      </span>
     </div>
   )
 }
