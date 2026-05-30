@@ -15,33 +15,51 @@ describe('splitAIMessage', () => {
     expect(splitAIMessage('   \n\n  ')).toEqual([])
   })
 
-  it('one text segment for content without periods', () => {
+  it('one text segment for content without terminators', () => {
     expect(splitAIMessage('oi tudo bem')).toEqual([
       { kind: 'text', content: 'oi tudo bem' },
     ])
   })
 
-  it('splits two sentences at the period boundary', () => {
+  it('one segment when total sentences = 2 (grouped together)', () => {
     expect(splitAIMessage('Oi tudo bem. Posso ajudar?')).toEqual([
-      { kind: 'text', content: 'Oi tudo bem.' },
-      { kind: 'text', content: 'Posso ajudar?' },
+      { kind: 'text', content: 'Oi tudo bem. Posso ajudar?' },
     ])
   })
 
-  it('splits three sentences preserving each period', () => {
+  it('two segments when total sentences = 3 (group 2 + group 1)', () => {
     expect(
       splitAIMessage('Primeiro. Segundo. Terceiro.'),
     ).toEqual([
-      { kind: 'text', content: 'Primeiro.' },
-      { kind: 'text', content: 'Segundo.' },
+      { kind: 'text', content: 'Primeiro. Segundo.' },
       { kind: 'text', content: 'Terceiro.' },
+    ])
+  })
+
+  it('two segments when total sentences = 4 (group 2 + group 2)', () => {
+    expect(
+      splitAIMessage('Um. Dois? Três. Quatro?'),
+    ).toEqual([
+      { kind: 'text', content: 'Um. Dois?' },
+      { kind: 'text', content: 'Três. Quatro?' },
+    ])
+  })
+
+  it('treats ? as a sentence terminator', () => {
+    expect(splitAIMessage('Oi? Tudo bem?')).toEqual([
+      { kind: 'text', content: 'Oi? Tudo bem?' },
     ])
   })
 
   it('does NOT split on ellipsis (...)', () => {
     expect(splitAIMessage('Espera... agora vai. Pronto.')).toEqual([
-      { kind: 'text', content: 'Espera... agora vai.' },
-      { kind: 'text', content: 'Pronto.' },
+      { kind: 'text', content: 'Espera... agora vai. Pronto.' },
+    ])
+  })
+
+  it('does NOT split on triple question marks (???)', () => {
+    expect(splitAIMessage('Quê??? Sério. Falou.')).toEqual([
+      { kind: 'text', content: 'Quê??? Sério. Falou.' },
     ])
   })
 
@@ -51,9 +69,8 @@ describe('splitAIMessage', () => {
     ).toEqual([
       {
         kind: 'text',
-        content: 'Veja em https://exemplo.com/foto.jpg agora.',
+        content: 'Veja em https://exemplo.com/foto.jpg agora. Próximo.',
       },
-      { kind: 'text', content: 'Próximo.' },
     ])
   })
 
@@ -69,22 +86,21 @@ describe('splitAIMessage', () => {
     ).toEqual([{ kind: 'product', content: 'Camiseta Azul - R$ 50' }])
   })
 
-  it('mixes sentences and product segments preserving order', () => {
+  it('mixes grouped sentences and product segments preserving order', () => {
     const input =
-      'Encontrei estes produtos. Olha só.\n[produto]Camiseta - R$ 50[/produto]\n[produto]Calça - R$ 120[/produto]\nGostou?'
+      'Encontrei estes produtos. Olha só.\n[produto]Camiseta - R$ 50[/produto]\n[produto]Calça - R$ 120[/produto]\nGostou? Quer ver mais?'
     expect(splitAIMessage(input)).toEqual([
-      { kind: 'text', content: 'Encontrei estes produtos.' },
-      { kind: 'text', content: 'Olha só.' },
+      { kind: 'text', content: 'Encontrei estes produtos. Olha só.' },
       { kind: 'product', content: 'Camiseta - R$ 50' },
       { kind: 'product', content: 'Calça - R$ 120' },
-      { kind: 'text', content: 'Gostou?' },
+      { kind: 'text', content: 'Gostou? Quer ver mais?' },
     ])
   })
 
   it('handles empty product block by skipping it', () => {
-    expect(splitAIMessage('Oi. [produto][/produto] Tchau.')).toEqual([
-      { kind: 'text', content: 'Oi.' },
-      { kind: 'text', content: 'Tchau.' },
+    expect(splitAIMessage('Oi. Tchau. [produto][/produto] Pronto.')).toEqual([
+      { kind: 'text', content: 'Oi. Tchau.' },
+      { kind: 'text', content: 'Pronto.' },
     ])
   })
 
@@ -114,7 +130,7 @@ describe('delayForSegment', () => {
   })
 
   it('text → 30ms × content.length', () => {
-    const text = 'abcde' // 5 chars
+    const text = 'abcde'
     expect(delayForSegment({ kind: 'text', content: text })).toBe(
       5 * TEXT_DELAY_MS_PER_CHAR,
     )

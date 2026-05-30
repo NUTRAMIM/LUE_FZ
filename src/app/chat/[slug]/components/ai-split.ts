@@ -7,9 +7,10 @@ export interface AISegment {
 
 export const TEXT_DELAY_MS_PER_CHAR = 30
 export const PRODUCT_DELAY_MS = 4_000
+export const SENTENCES_PER_SEGMENT = 2
 
 const PRODUCT_RE = /\[produto\]([\s\S]*?)\[\/produto\]/g
-const SENTENCE_RE = /(?<=[^.]\.)\s+/
+const SENTENCE_RE = /(?<=[^.?][.?])\s+/
 
 export function splitAIMessage(content: string): AISegment[] {
   const segments: AISegment[] = []
@@ -40,10 +41,14 @@ export function splitAIMessage(content: string): AISegment[] {
 }
 
 function pushTextSegments(out: AISegment[], chunk: string): void {
-  const sentences = chunk.split(SENTENCE_RE)
-  for (const s of sentences) {
-    const trimmed = s.trim()
-    if (trimmed) out.push({ kind: 'text', content: trimmed })
+  const sentences = chunk
+    .split(SENTENCE_RE)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+
+  for (let i = 0; i < sentences.length; i += SENTENCES_PER_SEGMENT) {
+    const group = sentences.slice(i, i + SENTENCES_PER_SEGMENT).join(' ')
+    if (group) out.push({ kind: 'text', content: group })
   }
 }
 
