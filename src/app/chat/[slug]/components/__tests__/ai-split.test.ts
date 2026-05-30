@@ -15,17 +15,51 @@ describe('splitAIMessage', () => {
     expect(splitAIMessage('   \n\n  ')).toEqual([])
   })
 
-  it('one text segment for content without markers or paragraphs', () => {
+  it('one text segment for content without periods', () => {
     expect(splitAIMessage('oi tudo bem')).toEqual([
       { kind: 'text', content: 'oi tudo bem' },
     ])
   })
 
-  it('splits paragraphs separated by double newlines', () => {
-    expect(splitAIMessage('Oi!\n\nTudo bem?\n\nAté logo')).toEqual([
-      { kind: 'text', content: 'Oi!' },
-      { kind: 'text', content: 'Tudo bem?' },
-      { kind: 'text', content: 'Até logo' },
+  it('splits two sentences at the period boundary', () => {
+    expect(splitAIMessage('Oi tudo bem. Posso ajudar?')).toEqual([
+      { kind: 'text', content: 'Oi tudo bem.' },
+      { kind: 'text', content: 'Posso ajudar?' },
+    ])
+  })
+
+  it('splits three sentences preserving each period', () => {
+    expect(
+      splitAIMessage('Primeiro. Segundo. Terceiro.'),
+    ).toEqual([
+      { kind: 'text', content: 'Primeiro.' },
+      { kind: 'text', content: 'Segundo.' },
+      { kind: 'text', content: 'Terceiro.' },
+    ])
+  })
+
+  it('does NOT split on ellipsis (...)', () => {
+    expect(splitAIMessage('Espera... agora vai. Pronto.')).toEqual([
+      { kind: 'text', content: 'Espera... agora vai.' },
+      { kind: 'text', content: 'Pronto.' },
+    ])
+  })
+
+  it('does NOT split inside URLs containing periods', () => {
+    expect(
+      splitAIMessage('Veja em https://exemplo.com/foto.jpg agora. Próximo.'),
+    ).toEqual([
+      {
+        kind: 'text',
+        content: 'Veja em https://exemplo.com/foto.jpg agora.',
+      },
+      { kind: 'text', content: 'Próximo.' },
+    ])
+  })
+
+  it('keeps single newlines inside a sentence', () => {
+    expect(splitAIMessage('Linha um\nLinha dois.')).toEqual([
+      { kind: 'text', content: 'Linha um\nLinha dois.' },
     ])
   })
 
@@ -35,11 +69,12 @@ describe('splitAIMessage', () => {
     ).toEqual([{ kind: 'product', content: 'Camiseta Azul - R$ 50' }])
   })
 
-  it('mixes text and product segments preserving order', () => {
+  it('mixes sentences and product segments preserving order', () => {
     const input =
-      'Encontrei estes produtos:\n\n[produto]Camiseta - R$ 50[/produto]\n\n[produto]Calça - R$ 120[/produto]\n\nGostou?'
+      'Encontrei estes produtos. Olha só.\n[produto]Camiseta - R$ 50[/produto]\n[produto]Calça - R$ 120[/produto]\nGostou?'
     expect(splitAIMessage(input)).toEqual([
-      { kind: 'text', content: 'Encontrei estes produtos:' },
+      { kind: 'text', content: 'Encontrei estes produtos.' },
+      { kind: 'text', content: 'Olha só.' },
       { kind: 'product', content: 'Camiseta - R$ 50' },
       { kind: 'product', content: 'Calça - R$ 120' },
       { kind: 'text', content: 'Gostou?' },
@@ -47,9 +82,9 @@ describe('splitAIMessage', () => {
   })
 
   it('handles empty product block by skipping it', () => {
-    expect(splitAIMessage('Oi\n\n[produto][/produto]\n\nTchau')).toEqual([
-      { kind: 'text', content: 'Oi' },
-      { kind: 'text', content: 'Tchau' },
+    expect(splitAIMessage('Oi. [produto][/produto] Tchau.')).toEqual([
+      { kind: 'text', content: 'Oi.' },
+      { kind: 'text', content: 'Tchau.' },
     ])
   })
 
