@@ -24,6 +24,7 @@ export interface ChatMessage {
   message_type: 'text' | 'image' | 'audio'
   media_url: string | null
   created_at: string
+  reply_to_message_id: string | null
 }
 
 interface AIQueue {
@@ -226,6 +227,7 @@ export function ChatClient({
             message_type: ChatMessage['message_type']
             media_path: string | null
             created_at: string
+            reply_to_message_id: string | null
           }
 
           let media_url: string | null = null
@@ -248,6 +250,7 @@ export function ChatClient({
             message_type: row.message_type,
             media_url,
             created_at: row.created_at,
+            reply_to_message_id: row.reply_to_message_id,
           }
 
           // findIndex pega o tempId mais antigo com esse content (FIFO).
