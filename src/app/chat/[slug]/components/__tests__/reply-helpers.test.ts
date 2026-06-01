@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   normalizeMessageId,
+  segmentIndexFromId,
   replyAuthorForRole,
   replyPreviewText,
   truncate,
@@ -16,6 +17,17 @@ describe('normalizeMessageId', () => {
   it('mantém id real intocado', () => {
     expect(normalizeMessageId('abc-123')).toBe('abc-123')
     expect(normalizeMessageId('temp-1700000000000')).toBe('temp-1700000000000')
+  })
+})
+
+describe('segmentIndexFromId', () => {
+  it('extrai o índice do segmento de um id -seg-N', () => {
+    expect(segmentIndexFromId('abc-123-seg-0')).toBe(0)
+    expect(segmentIndexFromId('abc-123-seg-12')).toBe(12)
+  })
+  it('retorna undefined para id real sem sufixo', () => {
+    expect(segmentIndexFromId('abc-123')).toBeUndefined()
+    expect(segmentIndexFromId('temp-1700000000000')).toBeUndefined()
   })
 })
 

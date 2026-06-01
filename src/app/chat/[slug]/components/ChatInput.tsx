@@ -5,6 +5,7 @@ import { sendMessage } from '@/actions/chat'
 import type { ChatMessage } from '../ChatClient'
 import {
   normalizeMessageId,
+  segmentIndexFromId,
   replyAuthorForRole,
   replyPreviewText,
   truncate,
@@ -53,6 +54,7 @@ export function ChatInput({
     const trimmed = text.trim()
     if (!trimmed) return
     const replyId = replyTo ? normalizeMessageId(replyTo.id) : undefined
+    const replySegmentIndex = replyTo ? segmentIndexFromId(replyTo.id) : undefined
     onSending(true)
     onError(null)
 
@@ -75,6 +77,9 @@ export function ChatInput({
       text: trimmed,
       messageType: 'text',
       ...(replyId ? { replyToMessageId: replyId } : {}),
+      ...(replySegmentIndex !== undefined
+        ? { replyToSegmentIndex: replySegmentIndex }
+        : {}),
     })
 
     if (!result.success) {

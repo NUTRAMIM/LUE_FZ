@@ -6,6 +6,11 @@ export function normalizeMessageId(id: string): string {
   return id.replace(/-seg-\d+$/, '')
 }
 
+export function segmentIndexFromId(id: string): number | undefined {
+  const match = id.match(/-seg-(\d+)$/)
+  return match ? Number(match[1]) : undefined
+}
+
 export function replyAuthorForRole(role: Role): 'cliente' | 'loja' {
   return role === 'user' ? 'cliente' : 'loja'
 }

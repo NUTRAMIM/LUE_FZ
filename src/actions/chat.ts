@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dispatchToN8n } from '@/lib/n8n'
 import { signedReadUrl } from '@/lib/chat-media'
+import { splitAIMessage } from '@/app/chat/[slug]/components/ai-split'
 import {
   COOKIE_NAME,
   COOKIE_OPTIONS,
@@ -129,6 +130,7 @@ export interface SendMessageInput {
   mediaPath?: string
   messageType: 'text' | 'image' | 'audio'
   replyToMessageId?: string
+  replyToSegmentIndex?: number
 }
 
 export interface SendMessageResult {
@@ -192,10 +194,19 @@ export async function sendMessage(
       .eq('id', input.replyToMessageId)
       .maybeSingle()
     if (quoted) {
+      // Mensagens da IA são divididas em segmentos só na exibição (um balão por
+      // sentença/produto). Quando o cliente responde a um segmento específico,
+      // reaplicamos o split na linha do banco e enviamos só aquele trecho — assim
+      // o agente entende a referência ao balão, não ao grupo inteiro.
+      let conteudo = quoted.content
+      if (input.replyToSegmentIndex !== undefined && quoted.role !== 'user') {
+        const seg = splitAIMessage(quoted.content)[input.replyToSegmentIndex]
+        if (seg) conteudo = seg.content
+      }
       respondendoA = {
         id_mensagem: quoted.id,
         autor: quoted.role === 'user' ? 'cliente' : 'loja',
-        conteudo: quoted.content,
+        conteudo,
       }
     }
   }
