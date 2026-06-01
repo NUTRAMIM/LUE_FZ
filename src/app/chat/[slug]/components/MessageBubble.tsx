@@ -6,6 +6,8 @@ import type { TickState } from './cycle'
 import { parseSegments, groupConsecutiveImages } from './message-segments'
 import { ImageCarousel } from './ImageCarousel'
 import { ImageLightbox } from './ImageLightbox'
+import { useSwipeToReply } from './useSwipeToReply'
+import { replyPreviewText, truncate } from './reply-helpers'
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -15,14 +17,23 @@ function formatTime(iso: string): string {
 export function MessageBubble({
   message,
   tickState = 'idle',
+  quoted = null,
+  quotedLabel = '',
+  onStartReply,
+  onQuoteClick,
 }: {
   message: ChatMessage
   tickState?: TickState
+  quoted?: ChatMessage | null
+  quotedLabel?: string
+  onStartReply?: (message: ChatMessage) => void
+  onQuoteClick?: (targetId: string) => void
 }) {
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
 
   const [lightbox, setLightbox] = useState<{ srcs: string[]; index: number } | null>(null)
+  const { dx, swipeHandlers } = useSwipeToReply(() => onStartReply?.(message))
 
   if (isSystem) {
     return (
@@ -46,13 +57,66 @@ export function MessageBubble({
   const bubbleMaxWidth = hasImage ? 'max-w-[88%] sm:max-w-sm' : 'max-w-[75%]'
 
   return (
-    <div className={`mb-0.5 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div
+      data-msgid={message.id.replace(/-seg-\d+$/, '')}
+      className={`group relative mb-0.5 flex items-center ${
+        isUser ? 'justify-end' : 'justify-start'
+      }`}
+    >
+      {dx > 0 && (
+        <span
+          className="absolute left-1 text-[#075E54]"
+          style={{ opacity: Math.min(dx / 60, 1) }}
+          aria-hidden="true"
+        >
+          <ReplyIcon />
+        </span>
+      )}
+
+      {!isUser && onStartReply && (
+        <button
+          type="button"
+          onClick={() => onStartReply(message)}
+          className="order-2 ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 group-hover:flex"
+          aria-label="Responder"
+        >
+          <ReplyIcon />
+        </button>
+      )}
+
       <div
-        className={`${bubbleMaxWidth} rounded-lg px-3 py-2 shadow-sm ${
+        {...swipeHandlers}
+        style={{ transform: dx ? `translateX(${dx}px)` : undefined, touchAction: 'pan-y' }}
+        className={`${bubbleMaxWidth} ${isUser ? 'order-1' : ''} rounded-lg px-3 py-2 shadow-sm ${
           isUser ? 'bg-[#DCF8C6]' : 'bg-white'
         }`}
       >
-        {/* Mídia legítima (mensagem do tipo image/audio com media_url) — comportamento atual preservado */}
+        {quoted && (
+          <button
+            type="button"
+            onClick={() => onQuoteClick?.(quoted.id.replace(/-seg-\d+$/, ''))}
+            className="mb-1 block w-full rounded border-l-4 border-[#075E54] bg-black/5 px-2 py-1 text-left"
+          >
+            <span className="block text-xs font-semibold text-[#075E54]">
+              {quotedLabel}
+            </span>
+            <span className="block truncate text-xs text-gray-600">
+              {truncate(replyPreviewText(quoted), 90)}
+            </span>
+          </button>
+        )}
+
+        {isUser && onStartReply && (
+          <button
+            type="button"
+            onClick={() => onStartReply(message)}
+            className="float-right -mr-1 -mt-0.5 ml-1 hidden h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:bg-black/5 group-hover:flex"
+            aria-label="Responder"
+          >
+            <ReplyIcon />
+          </button>
+        )}
+
         {isTypedImage && message.media_url && (
           <a
             href={message.media_url}
@@ -72,7 +136,6 @@ export function MessageBubble({
           <audio controls src={message.media_url} className="max-w-full" />
         )}
 
-        {/* Texto + imagens detectadas no content */}
         {renderItems.map((item, i) => {
           if (item.type === 'text') {
             return (
@@ -101,7 +164,6 @@ export function MessageBubble({
               </button>
             )
           }
-          // imageGroup
           return (
             <ImageCarousel
               key={`g-${i}`}
@@ -125,6 +187,25 @@ export function MessageBubble({
         />
       )}
     </div>
+  )
+}
+
+function ReplyIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="9 17 4 12 9 7" />
+      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+    </svg>
   )
 }
 
