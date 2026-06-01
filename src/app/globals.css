@@ -848,3 +848,12 @@ details.faq .answer {
   line-height: 1.55;
   max-width: 72ch;
 }
+
+@keyframes reply-flash {
+  0% { background-color: rgba(7, 94, 84, 0.18); }
+  100% { background-color: transparent; }
+}
+.reply-flash {
+  animation: reply-flash 1s ease-out;
+  border-radius: 0.5rem;
+}
