@@ -62,7 +62,7 @@ export function MessageList({
       {groups.map((g) => (
         <div key={g.label + '-' + g.messages[0].id}>
           <DateSeparator label={g.label} />
-          {g.messages.map((m) => {
+          {g.messages.map((m, i) => {
             const quoted = m.reply_to_message_id
               ? messageById.get(m.reply_to_message_id) ?? null
               : null
@@ -71,6 +71,12 @@ export function MessageList({
                 ? 'Você'
                 : storeName
               : ''
+            const prev = i > 0 ? g.messages[i - 1] : null
+            const groupedWithPrev =
+              !!prev &&
+              prev.role !== 'system' &&
+              m.role !== 'system' &&
+              (prev.role === 'user') === (m.role === 'user')
             return (
               <MessageBubble
                 key={m.id}
@@ -78,6 +84,7 @@ export function MessageList({
                 tickState={tickStateFor(m.id, cycle, now)}
                 quoted={quoted}
                 quotedLabel={quotedLabel}
+                groupedWithPrev={groupedWithPrev}
                 onStartReply={onStartReply}
                 onQuoteClick={handleQuoteClick}
               />
@@ -103,7 +110,7 @@ function DateSeparator({ label }: { label: string }) {
 
 function TypingBubble() {
   return (
-    <div className="mb-0.5 flex justify-start" aria-label="digitando">
+    <div className="mt-2 flex justify-start" aria-label="digitando">
       <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
         <span className="typing">
           <span />

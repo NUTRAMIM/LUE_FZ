@@ -19,6 +19,7 @@ export function MessageBubble({
   tickState = 'idle',
   quoted = null,
   quotedLabel = '',
+  groupedWithPrev = false,
   onStartReply,
   onQuoteClick,
 }: {
@@ -26,6 +27,7 @@ export function MessageBubble({
   tickState?: TickState
   quoted?: ChatMessage | null
   quotedLabel?: string
+  groupedWithPrev?: boolean
   onStartReply?: (message: ChatMessage) => void
   onQuoteClick?: (targetId: string) => void
 }) {
@@ -59,7 +61,7 @@ export function MessageBubble({
   return (
     <div
       data-msgid={message.id.replace(/-seg-\d+$/, '')}
-      className={`group relative mb-0.5 flex items-center ${
+      className={`group relative ${groupedWithPrev ? 'mt-0.5' : 'mt-2'} flex items-center ${
         isUser ? 'justify-end' : 'justify-start'
       }`}
     >

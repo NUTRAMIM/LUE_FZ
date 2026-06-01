@@ -110,7 +110,7 @@ export function ChatInput({
   return (
     <div className="bg-white">
       {replyTo && (
-        <div className="flex items-center gap-2 border-l-4 border-[#075E54] bg-gray-50 px-3 py-2">
+        <div className="reply-bar-in flex items-center gap-2 border-l-4 border-[#075E54] bg-gray-50 px-3 py-2">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-[#075E54]">{replyLabel}</p>
             <p className="truncate text-xs text-gray-600">
