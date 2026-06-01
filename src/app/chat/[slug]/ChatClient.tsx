@@ -16,6 +16,7 @@ import {
   delayForSegment,
   type AISegment,
 } from './components/ai-split'
+import { normalizeMessageId } from './components/reply-helpers'
 
 export interface ChatMessage {
   id: string
@@ -125,6 +126,8 @@ export function ChatClient({
   }, [aiQueue])
 
   const [now, setNow] = useState<number>(() => Date.now())
+
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
 
   const pendingTempsRef = useRef<Array<{ tempId: string; content: string }>>([])
 
@@ -345,6 +348,20 @@ export function ChatClient({
     [dispatchCycle],
   )
 
+  const handleStartReply = useCallback((message: ChatMessage) => {
+    setReplyTo(message)
+  }, [])
+
+  const handleCancelReply = useCallback(() => {
+    setReplyTo(null)
+  }, [])
+
+  const messageById = new Map<string, ChatMessage>()
+  for (const m of state.messages) {
+    const key = normalizeMessageId(m.id)
+    if (!messageById.has(key)) messageById.set(key, m)
+  }
+
   return (
     <div className="flex h-dvh flex-col bg-[#ECE5DD]">
       <ChatHeader
@@ -358,6 +375,9 @@ export function ChatClient({
         cycle={cycle}
         now={now}
         isTyping={isTyping}
+        storeName={storeName}
+        messageById={messageById}
+        onStartReply={handleStartReply}
       />
       <ChatInput
         slug={slug}
@@ -371,6 +391,9 @@ export function ChatClient({
         onCycleStart={handleCycleStart}
         onCycleRename={handleCycleRename}
         onCycleCancel={handleCycleCancel}
+        replyTo={replyTo}
+        storeName={storeName}
+        onCancelReply={handleCancelReply}
       />
       {state.error && (
         <div className="bg-red-50 px-4 py-2 text-sm text-red-700">
