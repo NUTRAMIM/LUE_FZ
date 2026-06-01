@@ -26,6 +26,7 @@ export interface ChatBootstrap {
     message_type: 'text' | 'image' | 'audio'
     media_url: string | null
     created_at: string
+    reply_to_message_id: string | null
   }>
 }
 
@@ -96,7 +97,7 @@ export async function ensureConversation(slug: string): Promise<ChatBootstrap> {
 
   const { data: rows } = await admin
     .from('messages')
-    .select('id, role, content, message_type, media_path, created_at')
+    .select('id, role, content, message_type, media_path, created_at, reply_to_message_id')
     .eq('conversation_id', conversation.id)
     .order('created_at', { ascending: true })
     .limit(200)
@@ -109,6 +110,7 @@ export async function ensureConversation(slug: string): Promise<ChatBootstrap> {
       message_type: m.message_type,
       media_url: await signedReadUrl(m.media_path),
       created_at: m.created_at,
+      reply_to_message_id: m.reply_to_message_id,
     })),
   )
 
@@ -126,6 +128,7 @@ export interface SendMessageInput {
   text: string
   mediaPath?: string
   messageType: 'text' | 'image' | 'audio'
+  replyToMessageId?: string
 }
 
 export interface SendMessageResult {
@@ -167,6 +170,7 @@ export async function sendMessage(
       content: text,
       message_type: input.messageType,
       media_path: input.mediaPath ?? null,
+      reply_to_message_id: input.replyToMessageId ?? null,
     })
     .select('id')
     .single()
@@ -178,6 +182,24 @@ export async function sendMessage(
 
   const mediaUrl = await signedReadUrl(input.mediaPath ?? null)
 
+  let respondendoA:
+    | { id_mensagem: string; autor: 'cliente' | 'loja'; conteudo: string }
+    | undefined
+  if (input.replyToMessageId) {
+    const { data: quoted } = await admin
+      .from('messages')
+      .select('id, role, content')
+      .eq('id', input.replyToMessageId)
+      .maybeSingle()
+    if (quoted) {
+      respondendoA = {
+        id_mensagem: quoted.id,
+        autor: quoted.role === 'user' ? 'cliente' : 'loja',
+        conteudo: quoted.content,
+      }
+    }
+  }
+
   try {
     const res = await dispatchToN8n({
       mensagem: text,
@@ -187,6 +209,7 @@ export async function sendMessage(
       id_loja: store.id,
       tipo_de_mensagem: input.messageType,
       ...(mediaUrl ? { media_url: mediaUrl } : {}),
+      ...(respondendoA ? { respondendo_a: respondendoA } : {}),
     })
 
     if (res && res.ok) {
