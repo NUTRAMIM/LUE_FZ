@@ -12,10 +12,22 @@ export interface N8nDispatchPayload {
   media_url?: string
 }
 
+export function resolveWebhookUrl(
+  storeId: string,
+  env: { N8N_WEBHOOK_URL?: string; CHAT_PY_WEBHOOK_URL?: string; CHAT_PY_STORE_IDS?: string } = process.env,
+): string | undefined {
+  const pyStores = (env.CHAT_PY_STORE_IDS ?? '')
+    .split(',').map((s) => s.trim()).filter(Boolean)
+  if (env.CHAT_PY_WEBHOOK_URL && pyStores.includes(storeId)) {
+    return env.CHAT_PY_WEBHOOK_URL
+  }
+  return env.N8N_WEBHOOK_URL
+}
+
 export async function dispatchToN8n(
   payload: N8nDispatchPayload,
 ): Promise<Response | null> {
-  const webhookUrl = process.env.N8N_WEBHOOK_URL
+  const webhookUrl = resolveWebhookUrl(payload.id_loja)
   if (!webhookUrl) return null
 
   const secret = process.env.N8N_WEBHOOK_SECRET

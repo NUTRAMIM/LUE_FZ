@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { dispatchToN8n } from '../n8n'
+import { dispatchToN8n, resolveWebhookUrl } from '../n8n'
 
 describe('dispatchToN8n', () => {
   const fetchMock = vi.fn()
@@ -108,5 +108,25 @@ describe('dispatchToN8n', () => {
     })
 
     expect(res?.status).toBe(502)
+  })
+})
+
+describe('resolveWebhookUrl', () => {
+  it('uses python url for the test store', () => {
+    const url = resolveWebhookUrl('store-test-123', {
+      N8N_WEBHOOK_URL: 'https://n8n/webhook',
+      CHAT_PY_WEBHOOK_URL: 'https://py/chat',
+      CHAT_PY_STORE_IDS: 'store-test-123',
+    })
+    expect(url).toBe('https://py/chat')
+  })
+
+  it('falls back to n8n for other stores', () => {
+    const url = resolveWebhookUrl('other', {
+      N8N_WEBHOOK_URL: 'https://n8n/webhook',
+      CHAT_PY_WEBHOOK_URL: 'https://py/chat',
+      CHAT_PY_STORE_IDS: 'store-test-123',
+    })
+    expect(url).toBe('https://n8n/webhook')
   })
 })
