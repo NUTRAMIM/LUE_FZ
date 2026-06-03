@@ -16,7 +16,7 @@ O time quer migrar para um serviço próprio em **Python** (o time programa em P
 
 ## Estratégia
 
-**Híbrido:** portar o núcleo da conversa com **paridade de comportamento** (incluindo todos os efeitos colaterais), já incorporando as melhorias **baratas e de baixo risco** (resumo de cores, redução de tokens via remoção do splitter LLM e `topK` menor). As melhorias maiores — streaming de produtos (#3) e memória entre conversas (#4) — ficam para a **fase 2**, e a arquitetura é desenhada para acomodá-las sem rearquitetar.
+**Híbrido:** portar o núcleo da conversa com **paridade de comportamento** (incluindo todos os efeitos colaterais), já incorporando as melhorias **baratas e de baixo risco** (resumo de cores, redução de tokens via remoção do splitter LLM e `topK: 6`). As melhorias maiores — streaming de produtos (#3) e memória entre conversas (#4) — ficam para a **fase 2**, e a arquitetura é desenhada para acomodá-las sem rearquitetar.
 
 ## Estado atual (descobertas relevantes)
 
@@ -94,7 +94,7 @@ chat-service/
 │   ├── main.py            # FastAPI: POST /chat → valida, 202, dispara task
 │   ├── config.py          # env vars (SUPABASE_URL, SERVICE_KEY, OPENAI_KEY, modelo, flags)
 │   ├── pipeline.py        # orquestra o fluxo da Seção 2
-│   ├── db.py              # acesso ao Postgres (asyncpg ou supabase-py). Único lugar com SQL.
+│   ├── db.py              # acesso ao Postgres via asyncpg. Único lugar com SQL.
 │   ├── buffer.py          # janela de mensagens + decisão de abortar
 │   ├── agent/
 │   │   ├── runner.py      # loop de tool-calling (OpenAI SDK)
@@ -118,7 +118,7 @@ chat-service/
 - `buffer.resolve_window(conv_id, msg_id) -> BufferResult{should_process, chat_input}` — lógica + 1 query.
 - `agent.tools.buscar_produtos(store_id, consulta, category) -> list[Product]` — embed + `match_documents` + resumo de cores (resumo é função pura).
 - `branches/*.run(ctx: Context)` — cada uma recebe um `Context` (store, conv, chat_input, ai_output) e faz seu efeito; independentes entre si.
-- `db.py` concentra todo SQL — facilita trocar asyncpg↔supabase-py e mockar nos testes.
+- `db.py` concentra todo SQL via `asyncpg` (pool) — único ponto de acesso, fácil de mockar nos testes.
 
 **Racional:** `pipeline.py` é o único que conhece a ordem; cada peça se entende e se testa sozinha. A fase 2 entra como módulos novos (listagem por categoria em `tools.py`; perfil do lead em `prompt.py`/`branches`) sem mexer no resto.
 
@@ -149,7 +149,7 @@ Evita a falha quando o termo do cliente não bate com nenhuma categoria exata.
 | Fonte de token (n8n) | Fase 1 (Python) |
 |---|---|
 | Splitter LLM | eliminado (frontend divide) |
-| `topK: 12` com cores cheias | `topK` menor (6-8) + cores resumidas |
+| `topK: 12` com cores cheias | `topK: 6` + cores resumidas |
 | Lead + Interesse + Gap (3 LLMs) | mantidos separados (paridade — decisão (a)) |
 | System prompt inteiro toda vez | mantido (persona); enxugar é fase 2 |
 
