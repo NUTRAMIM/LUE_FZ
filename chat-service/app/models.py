@@ -1,0 +1,68 @@
+# app/models.py
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Literal
+from pydantic import BaseModel
+
+
+class WebhookPayload(BaseModel):
+    mensagem: str
+    id_mensagem: str
+    id_conversa: str
+    nome_loja: str
+    id_loja: str
+    tipo_de_mensagem: Literal["text", "image", "audio"]
+    media_url: str | None = None
+
+
+@dataclass
+class Message:
+    id: str
+    role: str
+    content: str
+
+
+@dataclass
+class StoreSettings:
+    id: str
+    store_name: str
+    categories: list[str] = field(default_factory=list)
+    payment_methods: list[str] = field(default_factory=list)
+    delivery_methods: list[str] = field(default_factory=list)
+    service_instructions: str = ""
+    seller_phone: str = ""
+    instagram_handle: str = ""
+
+
+@dataclass
+class Product:
+    name: str
+    price: float | None = None
+    category: str | None = None
+    brand: str | None = None
+    image_url: str | None = None
+    tamanhos: list[str] = field(default_factory=list)
+    cores: list[str] = field(default_factory=list)
+
+
+@dataclass
+class Lead:
+    id: str
+    name: str | None = None
+    whatsapp: str | None = None
+    email: str | None = None
+    cep: str | None = None
+
+
+@dataclass
+class BufferResult:
+    should_process: bool
+    chat_input: str = ""
+
+
+@dataclass
+class Context:
+    store: StoreSettings
+    conversation_id: str
+    chat_input: str
+    ai_output: str
