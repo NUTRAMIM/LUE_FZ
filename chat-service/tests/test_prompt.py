@@ -1,0 +1,19 @@
+# tests/test_prompt.py
+from app.agent.prompt import build_system_prompt
+
+
+def test_prompt_includes_store_fields(store):
+    p = build_system_prompt(store, shown_list="Top Alça")
+    assert "Assistente da loja LUE" in p
+    assert "Categorias: top, vestido, calça" in p
+    assert "Pagamento: pix, cartão" in p
+    assert "Entrega: correios" in p
+    assert "Atendimento das 9h às 18h." in p
+    assert "5511999999999" in p
+    assert "@lue" in p
+    assert "Top Alça" in p
+
+
+def test_prompt_shown_list_placeholder_when_empty(store):
+    p = build_system_prompt(store, shown_list="")
+    assert "(nenhum)" in p
