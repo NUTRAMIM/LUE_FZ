@@ -43,8 +43,15 @@ async def run_agent(llm, db, store, shown_list, chat_input, history) -> str:
         if not tool_calls:
             return resp.get("content") or ""
 
-        messages.append({"role": "assistant", "content": resp.get("content"),
-                         "tool_calls": tool_calls})
+        messages.append({
+            "role": "assistant",
+            "content": resp.get("content"),
+            "tool_calls": [
+                {"id": tc["id"], "type": "function",
+                 "function": {"name": tc["name"], "arguments": tc["arguments"]}}
+                for tc in tool_calls
+            ],
+        })
         for call in tool_calls:
             args = json.loads(call["arguments"])
             result = await buscar_produtos(
