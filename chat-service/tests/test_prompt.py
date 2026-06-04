@@ -38,3 +38,8 @@ def test_prompt_scopes_three_product_cap_to_buscar(store):
 def test_prompt_instructs_category_synonym_mapping(store):
     p = build_system_prompt(store, shown_list="")
     assert "categoria existente mais próxima" in p
+
+
+def test_prompt_has_tool_routing_decision(store):
+    p = build_system_prompt(store, shown_list="")
+    assert "decida pela intenção do cliente" in p
