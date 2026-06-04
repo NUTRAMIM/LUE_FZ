@@ -11,7 +11,7 @@ class LLMClient:
         if tools:
             kwargs["tools"] = tools
         if max_tokens:
-            kwargs["max_tokens"] = max_tokens
+            kwargs["max_completion_tokens"] = max_tokens
         resp = await self._client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
         tool_calls = None

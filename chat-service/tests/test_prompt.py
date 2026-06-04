@@ -17,3 +17,9 @@ def test_prompt_includes_store_fields(store):
 def test_prompt_shown_list_placeholder_when_empty(store):
     p = build_system_prompt(store, shown_list="")
     assert "(nenhum)" in p
+
+
+def test_prompt_instructs_produto_tags(store):
+    p = build_system_prompt(store, shown_list="")
+    assert "[produto]" in p
+    assert "[/produto]" in p
