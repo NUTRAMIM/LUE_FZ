@@ -1,6 +1,7 @@
 # tests/conftest.py
 import pytest
 from app.models import StoreSettings
+from app.usage import record_usage
 
 
 class FakeDB:
@@ -88,10 +89,12 @@ class FakeLLM:
 
     async def chat(self, model, messages, tools=None, max_tokens=None):
         self.chat_calls.append({"messages": messages, "tools": tools})
+        record_usage("chat", 10, 4, 14)
         return self.chat_responses.pop(0)
 
     async def embed(self, model, text):
         self.embed_calls.append(text)
+        record_usage("embed", 5, 0, 5)
         return [0.0] * 1536
 
 

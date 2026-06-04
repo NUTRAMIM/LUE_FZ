@@ -8,6 +8,7 @@ from app.branches.gap import run_gap
 from app.branches.mentions import run_mentions
 from app.models import Context
 from app.config import settings
+from app.usage import start_usage
 
 log = logging.getLogger("chat-service")
 
@@ -24,6 +25,7 @@ def with_reply_context(chat_input, respondendo_a):
 
 
 async def process_message(db, llm, payload) -> None:
+    usage = start_usage()
     await asyncio.sleep(settings.buffer_wait_seconds)
     buf = await resolve_window(
         db, payload.id_conversa, payload.id_mensagem, payload.mensagem)
@@ -69,3 +71,7 @@ async def process_message(db, llm, payload) -> None:
     for r in results:
         if isinstance(r, Exception):
             log.error("branch failed: %r", r)
+
+    log.info("usage da conversa %s: prompt=%d completion=%d total=%d calls=%d",
+             payload.id_conversa, usage.prompt, usage.completion,
+             usage.total, usage.calls)
