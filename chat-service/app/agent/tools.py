@@ -39,3 +39,39 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str) 
             "image_url": m.get("image_url"),
         })
     return json.dumps(produtos, ensure_ascii=False)
+
+
+def _format_price(price) -> str:
+    return f"R$ {price:.2f}".replace(".", ",")
+
+
+def _build_card(p: dict) -> str:
+    lines = [p["name"]]
+    urls = p.get("image_urls") or []
+    if urls:
+        lines.append(urls[0])
+    if p.get("price") is not None:
+        lines.append(_format_price(p["price"]))
+    tamanhos = p.get("tamanhos") or []
+    if tamanhos:
+        lines.append("Tamanhos: " + ", ".join(tamanhos))
+    cores = summarize_cores(p.get("cores") or [])
+    if cores:
+        lines.append("Cores: " + cores)
+    body = "\n".join(lines)
+    return f"[produto]\n{body}\n[/produto]"
+
+
+async def listar_categoria(db, store_id: str, categoria: str):
+    cat = (categoria or "").strip()
+    if not cat:
+        return ("", [], "Categoria não informada.")
+    rows = await db.get_products_by_category(store_id, cat)
+    if not rows:
+        return ("", [], f"Nenhuma peça disponível em {cat}.")
+    cards = [_build_card(p) for p in rows]
+    ids = [p["id"] for p in rows]
+    resumo = (f"Mostrei {len(rows)} peças de {cat} ao cliente. "
+              "Escreva só uma frase curta de fecho perguntando se quer ver "
+              "tamanho ou cor de alguma.")
+    return ("\n".join(cards), ids, resumo)

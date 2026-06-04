@@ -56,3 +56,86 @@ async def test_empty_result_returns_empty_list(db, llm):
     db.match_results = []
     out = await buscar_produtos(db, llm, "store-1", "x", "")
     assert json.loads(out) == []
+
+
+from app.agent.tools import listar_categoria
+
+
+def _prod(pid, name, category, price=89.9, tamanhos=None, cores=None,
+          image_urls=None, is_available=True):
+    return {"id": pid, "name": name, "category": category, "price": price,
+            "brand": None, "tamanhos": tamanhos if tamanhos is not None else ["P", "M"],
+            "cores": cores if cores is not None else ["preto", "branco"],
+            "image_urls": image_urls if image_urls is not None else [f"http://img/{pid}.jpg"],
+            "is_available": is_available}
+
+
+async def test_listar_categoria_builds_cards_in_order(db):
+    db.category_products = [_prod("p1", "Conjunto Alfa", "Conjuntos")]
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Conjuntos")
+    assert ids == ["p1"]
+    assert segmento == (
+        "[produto]\n"
+        "Conjunto Alfa\n"
+        "http://img/p1.jpg\n"
+        "R$ 89,90\n"
+        "Tamanhos: P, M\n"
+        "Cores: preto, branco\n"
+        "[/produto]"
+    )
+    assert "Conjuntos" in resumo
+
+
+async def test_listar_categoria_joins_multiple_cards(db):
+    db.category_products = [_prod("p1", "A", "Tops"), _prod("p2", "B", "Tops")]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "Tops")
+    assert ids == ["p1", "p2"]
+    assert segmento.count("[produto]") == 2
+    assert segmento == (
+        "[produto]\nA\nhttp://img/p1.jpg\nR$ 89,90\nTamanhos: P, M\nCores: preto, branco\n[/produto]\n"
+        "[produto]\nB\nhttp://img/p2.jpg\nR$ 89,90\nTamanhos: P, M\nCores: preto, branco\n[/produto]"
+    )
+
+
+async def test_listar_categoria_omits_missing_fields(db):
+    db.category_products = [_prod("p1", "Sem Tudo", "Tops", price=None,
+                                  tamanhos=[], cores=[], image_urls=[])]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "Tops")
+    assert segmento == "[produto]\nSem Tudo\n[/produto]"
+
+
+async def test_listar_categoria_is_case_insensitive(db):
+    db.category_products = [_prod("p1", "Conjunto", "Conjuntos")]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "conjuntos")
+    assert ids == ["p1"]
+
+
+async def test_listar_categoria_skips_out_of_stock(db):
+    db.category_products = [
+        _prod("p1", "Em estoque", "Tops"),
+        _prod("p2", "Esgotado", "Tops", is_available=False),
+    ]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "Tops")
+    assert ids == ["p1"]
+    assert "Esgotado" not in segmento
+
+
+async def test_listar_categoria_empty_when_no_stock(db):
+    db.category_products = []
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops")
+    assert segmento == ""
+    assert ids == []
+    assert "Nenhuma" in resumo
+
+
+async def test_listar_categoria_empty_when_no_category(db):
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "  ")
+    assert segmento == ""
+    assert ids == []
+
+
+async def test_listar_categoria_summarizes_many_colors(db):
+    db.category_products = [_prod("p1", "Multi", "Tops",
+                                  cores=[f"c{i}" for i in range(10)])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Cores: c0, c1, c2, c3, c4, c5, c6, c7 (+2 de 10)" in segmento
