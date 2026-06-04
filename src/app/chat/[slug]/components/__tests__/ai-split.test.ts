@@ -3,6 +3,8 @@ import {
   splitAIMessage,
   delayForSegment,
   PRODUCT_DELAY_MS,
+  FAST_PRODUCT_DELAY_MS,
+  PRODUCT_BURST_THRESHOLD,
   TEXT_DELAY_MS_PER_CHAR,
 } from '../ai-split'
 
@@ -138,5 +140,29 @@ describe('delayForSegment', () => {
 
   it('empty text → 0ms', () => {
     expect(delayForSegment({ kind: 'text', content: '' })).toBe(0)
+  })
+
+  it('product with productCount > 8 → FAST_PRODUCT_DELAY_MS', () => {
+    expect(
+      delayForSegment({ kind: 'product', content: 'any' }, 9),
+    ).toBe(FAST_PRODUCT_DELAY_MS)
+  })
+
+  it('product with productCount === threshold (8) → PRODUCT_DELAY_MS', () => {
+    expect(
+      delayForSegment({ kind: 'product', content: 'any' }, PRODUCT_BURST_THRESHOLD),
+    ).toBe(PRODUCT_DELAY_MS)
+  })
+
+  it('product with no count arg → PRODUCT_DELAY_MS (backward compatible)', () => {
+    expect(delayForSegment({ kind: 'product', content: 'any' })).toBe(
+      PRODUCT_DELAY_MS,
+    )
+  })
+
+  it('text delay ignores productCount', () => {
+    expect(delayForSegment({ kind: 'text', content: 'abcde' }, 20)).toBe(
+      5 * TEXT_DELAY_MS_PER_CHAR,
+    )
   })
 })

@@ -7,6 +7,8 @@ export interface AISegment {
 
 export const TEXT_DELAY_MS_PER_CHAR = 30
 export const PRODUCT_DELAY_MS = 4_000
+export const FAST_PRODUCT_DELAY_MS = 1_500
+export const PRODUCT_BURST_THRESHOLD = 8
 export const SENTENCES_PER_SEGMENT = 2
 
 const PRODUCT_RE = /\[produto\]([\s\S]*?)\[\/produto\]/g
@@ -52,7 +54,11 @@ function pushTextSegments(out: AISegment[], chunk: string): void {
   }
 }
 
-export function delayForSegment(seg: AISegment): number {
-  if (seg.kind === 'product') return PRODUCT_DELAY_MS
+export function delayForSegment(seg: AISegment, productCount = 0): number {
+  if (seg.kind === 'product') {
+    return productCount > PRODUCT_BURST_THRESHOLD
+      ? FAST_PRODUCT_DELAY_MS
+      : PRODUCT_DELAY_MS
+  }
   return seg.content.length * TEXT_DELAY_MS_PER_CHAR
 }
