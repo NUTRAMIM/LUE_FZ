@@ -19,7 +19,7 @@ export interface N8nDispatchPayload {
 
 export function resolveWebhookUrl(
   storeId: string,
-  env: { N8N_WEBHOOK_URL?: string; CHAT_PY_WEBHOOK_URL?: string; CHAT_PY_STORE_IDS?: string } = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): string | undefined {
   const pyStores = (env.CHAT_PY_STORE_IDS ?? '')
     .split(',').map((s) => s.trim()).filter(Boolean)
