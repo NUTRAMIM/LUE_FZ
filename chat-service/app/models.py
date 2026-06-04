@@ -5,6 +5,12 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class RespondendoA(BaseModel):
+    id_mensagem: str
+    autor: Literal["cliente", "loja"]
+    conteudo: str
+
+
 class WebhookPayload(BaseModel):
     mensagem: str
     id_mensagem: str
@@ -13,6 +19,7 @@ class WebhookPayload(BaseModel):
     id_loja: str
     tipo_de_mensagem: Literal["text", "image", "audio"]
     media_url: str | None = None
+    respondendo_a: RespondendoA | None = None
 
 
 @dataclass

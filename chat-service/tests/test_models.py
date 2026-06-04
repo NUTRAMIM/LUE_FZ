@@ -24,3 +24,25 @@ def test_webhook_payload_requires_mensagem():
             "id_mensagem": "x", "id_conversa": "y",
             "nome_loja": "z", "id_loja": "w", "tipo_de_mensagem": "text",
         })
+
+
+def test_webhook_payload_respondendo_a_optional():
+    p = WebhookPayload.model_validate({
+        "mensagem": "oi", "id_mensagem": "x", "id_conversa": "y",
+        "nome_loja": "z", "id_loja": "w", "tipo_de_mensagem": "text",
+    })
+    assert p.respondendo_a is None
+
+
+def test_webhook_payload_parses_respondendo_a():
+    p = WebhookPayload.model_validate({
+        "mensagem": "quero esse", "id_mensagem": "x", "id_conversa": "y",
+        "nome_loja": "z", "id_loja": "w", "tipo_de_mensagem": "text",
+        "respondendo_a": {
+            "id_mensagem": "m1", "autor": "loja",
+            "conteudo": "Top Alça R$ 50",
+        },
+    })
+    assert p.respondendo_a.id_mensagem == "m1"
+    assert p.respondendo_a.autor == "loja"
+    assert p.respondendo_a.conteudo == "Top Alça R$ 50"

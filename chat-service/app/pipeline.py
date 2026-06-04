@@ -14,6 +14,15 @@ log = logging.getLogger("chat-service")
 INSTABILITY_MSG = "Estamos com instabilidade. Sua mensagem foi recebida."
 
 
+def with_reply_context(chat_input, respondendo_a):
+    if respondendo_a is None:
+        return chat_input
+    origem = "da loja" if respondendo_a.autor == "loja" else "do cliente"
+    quote = respondendo_a.conteudo.strip()
+    return (f'[O cliente está respondendo a esta mensagem anterior {origem}: '
+            f'"{quote}"]\n{chat_input}')
+
+
 async def process_message(db, llm, payload) -> None:
     await asyncio.sleep(settings.buffer_wait_seconds)
     buf = await resolve_window(
@@ -32,9 +41,10 @@ async def process_message(db, llm, payload) -> None:
     )
     history_msgs = [{"role": m["role"], "content": m["content"]} for m in history]
 
+    agent_input = with_reply_context(buf.chat_input, payload.respondendo_a)
     try:
         ai_output = await run_agent(
-            llm, db, store, shown_list, buf.chat_input, history_msgs)
+            llm, db, store, shown_list, agent_input, history_msgs)
     except Exception:
         log.exception("agent failed; inserting instability fallback")
         await db.insert_message(payload.id_conversa, "system", INSTABILITY_MSG)
