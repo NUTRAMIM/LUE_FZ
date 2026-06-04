@@ -133,6 +133,7 @@ export function ChatClient({
 
   const enqueueAI = useCallback((msg: ChatMessage) => {
     const segments = splitAIMessage(msg.content)
+    const productCount = segments.filter((s) => s.kind === 'product').length
     if (segments.length === 0) {
       // empty msg, nothing to render
       return
@@ -148,7 +149,7 @@ export function ChatClient({
     const queue: AIQueue = {
       segments,
       segIdx: 0,
-      nextEmitAt: now + delayForSegment(segments[0]),
+      nextEmitAt: now + delayForSegment(segments[0], productCount),
       sourceMsg: msg,
     }
     aiQueueRef.current = queue
@@ -189,7 +190,12 @@ export function ChatClient({
     const next: AIQueue = {
       ...q,
       segIdx: nextIdx,
-      nextEmitAt: now + delayForSegment(q.segments[nextIdx]),
+      nextEmitAt:
+        now +
+        delayForSegment(
+          q.segments[nextIdx],
+          q.segments.filter((s) => s.kind === 'product').length,
+        ),
     }
     aiQueueRef.current = next
     setAiQueue(next)
