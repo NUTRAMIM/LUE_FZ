@@ -134,6 +134,7 @@ export interface Database {
           media_path: string | null
           store_id: string
           latency_ms: number | null
+          reply_to_message_id: string | null
         }
         Insert: {
           id?: string
@@ -146,6 +147,7 @@ export interface Database {
           media_path?: string | null
           store_id?: string
           latency_ms?: number | null
+          reply_to_message_id?: string | null
         }
         Update: {
           id?: string
@@ -157,6 +159,7 @@ export interface Database {
           media_path?: string | null
           store_id?: string
           latency_ms?: number | null
+          reply_to_message_id?: string | null
         }
         Relationships: []
       }

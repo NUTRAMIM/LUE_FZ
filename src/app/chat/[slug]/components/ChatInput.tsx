@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react'
 import { sendMessage } from '@/actions/chat'
 import type { ChatMessage } from '../ChatClient'
+import {
+  normalizeMessageId,
+  segmentIndexFromId,
+  replyAuthorForRole,
+  replyPreviewText,
+  truncate,
+} from './reply-helpers'
 
 export function ChatInput({
   slug,
@@ -14,6 +21,9 @@ export function ChatInput({
   onCycleStart,
   onCycleRename,
   onCycleCancel,
+  replyTo,
+  storeName,
+  onCancelReply,
 }: {
   slug: string
   sending: boolean
@@ -24,6 +34,9 @@ export function ChatInput({
   onCycleStart: (tempId: string, content: string) => void
   onCycleRename: (tempId: string, realId: string) => void
   onCycleCancel: (tempId: string) => void
+  replyTo: ChatMessage | null
+  storeName: string
+  onCancelReply: () => void
 }) {
   const [text, setText] = useState('')
 
@@ -40,6 +53,8 @@ export function ChatInput({
   async function handleSend() {
     const trimmed = text.trim()
     if (!trimmed) return
+    const replyId = replyTo ? normalizeMessageId(replyTo.id) : undefined
+    const replySegmentIndex = replyTo ? segmentIndexFromId(replyTo.id) : undefined
     onSending(true)
     onError(null)
 
@@ -51,14 +66,20 @@ export function ChatInput({
       message_type: 'text',
       media_url: null,
       created_at: new Date().toISOString(),
+      reply_to_message_id: replyId ?? null,
     })
     onCycleStart(tempId, trimmed)
     setText('')
+    onCancelReply()
 
     const result = await sendMessage({
       slug,
       text: trimmed,
       messageType: 'text',
+      ...(replyId ? { replyToMessageId: replyId } : {}),
+      ...(replySegmentIndex !== undefined
+        ? { replyToSegmentIndex: replySegmentIndex }
+        : {}),
     })
 
     if (!result.success) {
@@ -80,12 +101,37 @@ export function ChatInput({
 
   const canSend = text.trim().length > 0
 
+  const replyLabel = replyTo
+    ? replyAuthorForRole(replyTo.role) === 'cliente'
+      ? 'Você'
+      : storeName
+    : ''
+
   return (
-    <footer
-      className="flex items-end gap-2 bg-white px-3 py-2 shadow-inner"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
-    >
-      <textarea
+    <div className="bg-white">
+      {replyTo && (
+        <div className="reply-bar-in flex items-center gap-2 border-l-4 border-[#075E54] bg-gray-50 px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-[#075E54]">{replyLabel}</p>
+            <p className="truncate text-xs text-gray-600">
+              {truncate(replyPreviewText(replyTo), 80)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancelReply}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-black/5"
+            aria-label="Cancelar resposta"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+      )}
+      <footer
+        className="flex items-end gap-2 px-3 py-2 shadow-inner"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+      >
+        <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKey}
@@ -102,7 +148,25 @@ export function ChatInput({
       >
         <PaperPlaneIcon />
       </button>
-    </footer>
+      </footer>
+    </div>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
   )
 }
 
