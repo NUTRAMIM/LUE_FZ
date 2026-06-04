@@ -7,6 +7,7 @@ from app.branches.lead import run_lead
 from app.branches.gap import run_gap
 from app.branches.mentions import run_mentions
 from app.models import Context
+from app.config import settings
 
 log = logging.getLogger("chat-service")
 
@@ -14,6 +15,7 @@ INSTABILITY_MSG = "Estamos com instabilidade. Sua mensagem foi recebida."
 
 
 async def process_message(db, llm, payload) -> None:
+    await asyncio.sleep(settings.buffer_wait_seconds)
     buf = await resolve_window(
         db, payload.id_conversa, payload.id_mensagem, payload.mensagem)
     if not buf.should_process:

@@ -1,7 +1,22 @@
 # tests/test_pipeline.py
 import json
+import asyncio
+import pytest
+import app.pipeline as pipeline_mod
 from app.pipeline import process_message
 from app.models import WebhookPayload
+from app.config import settings
+
+
+@pytest.fixture(autouse=True)
+def fast_buffer_wait(monkeypatch):
+    slept = []
+
+    async def fake_sleep(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr(pipeline_mod.asyncio, "sleep", fake_sleep)
+    return slept
 
 
 def _payload(msg="quero um top", mid="msg-1", conv="conv-1"):
@@ -43,3 +58,13 @@ async def test_agent_failure_inserts_instability_system_message(db, llm, store):
     await process_message(db, llm, _payload(mid="msg-1"))
     assert db.inserted_messages[0]["role"] == "system"
     assert "instabilidade" in db.inserted_messages[0]["content"].lower()
+
+
+async def test_waits_buffer_window_before_processing(db, llm, store, fast_buffer_wait):
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "oi"}]
+    db.catalog = []
+    db.recent_messages = []
+    llm.chat_responses = [{"content": "oi!"}]
+    await process_message(db, llm, _payload(mid="msg-1"))
+    assert settings.buffer_wait_seconds in fast_buffer_wait
