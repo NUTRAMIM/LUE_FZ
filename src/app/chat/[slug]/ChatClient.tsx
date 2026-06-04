@@ -13,6 +13,7 @@ import {
 } from './components/cycle'
 import {
   splitAIMessage,
+  expandInitialMessages,
   delayForSegment,
   type AISegment,
 } from './components/ai-split'
@@ -105,7 +106,7 @@ export function ChatClient({
   initialMessages: ChatMessage[]
 }) {
   const [state, dispatch] = useReducer(reducer, {
-    messages: initialMessages,
+    messages: expandInitialMessages(initialMessages),
     sending: false,
     error: null,
   })

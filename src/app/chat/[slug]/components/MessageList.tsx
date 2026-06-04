@@ -63,7 +63,7 @@ function DateSeparator({ label }: { label: string }) {
 
 function TypingBubble() {
   return (
-    <div className="mb-0.5 flex justify-start" aria-label="digitando">
+    <div className="mb-2 flex justify-start" aria-label="digitando">
       <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
         <span className="typing">
           <span />

@@ -52,6 +52,40 @@ function pushTextSegments(out: AISegment[], chunk: string): void {
   }
 }
 
+interface SplittableMessage {
+  id: string
+  role: 'user' | 'assistant' | 'operator' | 'system'
+  content: string
+  message_type: 'text' | 'image' | 'audio'
+}
+
+// Reaplica o split nas mensagens carregadas do banco (reload), espelhando o
+// que o realtime faz via enqueueAI. Sem delays — histórico aparece de uma vez.
+export function expandInitialMessages<T extends SplittableMessage>(
+  messages: T[],
+): T[] {
+  const out: T[] = []
+  for (const m of messages) {
+    const splittable =
+      (m.role === 'assistant' || m.role === 'operator') &&
+      m.message_type === 'text'
+    if (!splittable) {
+      out.push(m)
+      continue
+    }
+    const segments = splitAIMessage(m.content)
+    if (segments.length === 0) continue
+    if (segments.length === 1) {
+      out.push({ ...m, content: segments[0].content })
+      continue
+    }
+    segments.forEach((seg, i) => {
+      out.push({ ...m, id: `${m.id}-seg-${i}`, content: seg.content })
+    })
+  }
+  return out
+}
+
 export function delayForSegment(seg: AISegment): number {
   if (seg.kind === 'product') return PRODUCT_DELAY_MS
   return seg.content.length * TEXT_DELAY_MS_PER_CHAR

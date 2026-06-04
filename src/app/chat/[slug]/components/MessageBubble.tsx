@@ -46,7 +46,7 @@ export function MessageBubble({
   const bubbleMaxWidth = hasImage ? 'max-w-[88%] sm:max-w-sm' : 'max-w-[75%]'
 
   return (
-    <div className={`mb-0.5 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`mb-2 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
         className={`${bubbleMaxWidth} rounded-lg px-3 py-2 shadow-sm ${
           isUser ? 'bg-[#DCF8C6]' : 'bg-white'
@@ -177,7 +177,7 @@ function DoubleCheckSvg() {
       aria-hidden="true"
     >
       <path d="M1 6.5L4 9.5L10 2" />
-      <path d="M9 9.5L17 2" />
+      <path d="M8 6.5L11 9.5L17 2" />
     </svg>
   )
 }
