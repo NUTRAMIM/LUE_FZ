@@ -260,7 +260,7 @@ function DoubleCheckSvg() {
       aria-hidden="true"
     >
       <path d="M1 6.5L4 9.5L10 2" />
-      <path d="M9 9.5L17 2" />
+      <path d="M8 6.5L11 9.5L17 2" />
     </svg>
   )
 }

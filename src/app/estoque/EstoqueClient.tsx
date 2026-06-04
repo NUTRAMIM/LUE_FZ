@@ -1,7 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Product } from '@/types/product'
+import { adjustStock, deleteProduct } from '@/actions/products'
 import { getEffectiveStockMin, getStockStatus } from '@/lib/stock-status'
 import { KpiSection } from '@/components/estoque/KpiSection'
 import { FilterBar, type StatusFilter } from '@/components/estoque/FilterBar'
@@ -25,12 +27,49 @@ export function EstoqueClient({
   products: Product[]
   defaultStockMin: number
 }) {
+  const router = useRouter()
+  const [, startTransition] = useTransition()
+  const [pendingId, setPendingId] = useState<string | null>(null)
   const [view, setView] = useState<View>('produtos')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+
+  function handleAdjustStock(productId: string, delta: number) {
+    if (pendingId) return
+    setPendingId(productId)
+    startTransition(async () => {
+      const res = await adjustStock(productId, delta)
+      if (!res.success) {
+        window.alert(res.error ?? 'Erro ao ajustar estoque.')
+      } else {
+        router.refresh()
+      }
+      setPendingId(null)
+    })
+  }
+
+  function handleDelete(productId: string) {
+    if (pendingId) return
+    const ok = window.confirm(
+      'Excluir este produto? Esta ação não pode ser desfeita.',
+    )
+    if (!ok) return
+    setPendingId(productId)
+    startTransition(async () => {
+      const res = await deleteProduct(productId)
+      if (!res.success) {
+        window.alert(res.error ?? 'Erro ao excluir produto.')
+      } else {
+        if (selectedId === productId) setSelectedId(null)
+        if (editingId === productId) setEditingId(null)
+        router.refresh()
+      }
+      setPendingId(null)
+    })
+  }
 
   // Pre-compute derived data for all products (status + effectiveMin)
   const allRows: ProductRowData[] = useMemo(() => {
@@ -92,11 +131,14 @@ export function EstoqueClient({
           />
           <ProductTable
             rows={filteredRows}
+            pendingId={pendingId}
             onViewDetails={id => setSelectedId(id)}
             onEdit={id => {
               setSelectedId(null)
               setEditingId(id)
             }}
+            onAdjustStock={handleAdjustStock}
+            onDelete={handleDelete}
           />
         </>
       ) : (

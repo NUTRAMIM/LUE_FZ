@@ -26,24 +26,24 @@ export function ProductRow({
   product,
   effectiveMin,
   status,
+  busy,
   onViewDetails,
   onEdit,
+  onAdjustStock,
+  onDelete,
 }: {
   product: Product
   effectiveMin: number
   status: StockStatus
+  busy: boolean
   onViewDetails: () => void
   onEdit: () => void
+  onAdjustStock: (delta: number) => void
+  onDelete: () => void
 }) {
   const firstImage = product.image_urls?.[0]
   const totalValue = product.stock_quantity * Number(product.price)
   const cfg = statusConfig[status]
-  const variants = [
-    ...(product.tamanhos ?? []).map((value, index) => ({ key: `t-${index}-${value}`, value })),
-    ...(product.cores ?? []).map((value, index) => ({ key: `c-${index}-${value}`, value })),
-  ]
-  const visibleVariants = variants.slice(0, 5)
-  const hiddenVariantCount = variants.length - visibleVariants.length
 
   return (
     <tr className="hover:bg-slate-50">
@@ -76,19 +76,11 @@ export function ProductRow({
       </td>
 
       <td className="px-4 py-3 text-sm">
-        <div className="flex flex-wrap gap-1 max-w-xs">
-          {visibleVariants.map(item => (
-            <Badge key={item.key} tone="neutral">{item.value}</Badge>
-          ))}
-          {hiddenVariantCount > 0 && (
-            <Badge tone="neutral" title={`${hiddenVariantCount} variantes a mais`}>
-              ...
-            </Badge>
-          )}
-          {variants.length === 0 && (
-            <span className="text-slate-400">-</span>
-          )}
-        </div>
+        <AttributeBadges values={product.cores} prefix="c" />
+      </td>
+
+      <td className="px-4 py-3 text-sm">
+        <AttributeBadges values={product.tamanhos} prefix="t" />
       </td>
 
       <td className="px-4 py-3 whitespace-nowrap text-center font-display text-lg font-bold tabular-nums text-slate-900">
@@ -127,15 +119,34 @@ export function ProductRow({
 
       <td className="px-4 py-3 whitespace-nowrap">
         <div className="flex items-center gap-1">
-          <ActionIconButton title="Aumentar" tone="success" disabled>+</ActionIconButton>
-          <ActionIconButton title="Diminuir" tone="danger" disabled>-</ActionIconButton>
-          <ActionIconButton title="Editar" tone="info" onClick={onEdit}>
+          <ActionIconButton
+            title="Aumentar"
+            tone="success"
+            disabled={busy}
+            onClick={() => onAdjustStock(1)}
+          >
+            +
+          </ActionIconButton>
+          <ActionIconButton
+            title="Diminuir"
+            tone="danger"
+            disabled={busy || product.stock_quantity <= 0}
+            onClick={() => onAdjustStock(-1)}
+          >
+            -
+          </ActionIconButton>
+          <ActionIconButton title="Editar" tone="info" disabled={busy} onClick={onEdit}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
             </svg>
           </ActionIconButton>
-          <ActionIconButton title="Excluir" tone="danger" disabled>
+          <ActionIconButton
+            title="Excluir"
+            tone="danger"
+            disabled={busy}
+            onClick={onDelete}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18" />
               <path d="M8 6V4h8v2" />
@@ -145,6 +156,37 @@ export function ProductRow({
         </div>
       </td>
     </tr>
+  )
+}
+
+function AttributeBadges({
+  values,
+  prefix,
+}: {
+  values: string[] | null | undefined
+  prefix: string
+}) {
+  const list = values ?? []
+  const visible = list.slice(0, 5)
+  const hidden = list.length - visible.length
+
+  if (list.length === 0) {
+    return <span className="text-slate-400">-</span>
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1 max-w-xs">
+      {visible.map((value, index) => (
+        <Badge key={`${prefix}-${index}-${value}`} tone="neutral">
+          {value}
+        </Badge>
+      ))}
+      {hidden > 0 && (
+        <Badge tone="neutral" title={`${hidden} a mais`}>
+          ...
+        </Badge>
+      )}
+    </div>
   )
 }
 

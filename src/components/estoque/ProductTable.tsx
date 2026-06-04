@@ -12,12 +12,18 @@ export interface ProductRowData {
 
 export function ProductTable({
   rows,
+  pendingId,
   onViewDetails,
   onEdit,
+  onAdjustStock,
+  onDelete,
 }: {
   rows: ProductRowData[]
+  pendingId: string | null
   onViewDetails: (productId: string) => void
   onEdit: (productId: string) => void
+  onAdjustStock: (productId: string, delta: number) => void
+  onDelete: (productId: string) => void
 }) {
   if (rows.length === 0) {
     return (
@@ -34,7 +40,8 @@ export function ProductTable({
           <tr>
             <Th>Produto</Th>
             <Th>Categoria</Th>
-            <Th>Variantes</Th>
+            <Th>Cores</Th>
+            <Th>Tamanhos</Th>
             <Th align="center">Estoque</Th>
             <Th align="center">Mín.</Th>
             <Th align="center">Status</Th>
@@ -51,8 +58,11 @@ export function ProductTable({
               product={r.product}
               effectiveMin={r.effectiveMin}
               status={r.status}
+              busy={pendingId !== null}
               onViewDetails={() => onViewDetails(r.product.id)}
               onEdit={() => onEdit(r.product.id)}
+              onAdjustStock={delta => onAdjustStock(r.product.id, delta)}
+              onDelete={() => onDelete(r.product.id)}
             />
           ))}
         </tbody>
