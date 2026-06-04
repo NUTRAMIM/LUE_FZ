@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { ChatMessage } from '../ChatClient'
 import { MessageBubble } from './MessageBubble'
 import { tickStateFor, type Cycle } from './cycle'
@@ -28,6 +28,10 @@ export function MessageList({
 }) {
   const groups = groupMessagesByDay(messages, now)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Horários/separadores dependem do fuso e do relógio do cliente; renderizá-los
+  // no SSR diverge do client e quebra a hidratação (React #418). Só após montar.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   function handleQuoteClick(targetId: string) {
     const el = containerRef.current?.querySelector<HTMLElement>(
@@ -59,7 +63,8 @@ export function MessageList({
           Comece a conversa enviando uma mensagem.
         </p>
       )}
-      {groups.map((g) => (
+      {mounted &&
+        groups.map((g) => (
         <div key={g.label + '-' + g.messages[0].id}>
           <DateSeparator label={g.label} />
           {g.messages.map((m, i) => {
