@@ -1,6 +1,9 @@
 # app/agent/runner.py
 import json
+import logging
 from app.config import settings
+
+log = logging.getLogger("chat-service")
 from app.models import AgentResult
 from app.agent.prompt import build_system_prompt
 from app.agent.tools import buscar_produtos, listar_categoria
@@ -83,16 +86,20 @@ async def run_agent(llm, db, store, shown_list, chat_input, history) -> AgentRes
         })
         for call in tool_calls:
             args = json.loads(call["arguments"])
+            log.info("tool call %s args=%s", call["name"], args)
             if call["name"] == LISTAR_TOOL_NAME:
                 segmento, ids, resumo = await listar_categoria(
                     db, store.id, args.get("categoria", ""))
                 if segmento:
                     product_segments.append(segmento)
                     shown_product_ids.extend(ids)
+                log.info("LISTAR_CATEGORIA(%r) -> %d peças", args.get("categoria", ""), len(ids))
                 content = resumo
             else:
                 content = await buscar_produtos(
                     db, llm, store.id, args.get("consulta", ""), args.get("category", ""))
+                log.info("BUSCAR_PRODUTOS(consulta=%r, category=%r)",
+                         args.get("consulta", ""), args.get("category", ""))
             messages.append({"role": "tool", "tool_call_id": call["id"],
                              "content": content})
 
