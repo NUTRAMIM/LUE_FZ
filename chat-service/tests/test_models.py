@@ -46,3 +46,20 @@ def test_webhook_payload_parses_respondendo_a():
     assert p.respondendo_a.id_mensagem == "m1"
     assert p.respondendo_a.autor == "loja"
     assert p.respondendo_a.conteudo == "Top Alça R$ 50"
+
+
+from app.models import AgentResult
+
+
+def test_agent_result_defaults_to_empty_lists():
+    r = AgentResult(text="oi")
+    assert r.text == "oi"
+    assert r.product_segments == []
+    assert r.shown_product_ids == []
+
+
+def test_agent_result_holds_segments_and_ids():
+    r = AgentResult(text="fecho", product_segments=["[produto]X[/produto]"],
+                    shown_product_ids=["p1", "p2"])
+    assert r.product_segments == ["[produto]X[/produto]"]
+    assert r.shown_product_ids == ["p1", "p2"]

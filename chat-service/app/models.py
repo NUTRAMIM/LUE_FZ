@@ -73,3 +73,10 @@ class Context:
     conversation_id: str
     chat_input: str
     ai_output: str
+
+
+@dataclass
+class AgentResult:
+    text: str
+    product_segments: list[str] = field(default_factory=list)
+    shown_product_ids: list[str] = field(default_factory=list)
