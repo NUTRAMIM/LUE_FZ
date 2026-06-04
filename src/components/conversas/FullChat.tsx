@@ -9,11 +9,8 @@ import {
 } from '@/app/chat/[slug]/components/message-segments'
 import { ImageCarousel } from '@/app/chat/[slug]/components/ImageCarousel'
 import { ImageLightbox } from '@/app/chat/[slug]/components/ImageLightbox'
-import {
-  avatarColor,
-  avatarInitials,
-  formatRelativeTime,
-} from './formatters'
+import { avatarColor, avatarInitials } from './formatters'
+import { RelativeTime } from './RelativeTime'
 
 interface FullChatProps {
   conversation: ConversationRow | null
@@ -206,7 +203,6 @@ export function FullChat({ conversation, messages, loading, onBack }: FullChatPr
   const t = conversation
   const initials = avatarInitials(t.visitor_name)
   const bg = avatarColor(t.visitor_id)
-  const elapsed = formatRelativeTime(t.created_at)
 
   return (
     <div className="card flex flex-col overflow-hidden h-[calc(100dvh-120px)] md:h-[calc(100vh-138px)]">
@@ -260,7 +256,7 @@ export function FullChat({ conversation, messages, loading, onBack }: FullChatPr
             <span className="text-ink-300">·</span>
             <span className="eyebrow inline-flex items-center gap-1 shrink-0">
               <Icon name="clock" className="w-3 h-3" />
-              iniciada {elapsed}
+              iniciada <RelativeTime iso={t.created_at} />
             </span>
           </div>
         </div>

@@ -5,9 +5,9 @@ import type { ConversationRow } from '@/actions/conversas'
 import {
   avatarColor,
   avatarInitials,
-  formatRelativeTime,
   previewPrefix,
 } from './formatters'
+import { RelativeTime } from './RelativeTime'
 
 interface ChatRailProps {
   active: ConversationRow[]
@@ -40,7 +40,6 @@ function ConversationTile({
 }) {
   const lastText =
     previewPrefix(c.last_message_role) + (c.last_message_preview ?? '')
-  const time = formatRelativeTime(c.last_message_at)
   const initials = avatarInitials(c.visitor_name)
   const bg = avatarColor(c.visitor_id)
   const unread = c.unread_count > 0
@@ -77,7 +76,7 @@ function ConversationTile({
               unread && !selected ? 'text-brand-700 font-bold' : 'text-ink-500'
             }`}
           >
-            {time}
+            <RelativeTime iso={c.last_message_at} />
           </span>
         </div>
         <div
