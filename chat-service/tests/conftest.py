@@ -13,6 +13,7 @@ class FakeDB:
         self.recent_messages = []          # list[dict(role, content)]
         self.match_results = []            # list[dict(content, metadata, similarity)]
         self.catalog = []                  # list[dict(id, name)]
+        self.category_products = []        # list[dict(id,name,price,brand,tamanhos,cores,image_urls,category,is_available)]
         self.lead = None                   # dict | None
         self.inserted_messages = []
         self.created_leads = []
@@ -42,6 +43,11 @@ class FakeDB:
 
     async def get_catalog(self, store_id):
         return list(self.catalog)
+
+    async def get_products_by_category(self, store_id, category):
+        return [p for p in self.category_products
+                if (p.get("category") or "").lower() == category.lower()
+                and p.get("is_available", True)]
 
     async def insert_message(self, conversation_id, role, content, store_id=None):
         self.inserted_messages.append(

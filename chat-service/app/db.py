@@ -77,6 +77,15 @@ class Database:
             "SELECT id::text, name FROM products WHERE user_id = $1", store_id)
         return [dict(r) for r in rows]
 
+    async def get_products_by_category(self, store_id, category):
+        rows = await self._pool.fetch(
+            """SELECT id::text, name, price, brand, tamanhos, cores, image_urls
+               FROM products
+               WHERE user_id = $1 AND lower(category) = lower($2)
+                 AND is_available = true
+               ORDER BY name""", store_id, category)
+        return [dict(r) for r in rows]
+
     async def insert_message(self, conversation_id, role, content, store_id=None):
         await self._pool.execute(
             """INSERT INTO messages (conversation_id, role, content, message_type)
