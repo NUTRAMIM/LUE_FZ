@@ -14,7 +14,6 @@ def summarize_cores(cores: list[str], keep: int = KEEP_CORES) -> str:
     return f"{', '.join(visiveis)} (+{len(cores) - keep} de {len(cores)})"
 
 
-# app/agent/tools.py  (append)
 async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str) -> str:
     embedding = await llm.embed(settings.embed_model, consulta)
     cat = (category or "").strip()
