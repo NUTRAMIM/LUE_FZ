@@ -43,17 +43,23 @@ async def process_message(db, llm, payload) -> None:
 
     agent_input = with_reply_context(buf.chat_input, payload.respondendo_a)
     try:
-        ai_output = await run_agent(
+        result = await run_agent(
             llm, db, store, shown_list, agent_input, history_msgs)
     except Exception:
         log.exception("agent failed; inserting instability fallback")
         await db.insert_message(payload.id_conversa, "system", INSTABILITY_MSG)
         return
 
-    await db.insert_message(payload.id_conversa, "assistant", ai_output)
+    for segmento in result.product_segments:
+        await db.insert_message(payload.id_conversa, "assistant", segmento)
+    for product_id in result.shown_product_ids:
+        await db.insert_product_mention(
+            store.id, payload.id_conversa, product_id, "ai_shown")
+    if result.text:
+        await db.insert_message(payload.id_conversa, "assistant", result.text)
 
     ctx = Context(store=store, conversation_id=payload.id_conversa,
-                  chat_input=buf.chat_input, ai_output=ai_output)
+                  chat_input=buf.chat_input, ai_output=result.text)
     results = await asyncio.gather(
         run_lead(db, llm, ctx),
         run_gap(db, llm, ctx),

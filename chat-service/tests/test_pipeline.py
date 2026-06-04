@@ -110,3 +110,58 @@ async def test_waits_buffer_window_before_processing(db, llm, store, fast_buffer
     llm.chat_responses = [{"content": "oi!"}]
     await process_message(db, llm, _payload(mid="msg-1"))
     assert settings.buffer_wait_seconds in fast_buffer_wait
+
+
+async def test_category_dump_inserts_cards_then_closing(db, llm, store):
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "me mostra os conjuntos"}]
+    db.recent_messages = []
+    db.category_products = [
+        {"id": "p1", "name": "Conjunto A", "category": "Conjuntos", "price": 99.9,
+         "brand": None, "tamanhos": ["P"], "cores": ["preto"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+        {"id": "p2", "name": "Conjunto B", "category": "Conjuntos", "price": 79.9,
+         "brand": None, "tamanhos": ["M"], "cores": ["branco"],
+         "image_urls": ["http://img/p2.jpg"], "is_available": True},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": "LISTAR_CATEGORIA",
+                         "arguments": json.dumps({"categoria": "Conjuntos"})}]},
+        {"content": "Esses são nossos conjuntos! Quer ver algum?"},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(mid="msg-1"))
+
+    assistant_msgs = [m for m in db.inserted_messages if m["role"] == "assistant"]
+    assert len(assistant_msgs) == 2
+    assert "[produto]" in assistant_msgs[0]["content"]
+    assert "Conjunto A" in assistant_msgs[0]["content"]
+    assert "Conjunto B" in assistant_msgs[0]["content"]
+    assert assistant_msgs[1]["content"] == "Esses são nossos conjuntos! Quer ver algum?"
+    shown = [m for m in db.inserted_mentions if m["source"] == "ai_shown"]
+    assert {m["product_id"] for m in shown} == {"p1", "p2"}
+
+
+async def test_category_dump_skips_text_insert_when_empty(db, llm, store):
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "me mostra os conjuntos"}]
+    db.recent_messages = []
+    db.category_products = [
+        {"id": "p1", "name": "Conjunto A", "category": "Conjuntos", "price": 99.9,
+         "brand": None, "tamanhos": ["P"], "cores": ["preto"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": "LISTAR_CATEGORIA",
+                         "arguments": json.dumps({"categoria": "Conjuntos"})}]},
+        {"content": ""},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(mid="msg-1"))
+    assistant_msgs = [m for m in db.inserted_messages if m["role"] == "assistant"]
+    assert len(assistant_msgs) == 1
+    assert "[produto]" in assistant_msgs[0]["content"]
