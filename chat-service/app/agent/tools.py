@@ -2,17 +2,6 @@
 import json
 from app.config import settings
 
-KEEP_CORES = 8
-
-
-def summarize_cores(cores: list[str], keep: int = KEEP_CORES) -> str:
-    if not cores:
-        return ""
-    if len(cores) <= keep:
-        return ", ".join(cores)
-    visiveis = cores[:keep]
-    return f"{', '.join(visiveis)} (+{len(cores) - keep} de {len(cores)})"
-
 
 async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str) -> str:
     embedding = await llm.embed(settings.embed_model, consulta)
@@ -35,7 +24,7 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str) 
             "category": m.get("category"),
             "brand": m.get("brand"),
             "tamanhos": m.get("tamanhos") or [],
-            "cores": summarize_cores(m.get("cores") or []),
+            "cores": ", ".join(m.get("cores") or []),
             "image_url": m.get("image_url"),
         })
     return json.dumps(produtos, ensure_ascii=False)
@@ -48,14 +37,14 @@ def _format_price(price) -> str:
 def _build_card(p: dict) -> str:
     lines = [p["name"]]
     urls = p.get("image_urls") or []
-    if urls:
-        lines.append(urls[0])
+    # todas as URLs em linhas consecutivas -> o front agrupa num carrossel
+    lines.extend(urls)
     if p.get("price") is not None:
         lines.append(_format_price(p["price"]))
     tamanhos = p.get("tamanhos") or []
     if tamanhos:
         lines.append("Tamanhos: " + ", ".join(tamanhos))
-    cores = summarize_cores(p.get("cores") or [])
+    cores = ", ".join(p.get("cores") or [])
     if cores:
         lines.append("Cores: " + cores)
     body = "\n".join(lines)

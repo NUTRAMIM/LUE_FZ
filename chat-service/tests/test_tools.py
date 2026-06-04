@@ -1,28 +1,4 @@
 # tests/test_tools.py
-from app.agent.tools import summarize_cores
-
-
-def test_few_colors_unchanged():
-    cores = ["rosa", "branco", "preto"]
-    assert summarize_cores(cores) == "rosa, branco, preto"
-
-
-def test_exactly_eight_unchanged():
-    cores = [f"c{i}" for i in range(8)]
-    assert summarize_cores(cores) == ", ".join(cores)
-
-
-def test_many_colors_sampled_with_count():
-    cores = [f"c{i}" for i in range(204)]
-    out = summarize_cores(cores)
-    assert out == "c0, c1, c2, c3, c4, c5, c6, c7 (+196 de 204)"
-
-
-def test_empty_returns_empty_string():
-    assert summarize_cores([]) == ""
-
-
-# tests/test_tools.py  (append)
 import json
 from app.agent.tools import buscar_produtos
 
@@ -34,12 +10,12 @@ def _doc(name, category, cores):
                          "brand": None, "image_url": f"http://x/{name}"}}
 
 
-async def test_buscar_produtos_summarizes_colors(db, llm):
+async def test_buscar_produtos_includes_all_colors(db, llm):
     db.match_results = [_doc("Top Alça", "top", [f"c{i}" for i in range(10)])]
     out = await buscar_produtos(db, llm, "store-1", "top floral", "top")
     data = json.loads(out)
     assert data[0]["name"] == "Top Alça"
-    assert data[0]["cores"] == "c0, c1, c2, c3, c4, c5, c6, c7 (+2 de 10)"
+    assert data[0]["cores"] == ", ".join(f"c{i}" for i in range(10))
     assert llm.embed_calls == ["top floral"]
 
 
@@ -134,8 +110,28 @@ async def test_listar_categoria_empty_when_no_category(db):
     assert ids == []
 
 
-async def test_listar_categoria_summarizes_many_colors(db):
+async def test_listar_categoria_card_includes_all_images_for_carousel(db):
+    # várias image_urls devem sair em linhas consecutivas pro front formar carrossel
+    db.category_products = [_prod("p1", "Multi Fotos", "Tops",
+                                  image_urls=["http://img/p1-a.jpg",
+                                              "http://img/p1-b.jpg",
+                                              "http://img/p1-c.jpg"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert segmento == (
+        "[produto]\n"
+        "Multi Fotos\n"
+        "http://img/p1-a.jpg\n"
+        "http://img/p1-b.jpg\n"
+        "http://img/p1-c.jpg\n"
+        "R$ 89,90\n"
+        "Tamanhos: P, M\n"
+        "Cores: preto, branco\n"
+        "[/produto]"
+    )
+
+
+async def test_listar_categoria_includes_all_colors(db):
     db.category_products = [_prod("p1", "Multi", "Tops",
                                   cores=[f"c{i}" for i in range(10)])]
     segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
-    assert "Cores: c0, c1, c2, c3, c4, c5, c6, c7 (+2 de 10)" in segmento
+    assert "Cores: " + ", ".join(f"c{i}" for i in range(10)) in segmento
