@@ -360,3 +360,98 @@ export async function createProduct(
 
   return { success: false, error: 'Nao foi possivel gerar SKU unico. Tente novamente.' }
 }
+
+export interface AdjustStockResult {
+  success: boolean
+  error?: string
+  stockQuantity?: number
+}
+
+export async function adjustStock(
+  id: string,
+  delta: number,
+): Promise<AdjustStockResult> {
+  const supabase = await createClient()
+
+  const user = await getAuthedUser()
+  if (!user) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+  if ((await getStoreRole()) !== 'owner') {
+    return { success: false, error: 'Apenas o dono da loja pode ajustar o estoque.' }
+  }
+
+  const productId = sanitizeText(id, 80)
+  if (!productId) return { success: false, error: 'Produto invalido.' }
+  if (!Number.isInteger(delta) || delta === 0) {
+    return { success: false, error: 'Ajuste invalido.' }
+  }
+
+  const { data: current, error: readErr } = await supabase
+    .from('products')
+    .select('stock_quantity')
+    .eq('id', productId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (readErr) {
+    console.error('adjustStock read error:', readErr.message)
+    return { success: false, error: 'Erro ao ajustar estoque. Tente novamente.' }
+  }
+  if (!current) {
+    return { success: false, error: 'Produto nao encontrado para esta loja.' }
+  }
+
+  const next = Math.min(MAX_STOCK, Math.max(0, current.stock_quantity + delta))
+  if (next === current.stock_quantity) {
+    return { success: true, stockQuantity: next }
+  }
+
+  const { error: updErr } = await supabase
+    .from('products')
+    .update({ stock_quantity: next, updated_at: new Date().toISOString() })
+    .eq('id', productId)
+    .eq('user_id', user.id)
+
+  if (updErr) {
+    console.error('adjustStock update error:', updErr.message)
+    return { success: false, error: 'Erro ao ajustar estoque. Tente novamente.' }
+  }
+
+  revalidatePath('/estoque')
+  return { success: true, stockQuantity: next }
+}
+
+export async function deleteProduct(id: string): Promise<SaveProductResult> {
+  const supabase = await createClient()
+
+  const user = await getAuthedUser()
+  if (!user) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+  if ((await getStoreRole()) !== 'owner') {
+    return { success: false, error: 'Apenas o dono da loja pode excluir produtos.' }
+  }
+
+  const productId = sanitizeText(id, 80)
+  if (!productId) return { success: false, error: 'Produto invalido.' }
+
+  const { data: deleted, error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', productId)
+    .eq('user_id', user.id)
+    .select('id')
+    .maybeSingle()
+
+  if (error) {
+    console.error('deleteProduct error:', error.message)
+    return { success: false, error: 'Erro ao excluir produto. Tente novamente.' }
+  }
+  if (!deleted) {
+    return { success: false, error: 'Produto nao encontrado para esta loja.' }
+  }
+
+  revalidatePath('/estoque')
+  return { success: true }
+}

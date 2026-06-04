@@ -292,6 +292,19 @@ export interface KnowledgeGap {
 // Top 5 perguntas sem resposta agregadas por pergunta (lowercase trim),
 // considerando apenas as não resolvidas (resolved_at IS NULL). Usado pelo
 // painel `GapsConhecimento.tsx`.
+// Chave canônica para agrupar perguntas "iguais" feitas em conversas
+// diferentes. Ignora caixa, acentos, pontuação e espaços repetidos — assim
+// "Vocês entregam?" e "voces  entregam" caem no mesmo balde.
+function normalizeGapKey(q: string): string {
+  return q
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export async function getKnowledgeGaps(): Promise<{
   items: KnowledgeGap[]
   totalPending: number
@@ -316,7 +329,7 @@ export async function getKnowledgeGaps(): Promise<{
   const rows = data ?? []
   const buckets = new Map<string, { count: number; question: string; tag: string }>()
   for (const r of rows) {
-    const key = r.question.toLowerCase().trim()
+    const key = normalizeGapKey(r.question)
     const existing = buckets.get(key)
     if (existing) {
       existing.count += 1
@@ -385,9 +398,9 @@ export async function answerKnowledgeGap(input: {
     .eq('store_id', user.id)
     .is('resolved_at', null)
 
-  const target = question.toLowerCase()
+  const target = normalizeGapKey(question)
   const ids = (gapRows ?? [])
-    .filter((g) => g.question.toLowerCase().trim() === target)
+    .filter((g) => normalizeGapKey(g.question) === target)
     .map((g) => g.id)
 
   if (ids.length > 0) {

@@ -70,10 +70,69 @@ const COMPOUND_SIZES: Record<string, string> = {
   'EXTRA P': 'EXP',
 }
 
+// Mínimo de caracteres para a fusão fuzzy (typos) atuar — protege cores
+// curtas e parecidas mas legítimas (ex.: "Rosa" vs "Rose") de fundirem.
+const FUZZY_MIN_LEN = 6
+
+// Normaliza um lado da cor (segmento atômico) para comparação: sem acento,
+// minúsculo, espaços colapsados. "FÚCSIA" e "Fucsia" viram a mesma chave.
+function normalizeAtom(seg: string): string {
+  return seg
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Entre formas que colidem na mesma chave, prefere a mais legível:
+// acentuada (+2) e com minúsculas (+1) em vez de CAIXA ALTA.
+function displayScore(cor: string): number {
+  const hasDiacritics = /[\u0300-\u036f]/.test(cor.normalize('NFD'))
+  const hasLowercase = cor !== cor.toUpperCase()
+  return (hasDiacritics ? 2 : 0) + (hasLowercase ? 1 : 0)
+}
+
+// Distância de edição exatamente 1 (substituição, inserção ou remoção).
+function isOneEditAway(a: string, b: string): boolean {
+  const la = a.length
+  const lb = b.length
+  if (Math.abs(la - lb) > 1) return false
+  if (la === lb) {
+    let diff = 0
+    for (let i = 0; i < la; i++) if (a[i] !== b[i]) diff++
+    return diff === 1
+  }
+  const short = la < lb ? a : b
+  const long = la < lb ? b : a
+  let i = 0
+  let j = 0
+  let skipped = false
+  while (i < short.length && j < long.length) {
+    if (short[i] === long[j]) {
+      i++
+      j++
+    } else {
+      if (skipped) return false
+      skipped = true
+      j++
+    }
+  }
+  return true
+}
+
+// Segmenta uma cor em lados pela barra: "ABACATE/AREIA" -> ["ABACATE","AREIA"].
+function segmentsOf(cor: string): string[] {
+  return cor
+    .split('/')
+    .map(s => s.trim())
+    .filter(Boolean)
+}
+
 export function extractVariantOptions(
   variacoes: FacilZapVariation[],
 ): { cores: string[]; tamanhos: string[] } {
-  const cores = new Set<string>()
+  const rawCores: string[] = []
   const tamanhos = new Set<string>()
 
   for (const v of variacoes) {
@@ -84,8 +143,7 @@ export function extractVariantOptions(
       const last2 = parts.slice(-2).join(' ').toUpperCase()
       if (last2 in COMPOUND_SIZES) {
         tamanhos.add(COMPOUND_SIZES[last2])
-        const cor = parts.slice(0, -2).join(' ')
-        if (cor) cores.add(cor)
+        rawCores.push(parts.slice(0, -2).join(' '))
         continue
       }
     }
@@ -93,15 +151,58 @@ export function extractVariantOptions(
     const last = parts[parts.length - 1].toUpperCase()
     if (KNOWN_SIZES_UP.has(last)) {
       tamanhos.add(last)
-      const cor = parts.slice(0, -1).join(' ')
-      if (cor) cores.add(cor)
+      rawCores.push(parts.slice(0, -1).join(' '))
     } else {
-      cores.add(parts.join(' '))
+      rawCores.push(parts.join(' '))
     }
   }
 
+  // Melhor forma de exibição de cada lado atômico, compartilhada entre cores
+  // sólidas e pares (ex.: "Fúcsia" sólida embeleza o lado de "FUCSIA/AREIA").
+  const atomBest = new Map<string, string>()
+  // Chave canônica da cor inteira -> lados atômicos ordenados (par fica junto,
+  // mas ordem-independente: "AZUL/ROYAL" == "ROYAL/AZUL").
+  const fullKeyToAtoms = new Map<string, string[]>()
+
+  for (const cor of rawCores) {
+    const atomKeys: string[] = []
+    for (const seg of segmentsOf(cor)) {
+      const key = normalizeAtom(seg)
+      if (!key) continue
+      atomKeys.push(key)
+      const current = atomBest.get(key)
+      if (current === undefined || displayScore(seg) > displayScore(current)) {
+        atomBest.set(key, seg)
+      }
+    }
+    const sortedAtoms = [...new Set(atomKeys)].sort()
+    if (sortedAtoms.length === 0) continue
+    fullKeyToAtoms.set(sortedAtoms.join('/'), sortedAtoms)
+  }
+
+  // Fusão fuzzy de typos: processa as chaves longas primeiro (mais provável
+  // de serem a grafia correta) e funde as que estão a 1 edição de distância.
+  const orderedKeys = [...fullKeyToAtoms.keys()].sort(
+    (a, b) => b.length - a.length || a.localeCompare(b),
+  )
+  const keptKeys: string[] = []
+  for (const key of orderedKeys) {
+    const match =
+      key.length >= FUZZY_MIN_LEN
+        ? keptKeys.find(k => k.length >= FUZZY_MIN_LEN && isOneEditAway(k, key))
+        : undefined
+    if (!match) keptKeys.push(key)
+  }
+
+  const cores = keptKeys.map(key => {
+    const atoms = fullKeyToAtoms.get(key)!
+    return atoms.map(a => atomBest.get(a)!).join('/')
+  })
+
   return {
-    cores: [...cores].sort(),
+    cores: cores.sort((a, b) =>
+      a.localeCompare(b, 'pt', { sensitivity: 'base' }),
+    ),
     tamanhos: [...tamanhos].sort(),
   }
 }
