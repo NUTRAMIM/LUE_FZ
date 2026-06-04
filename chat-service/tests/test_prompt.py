@@ -23,3 +23,13 @@ def test_prompt_instructs_produto_tags(store):
     p = build_system_prompt(store, shown_list="")
     assert "[produto]" in p
     assert "[/produto]" in p
+
+
+def test_prompt_documents_listar_categoria_tool(store):
+    p = build_system_prompt(store, shown_list="")
+    assert "LISTAR_CATEGORIA" in p
+
+
+def test_prompt_scopes_three_product_cap_to_buscar(store):
+    p = build_system_prompt(store, shown_list="")
+    assert "Máximo 3 produtos por mensagem ao usar BUSCAR_PRODUTOS" in p
