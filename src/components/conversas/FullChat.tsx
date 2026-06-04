@@ -1,7 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { Icon } from '@/components/painel/Icons'
 import type { ConversationRow, MessageRow } from '@/actions/conversas'
+import {
+  parseSegments,
+  groupConsecutiveImages,
+} from '@/app/chat/[slug]/components/message-segments'
+import { ImageCarousel } from '@/app/chat/[slug]/components/ImageCarousel'
+import { ImageLightbox } from '@/app/chat/[slug]/components/ImageLightbox'
 import {
   avatarColor,
   avatarInitials,
@@ -42,62 +49,61 @@ function StatusPill({ status }: { status: 'ai_active' | 'closed' }) {
   )
 }
 
-const IMAGE_URL_RE = /https?:\/\/\S+?\.(?:jpe?g|png|webp|gif)(?:\?\S*)?/gi
-
-type Segment = { type: 'text'; value: string } | { type: 'image'; src: string }
-
-function parseSegments(text: string): Segment[] {
-  const segments: Segment[] = []
-  const re = new RegExp(IMAGE_URL_RE.source, IMAGE_URL_RE.flags)
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = re.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      const chunk = text.slice(lastIndex, match.index)
-      if (chunk.trim()) segments.push({ type: 'text', value: chunk.trim() })
-    }
-    segments.push({ type: 'image', src: match[0] })
-    lastIndex = match.index + match[0].length
-  }
-  if (lastIndex < text.length) {
-    const tail = text.slice(lastIndex)
-    if (tail.trim()) segments.push({ type: 'text', value: tail.trim() })
-  }
-  if (segments.length === 0 && text) segments.push({ type: 'text', value: text })
-  return segments
-}
-
-function MessageContent({ content }: { content: string }) {
-  const segments = parseSegments(content)
+function MessageContent({
+  content,
+  onImageClick,
+}: {
+  content: string
+  onImageClick: (srcs: string[], index: number) => void
+}) {
+  const { segments } = parseSegments(content)
+  const renderItems = groupConsecutiveImages(segments)
   return (
     <div className="flex flex-col gap-1.5">
-      {segments.map((seg, i) =>
-        seg.type === 'text' ? (
-          <p key={`t-${i}`} className="whitespace-pre-wrap break-words">
-            {seg.value}
-          </p>
-        ) : (
-          <a
-            key={`i-${i}-${seg.src}`}
-            href={seg.src}
-            target="_blank"
-            rel="noreferrer"
-            className="block"
-          >
-            <img
-              src={seg.src}
-              alt=""
-              className="rounded-md max-w-[260px] block"
-              loading="lazy"
+      {renderItems.map((item, i) => {
+        if (item.type === 'text') {
+          return (
+            <p key={`t-${i}`} className="whitespace-pre-wrap break-words">
+              {item.value}
+            </p>
+          )
+        }
+        if (item.type === 'image') {
+          return (
+            <button
+              type="button"
+              key={`i-${i}-${item.src}`}
+              onClick={() => onImageClick([item.src], 0)}
+              className="block"
+            >
+              <img
+                src={item.src}
+                alt=""
+                className="rounded-md max-w-[260px] block"
+                loading="lazy"
+              />
+            </button>
+          )
+        }
+        // imageGroup — carrossel
+        return (
+          <div key={`g-${i}`} className="max-w-[260px]">
+            <ImageCarousel
+              srcs={item.srcs}
+              onImageClick={(idx) => onImageClick(item.srcs, idx)}
             />
-          </a>
-        ),
-      )}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
 function MessageBubble({ m }: { m: MessageRow }) {
+  const [lightbox, setLightbox] = useState<{ srcs: string[]; index: number } | null>(null)
+  const openLightbox = (srcs: string[], index: number) =>
+    setLightbox({ srcs, index })
+
   const time = new Date(m.created_at).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -113,23 +119,38 @@ function MessageBubble({ m }: { m: MessageRow }) {
     )
   }
 
+  const lightboxEl = lightbox && (
+    <ImageLightbox
+      srcs={lightbox.srcs}
+      startIndex={lightbox.index}
+      onClose={() => setLightbox(null)}
+    />
+  )
+
   if (m.role === 'user') {
     return (
       <div className="flex items-end gap-2 max-w-[88%]">
         <div className="bubble-them text-[13px] leading-snug">
           {m.message_type === 'image' && m.media_url ? (
-            <img
-              src={m.media_url}
-              alt=""
-              className="rounded-md max-w-[260px] block"
-            />
+            <button
+              type="button"
+              onClick={() => openLightbox([m.media_url!], 0)}
+              className="block"
+            >
+              <img
+                src={m.media_url}
+                alt=""
+                className="rounded-md max-w-[260px] block"
+              />
+            </button>
           ) : m.message_type === 'audio' && m.media_url ? (
             <audio controls src={m.media_url} className="max-w-[260px]" />
           ) : (
-            <MessageContent content={m.content} />
+            <MessageContent content={m.content} onImageClick={openLightbox} />
           )}
         </div>
         <span className="eyebrow text-ink-400 mb-0.5 tabular shrink-0">{time}</span>
+        {lightboxEl}
       </div>
     )
   }
@@ -148,18 +169,25 @@ function MessageBubble({ m }: { m: MessageRow }) {
         )}
         <div className={`${isIA ? 'bubble-ia' : 'bubble-me'} text-[13px] leading-snug`}>
           {m.message_type === 'image' && m.media_url ? (
-            <img
-              src={m.media_url}
-              alt=""
-              className="rounded-md max-w-[260px] block"
-            />
+            <button
+              type="button"
+              onClick={() => openLightbox([m.media_url!], 0)}
+              className="block"
+            >
+              <img
+                src={m.media_url}
+                alt=""
+                className="rounded-md max-w-[260px] block"
+              />
+            </button>
           ) : m.message_type === 'audio' && m.media_url ? (
             <audio controls src={m.media_url} className="max-w-[260px]" />
           ) : (
-            <MessageContent content={m.content} />
+            <MessageContent content={m.content} onImageClick={openLightbox} />
           )}
         </div>
       </div>
+      {lightboxEl}
     </div>
   )
 }
