@@ -11,6 +11,7 @@ const baseMsg = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   message_type: 'text',
   media_url: null,
   created_at: '2026-05-29T12:00:00Z',
+  reply_to_message_id: null,
   ...overrides,
 })
 

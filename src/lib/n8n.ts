@@ -10,6 +10,11 @@ export interface N8nDispatchPayload {
   id_loja: string
   tipo_de_mensagem: 'text' | 'image' | 'audio'
   media_url?: string
+  respondendo_a?: {
+    id_mensagem: string
+    autor: 'cliente' | 'loja'
+    conteudo: string
+  }
 }
 
 export async function dispatchToN8n(

@@ -9,6 +9,7 @@ const msg = (id: string, isoDate: string): ChatMessage => ({
   message_type: 'text',
   media_url: null,
   created_at: isoDate,
+  reply_to_message_id: null,
 })
 
 // All timestamps anchored to local-noon to avoid TZ flakiness near midnight.
