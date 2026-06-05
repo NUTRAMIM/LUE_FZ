@@ -16,12 +16,17 @@ log = logging.getLogger("chat-service")
 _db: Database | None = None
 _llm: LLMClient | None = None
 _db_error: str | None = None
+_llm_error: str | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _db, _llm, _db_error
-    _llm = LLMClient(settings.openai_api_key)
+    global _db, _llm, _db_error, _llm_error
+    try:
+        _llm = LLMClient(settings.openai_api_key)
+    except Exception as exc:
+        _llm_error = f"{type(exc).__name__}: {exc}"
+        log.exception("llm init failed at startup")
     try:
         _db = await Database.create(settings.database_url)
     except Exception as exc:
@@ -66,7 +71,9 @@ async def chat(
 @app.get("/health")
 async def health():
     return {
-        "ok": _db is not None,
+        "ok": _db is not None and _llm is not None,
         "db": "connected" if _db is not None else "error",
         "db_error": _db_error,
+        "llm": "ready" if _llm is not None else "error",
+        "llm_error": _llm_error,
     }
