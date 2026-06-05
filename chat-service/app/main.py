@@ -15,15 +15,21 @@ log = logging.getLogger("chat-service")
 
 _db: Database | None = None
 _llm: LLMClient | None = None
+_db_error: str | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _db, _llm
-    _db = await Database.create(settings.database_url)
+    global _db, _llm, _db_error
     _llm = LLMClient(settings.openai_api_key)
+    try:
+        _db = await Database.create(settings.database_url)
+    except Exception as exc:
+        _db_error = f"{type(exc).__name__}: {exc}"
+        log.exception("database connect failed at startup")
     yield
-    await _db.close()
+    if _db is not None:
+        await _db.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -59,4 +65,8 @@ async def chat(
 
 @app.get("/health")
 async def health():
-    return {"ok": True}
+    return {
+        "ok": _db is not None,
+        "db": "connected" if _db is not None else "error",
+        "db_error": _db_error,
+    }
