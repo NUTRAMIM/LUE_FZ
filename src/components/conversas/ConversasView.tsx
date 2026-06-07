@@ -16,19 +16,28 @@ import { truncatePreview } from './formatters'
 interface ConversasViewProps {
   storeId: string
   initialActive: ConversationRow[]
+  initialClosed?: ConversationRow[]
+  initialSelectedId?: string | null
 }
 
 function previewFromContent(content: string): string {
   return truncatePreview(content, 120)
 }
 
-export function ConversasView({ storeId, initialActive }: ConversasViewProps) {
+export function ConversasView({
+  storeId,
+  initialActive,
+  initialClosed = [],
+  initialSelectedId = null,
+}: ConversasViewProps) {
   const [active, setActive] = useState<ConversationRow[]>(initialActive)
-  const [closed, setClosed] = useState<ConversationRow[]>([])
-  const [closedLoaded, setClosedLoaded] = useState(false)
-  const [closedExpanded, setClosedExpanded] = useState(false)
+  const [closed, setClosed] = useState<ConversationRow[]>(initialClosed)
+  // Se as encerradas já vieram pré-carregadas (deep-link de lead), evita o
+  // fetch lazy e mantém a seção aberta pra a conversa alvo aparecer no rail.
+  const [closedLoaded, setClosedLoaded] = useState(initialClosed.length > 0)
+  const [closedExpanded, setClosedExpanded] = useState(initialClosed.length > 0)
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialActive[0]?.id ?? null,
+    initialSelectedId ?? initialActive[0]?.id ?? null,
   )
   const [messages, setMessages] = useState<MessageRow[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)

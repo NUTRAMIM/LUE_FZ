@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { markLeadContacted, type LeadRow } from '@/actions/leads'
 
@@ -122,6 +123,14 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                   >
                     {expandedId === l.id ? 'Ocultar' : 'Ver detalhes'}
                   </button>
+                  {l.conversationId && (
+                    <Link
+                      href={`/conversas?c=${l.conversationId}`}
+                      className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 px-2.5 py-1.5 rounded-lg ring-1 ring-ink-200"
+                    >
+                      Ver conversa
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleCopy(l.id, l.whatsapp)}
@@ -129,6 +138,17 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                   >
                     {copiedId === l.id ? 'Copiado!' : 'Copiar nº'}
                   </button>
+                  {l.whatsapp.replace(/\D/g, '') && (
+                    <a
+                      href={`https://api.whatsapp.com/send?phone=${l.whatsapp.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ backgroundColor: '#25D366', color: '#FFFFFF' }}
+                      className="text-[12.5px] font-semibold px-2.5 py-1.5 rounded-lg hover:brightness-95"
+                    >
+                      Conversar no WhatsApp
+                    </a>
+                  )}
                   {!l.contactedAt && (
                     <button
                       type="button"
