@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     openai_api_key: str = ""
     webhook_secret: str = ""
-    chat_model: str = "gpt-5.4-mini"
+    chat_model: str = "gpt-5-mini"
     embed_model: str = "text-embedding-3-small"
     buffer_wait_seconds: float = 7.0
     match_count: int = 6
