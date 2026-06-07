@@ -15,7 +15,7 @@ import {
   splitAIMessage,
   expandInitialMessages,
   delayForSegment,
-  type AISegment,
+  type AISegmentKind,
 } from './components/ai-split'
 import { normalizeMessageId } from './components/reply-helpers'
 
@@ -29,11 +29,47 @@ export interface ChatMessage {
   reply_to_message_id: string | null
 }
 
+// Um item de emissão = um segmento de uma mensagem do assistente. Várias
+// mensagens (produtos + texto) são achatadas numa única fila para emitir uma
+// de cada vez, sem que uma sobrescreva a outra.
+interface EmitItem {
+  id: string
+  content: string
+  source: ChatMessage
+  kind: AISegmentKind
+}
+
 interface AIQueue {
-  segments: AISegment[]
-  segIdx: number
+  items: EmitItem[]
+  idx: number
   nextEmitAt: number
-  sourceMsg: ChatMessage
+  productCount: number
+}
+
+function flattenToItems(msgs: ChatMessage[]): EmitItem[] {
+  const items: EmitItem[] = []
+  for (const msg of msgs) {
+    const segments = splitAIMessage(msg.content)
+    if (segments.length === 0) continue
+    if (segments.length === 1) {
+      items.push({
+        id: msg.id,
+        content: segments[0].content,
+        source: msg,
+        kind: segments[0].kind,
+      })
+      continue
+    }
+    segments.forEach((seg, i) => {
+      items.push({
+        id: `${msg.id}-seg-${i}`,
+        content: seg.content,
+        source: msg,
+        kind: seg.kind,
+      })
+    })
+  }
+  return items
 }
 
 interface State {
@@ -132,26 +168,38 @@ export function ChatClient({
 
   const pendingTempsRef = useRef<Array<{ tempId: string; content: string }>>([])
 
-  const enqueueAI = useCallback((msg: ChatMessage) => {
-    const segments = splitAIMessage(msg.content)
-    const productCount = segments.filter((s) => s.kind === 'product').length
-    if (segments.length === 0) {
-      // empty msg, nothing to render
+  const enqueueAI = useCallback((msgs: ChatMessage[]) => {
+    const newItems = flattenToItems(msgs)
+    if (newItems.length === 0) return
+
+    // Já há uma fila rodando: anexa no fim em vez de sobrescrever.
+    const active = aiQueueRef.current
+    if (active) {
+      const items = [...active.items, ...newItems]
+      const productCount = items.filter((it) => it.kind === 'product').length
+      const next: AIQueue = { ...active, items, productCount }
+      aiQueueRef.current = next
+      setAiQueue(next)
       return
     }
-    if (segments.length === 1) {
-      // single segment: emit immediately, no queue overhead
-      const seg = segments[0]
-      const adjusted: ChatMessage = { ...msg, content: seg.content }
-      dispatch({ type: 'add', message: adjusted })
+
+    // Sem fila e item único: emite na hora (resposta de texto fica ágil).
+    if (newItems.length === 1) {
+      const it = newItems[0]
+      dispatch({
+        type: 'add',
+        message: { ...it.source, id: it.id, content: it.content },
+      })
       return
     }
+
+    const productCount = newItems.filter((it) => it.kind === 'product').length
     const now = Date.now()
     const queue: AIQueue = {
-      segments,
-      segIdx: 0,
-      nextEmitAt: now + delayForSegment(segments[0], productCount),
-      sourceMsg: msg,
+      items: newItems,
+      idx: 0,
+      nextEmitAt: now + delayForSegment(newItems[0], productCount),
+      productCount,
     }
     aiQueueRef.current = queue
     setAiQueue(queue)
@@ -162,7 +210,7 @@ export function ChatClient({
       const res = cycleReducer(cycleRef.current, action)
       cycleRef.current = res.cycle
       setCycle(res.cycle)
-      if (res.releaseAI) {
+      if (res.releaseAI.length > 0) {
         enqueueAI(res.releaseAI)
       }
     },
@@ -174,29 +222,22 @@ export function ChatClient({
     if (!q) return
     if (now < q.nextEmitAt) return
 
-    const seg = q.segments[q.segIdx]
-    const adjusted: ChatMessage = {
-      ...q.sourceMsg,
-      id: `${q.sourceMsg.id}-seg-${q.segIdx}`,
-      content: seg.content,
-    }
-    dispatch({ type: 'add', message: adjusted })
+    const it = q.items[q.idx]
+    dispatch({
+      type: 'add',
+      message: { ...it.source, id: it.id, content: it.content },
+    })
 
-    const nextIdx = q.segIdx + 1
-    if (nextIdx >= q.segments.length) {
+    const nextIdx = q.idx + 1
+    if (nextIdx >= q.items.length) {
       aiQueueRef.current = null
       setAiQueue(null)
       return
     }
     const next: AIQueue = {
       ...q,
-      segIdx: nextIdx,
-      nextEmitAt:
-        now +
-        delayForSegment(
-          q.segments[nextIdx],
-          q.segments.filter((s) => s.kind === 'product').length,
-        ),
+      idx: nextIdx,
+      nextEmitAt: now + delayForSegment(q.items[nextIdx], q.productCount),
     }
     aiQueueRef.current = next
     setAiQueue(next)

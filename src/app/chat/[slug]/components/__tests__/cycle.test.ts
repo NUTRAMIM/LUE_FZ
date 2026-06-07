@@ -13,7 +13,7 @@ import type { ChatMessage } from '../../ChatClient'
 const baseCycle = (overrides: Partial<Cycle> = {}): Cycle => ({
   startedAt: 1000,
   userMsgIds: ['m1'],
-  pendingAI: null,
+  pendingAIs: [],
   ...overrides,
 })
 
@@ -94,16 +94,16 @@ describe('cycleReducer / startOrExtend', () => {
     expect(res.cycle).toEqual({
       startedAt: 1000,
       userMsgIds: ['a'],
-      pendingAI: null,
+      pendingAIs: [],
     })
-    expect(res.releaseAI).toBeNull()
+    expect(res.releaseAI).toEqual([])
   })
 
   it('appends id and resets startedAt when cycle exists', () => {
     const existing: Cycle = {
       startedAt: 500,
       userMsgIds: ['a'],
-      pendingAI: aiMsg(),
+      pendingAIs: [aiMsg()],
     }
     const res = cycleReducer(existing, {
       type: 'startOrExtend',
@@ -113,7 +113,7 @@ describe('cycleReducer / startOrExtend', () => {
     expect(res.cycle).toEqual({
       startedAt: 2000,
       userMsgIds: ['a', 'b'],
-      pendingAI: aiMsg(),
+      pendingAIs: [aiMsg()],
     })
   })
 
@@ -121,7 +121,7 @@ describe('cycleReducer / startOrExtend', () => {
     const existing: Cycle = {
       startedAt: 500,
       userMsgIds: ['a'],
-      pendingAI: null,
+      pendingAIs: [],
     }
     const res = cycleReducer(existing, {
       type: 'startOrExtend',
@@ -141,14 +141,14 @@ describe('cycleReducer / renameInCycle', () => {
         tempId: 't',
         realId: 'r',
       }),
-    ).toEqual({ cycle: null, releaseAI: null })
+    ).toEqual({ cycle: null, releaseAI: [] })
   })
 
   it('replaces tempId with realId', () => {
     const existing: Cycle = {
       startedAt: 500,
       userMsgIds: ['temp-1', 'temp-2'],
-      pendingAI: null,
+      pendingAIs: [],
     }
     const res = cycleReducer(existing, {
       type: 'renameInCycle',
@@ -162,7 +162,7 @@ describe('cycleReducer / renameInCycle', () => {
     const existing: Cycle = {
       startedAt: 500,
       userMsgIds: ['a'],
-      pendingAI: null,
+      pendingAIs: [],
     }
     const res = cycleReducer(existing, {
       type: 'renameInCycle',
@@ -177,32 +177,32 @@ describe('cycleReducer / cancelFor', () => {
   it('no-op when cycle is null', () => {
     expect(
       cycleReducer(null, { type: 'cancelFor', userMsgId: 'x' }),
-    ).toEqual({ cycle: null, releaseAI: null })
+    ).toEqual({ cycle: null, releaseAI: [] })
   })
 
   it('removes id, keeps cycle when set non-empty', () => {
     const existing: Cycle = {
       startedAt: 500,
       userMsgIds: ['a', 'b'],
-      pendingAI: aiMsg(),
+      pendingAIs: [aiMsg()],
     }
     const res = cycleReducer(existing, { type: 'cancelFor', userMsgId: 'a' })
     expect(res.cycle).toEqual({
       startedAt: 500,
       userMsgIds: ['b'],
-      pendingAI: aiMsg(),
+      pendingAIs: [aiMsg()],
     })
   })
 
-  it('nullifies cycle when set becomes empty (drops pendingAI)', () => {
+  it('nullifies cycle when set becomes empty (drops pendingAIs)', () => {
     const existing: Cycle = {
       startedAt: 500,
       userMsgIds: ['a'],
-      pendingAI: aiMsg(),
+      pendingAIs: [aiMsg()],
     }
     const res = cycleReducer(existing, { type: 'cancelFor', userMsgId: 'a' })
     expect(res.cycle).toBeNull()
-    expect(res.releaseAI).toBeNull()
+    expect(res.releaseAI).toEqual([])
   })
 })
 
@@ -215,14 +215,14 @@ describe('cycleReducer / holdOrRelease', () => {
       now: 9999,
     })
     expect(res.cycle).toBeNull()
-    expect(res.releaseAI).toBe(msg)
+    expect(res.releaseAI).toEqual([msg])
   })
 
   it('holds when elapsed < TICK_BLUE_MS', () => {
     const existing: Cycle = {
       startedAt: 1000,
       userMsgIds: ['a'],
-      pendingAI: null,
+      pendingAIs: [],
     }
     const msg = aiMsg()
     const res = cycleReducer(existing, {
@@ -230,15 +230,16 @@ describe('cycleReducer / holdOrRelease', () => {
       msg,
       now: 1000 + TICK_BLUE_MS - 1,
     })
-    expect(res.releaseAI).toBeNull()
-    expect(res.cycle?.pendingAI).toBe(msg)
+    expect(res.releaseAI).toEqual([])
+    expect(res.cycle?.pendingAIs).toEqual([msg])
   })
 
-  it('releases and clears cycle when elapsed >= TICK_BLUE_MS', () => {
+  it('releases pending plus new msg when elapsed >= TICK_BLUE_MS', () => {
+    const held = aiMsg({ id: 'held', content: 'held' })
     const existing: Cycle = {
       startedAt: 1000,
       userMsgIds: ['a'],
-      pendingAI: null,
+      pendingAIs: [held],
     }
     const msg = aiMsg()
     const res = cycleReducer(existing, {
@@ -246,16 +247,16 @@ describe('cycleReducer / holdOrRelease', () => {
       msg,
       now: 1000 + TICK_BLUE_MS,
     })
-    expect(res.releaseAI).toBe(msg)
+    expect(res.releaseAI).toEqual([held, msg])
     expect(res.cycle).toBeNull()
   })
 
-  it('replaces pendingAI when one already exists', () => {
+  it('accumulates multiple held messages instead of replacing', () => {
     const first = aiMsg({ id: 'a1', content: 'first' })
     const existing: Cycle = {
       startedAt: 1000,
       userMsgIds: ['a'],
-      pendingAI: first,
+      pendingAIs: [first],
     }
     const second = aiMsg({ id: 'a2', content: 'second' })
     const res = cycleReducer(existing, {
@@ -263,8 +264,8 @@ describe('cycleReducer / holdOrRelease', () => {
       msg: second,
       now: 1100,
     })
-    expect(res.releaseAI).toBeNull()
-    expect(res.cycle?.pendingAI).toBe(second)
+    expect(res.releaseAI).toEqual([])
+    expect(res.cycle?.pendingAIs).toEqual([first, second])
   })
 })
 
@@ -272,51 +273,53 @@ describe('cycleReducer / tickElapsed', () => {
   it('no-op when cycle is null', () => {
     expect(cycleReducer(null, { type: 'tickElapsed', now: 9999 })).toEqual({
       cycle: null,
-      releaseAI: null,
+      releaseAI: [],
     })
   })
 
-  it('no-op when pendingAI is null', () => {
+  it('no-op when pendingAIs is empty', () => {
     const existing: Cycle = {
       startedAt: 1000,
       userMsgIds: ['a'],
-      pendingAI: null,
+      pendingAIs: [],
     }
     const res = cycleReducer(existing, {
       type: 'tickElapsed',
       now: 1000 + TICK_BLUE_MS,
     })
     expect(res.cycle).toBe(existing)
-    expect(res.releaseAI).toBeNull()
+    expect(res.releaseAI).toEqual([])
   })
 
-  it('no-op when pendingAI present but elapsed < TICK_BLUE_MS', () => {
+  it('no-op when pendingAIs present but elapsed < TICK_BLUE_MS', () => {
     const msg = aiMsg()
     const existing: Cycle = {
       startedAt: 1000,
       userMsgIds: ['a'],
-      pendingAI: msg,
+      pendingAIs: [msg],
     }
     const res = cycleReducer(existing, {
       type: 'tickElapsed',
       now: 1000 + TICK_BLUE_MS - 1,
     })
-    expect(res.releaseAI).toBeNull()
+    expect(res.releaseAI).toEqual([])
     expect(res.cycle).toBe(existing)
   })
 
-  it('releases pendingAI and nullifies cycle when elapsed >= TICK_BLUE_MS', () => {
-    const msg = aiMsg()
+  it('releases all pendingAIs and nullifies cycle when elapsed >= TICK_BLUE_MS', () => {
+    const p1 = aiMsg({ id: 'p1', content: 'prod-1' })
+    const p2 = aiMsg({ id: 'p2', content: 'prod-2' })
+    const text = aiMsg({ id: 't', content: 'texto' })
     const existing: Cycle = {
       startedAt: 1000,
       userMsgIds: ['a'],
-      pendingAI: msg,
+      pendingAIs: [p1, p2, text],
     }
     const res = cycleReducer(existing, {
       type: 'tickElapsed',
       now: 1000 + TICK_BLUE_MS,
     })
-    expect(res.releaseAI).toBe(msg)
+    expect(res.releaseAI).toEqual([p1, p2, text])
     expect(res.cycle).toBeNull()
   })
 })

@@ -10,7 +10,10 @@ export type TickState = 'idle' | 'clock' | 'gray' | 'blue'
 export interface Cycle {
   startedAt: number
   userMsgIds: string[]
-  pendingAI: ChatMessage | null
+  // Fila de mensagens do assistente seguradas durante o ciclo. O agente emite
+  // várias mensagens por resposta (uma por produto + o texto); guardar só uma
+  // descartava as demais no realtime.
+  pendingAIs: ChatMessage[]
 }
 
 export function tickStateFor(
@@ -40,7 +43,7 @@ export type CycleAction =
 
 export interface CycleResult {
   cycle: Cycle | null
-  releaseAI: ChatMessage | null
+  releaseAI: ChatMessage[]
 }
 
 export function cycleReducer(
@@ -54,9 +57,9 @@ export function cycleReducer(
           cycle: {
             startedAt: action.now,
             userMsgIds: [action.userMsgId],
-            pendingAI: null,
+            pendingAIs: [],
           },
-          releaseAI: null,
+          releaseAI: [],
         }
       }
       const ids = cycle.userMsgIds.includes(action.userMsgId)
@@ -64,13 +67,13 @@ export function cycleReducer(
         : [...cycle.userMsgIds, action.userMsgId]
       return {
         cycle: { ...cycle, startedAt: action.now, userMsgIds: ids },
-        releaseAI: null,
+        releaseAI: [],
       }
     }
     case 'renameInCycle': {
-      if (cycle === null) return { cycle: null, releaseAI: null }
+      if (cycle === null) return { cycle: null, releaseAI: [] }
       if (!cycle.userMsgIds.includes(action.tempId)) {
-        return { cycle, releaseAI: null }
+        return { cycle, releaseAI: [] }
       }
       return {
         cycle: {
@@ -79,39 +82,39 @@ export function cycleReducer(
             id === action.tempId ? action.realId : id,
           ),
         },
-        releaseAI: null,
+        releaseAI: [],
       }
     }
     case 'cancelFor': {
-      if (cycle === null) return { cycle: null, releaseAI: null }
+      if (cycle === null) return { cycle: null, releaseAI: [] }
       const ids = cycle.userMsgIds.filter((id) => id !== action.userMsgId)
       if (ids.length === 0) {
-        return { cycle: null, releaseAI: null }
+        return { cycle: null, releaseAI: [] }
       }
-      return { cycle: { ...cycle, userMsgIds: ids }, releaseAI: null }
+      return { cycle: { ...cycle, userMsgIds: ids }, releaseAI: [] }
     }
     case 'holdOrRelease': {
       if (cycle === null) {
-        return { cycle: null, releaseAI: action.msg }
+        return { cycle: null, releaseAI: [action.msg] }
       }
       const elapsed = action.now - cycle.startedAt
       if (elapsed >= TICK_BLUE_MS) {
-        return { cycle: null, releaseAI: action.msg }
+        return { cycle: null, releaseAI: [...cycle.pendingAIs, action.msg] }
       }
       return {
-        cycle: { ...cycle, pendingAI: action.msg },
-        releaseAI: null,
+        cycle: { ...cycle, pendingAIs: [...cycle.pendingAIs, action.msg] },
+        releaseAI: [],
       }
     }
     case 'tickElapsed': {
-      if (cycle === null || cycle.pendingAI === null) {
-        return { cycle, releaseAI: null }
+      if (cycle === null || cycle.pendingAIs.length === 0) {
+        return { cycle, releaseAI: [] }
       }
       const elapsed = action.now - cycle.startedAt
       if (elapsed < TICK_BLUE_MS) {
-        return { cycle, releaseAI: null }
+        return { cycle, releaseAI: [] }
       }
-      return { cycle: null, releaseAI: cycle.pendingAI }
+      return { cycle: null, releaseAI: cycle.pendingAIs }
     }
   }
 }
