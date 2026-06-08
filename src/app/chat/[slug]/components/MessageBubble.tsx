@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChatMessage } from '../ChatClient'
 import type { TickState } from './cycle'
 import { parseSegments, groupConsecutiveImages } from './message-segments'
@@ -13,6 +13,13 @@ function formatTime(iso: string): string {
   const d = new Date(iso)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
+
+// Mensagens longas no chat público são truncadas em 15 linhas; o resto fica
+// atrás de um "Ler mais". text-sm tem line-height de 20px (Tailwind), então
+// 15 linhas ≈ 300px.
+const MAX_LINES = 15
+const LINE_HEIGHT_PX = 20
+const COLLAPSED_MAX_PX = MAX_LINES * LINE_HEIGHT_PX
 
 export function MessageBubble({
   message,
@@ -36,6 +43,22 @@ export function MessageBubble({
 
   const [lightbox, setLightbox] = useState<{ srcs: string[]; index: number } | null>(null)
   const { dx, swipeHandlers } = useSwipeToReply(() => onStartReply?.(message))
+
+  const [expanded, setExpanded] = useState(false)
+  const [overflowing, setOverflowing] = useState(false)
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  // Detecta se o corpo passa de 15 linhas pra decidir se mostra o "Ler mais".
+  // ResizeObserver re-mede quando imagens carregam e mudam a altura.
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    const measure = () => setOverflowing(el.scrollHeight > COLLAPSED_MAX_PX + 1)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   if (isSystem) {
     return (
@@ -119,61 +142,78 @@ export function MessageBubble({
           </button>
         )}
 
-        {isTypedImage && message.media_url && (
-          <a
-            href={message.media_url}
-            target="_blank"
-            rel="noreferrer"
-            className="mb-1 block"
-          >
-            <img
-              src={message.media_url}
-              alt=""
-              className="max-h-80 w-full rounded object-cover"
-              loading="lazy"
-            />
-          </a>
-        )}
-        {message.message_type === 'audio' && message.media_url && (
-          <audio controls src={message.media_url} className="max-w-full" />
-        )}
+        <div
+          ref={bodyRef}
+          style={
+            !expanded ? { maxHeight: COLLAPSED_MAX_PX, overflow: 'hidden' } : undefined
+          }
+        >
+          {isTypedImage && message.media_url && (
+            <a
+              href={message.media_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-1 block"
+            >
+              <img
+                src={message.media_url}
+                alt=""
+                className="max-h-80 w-full rounded object-cover"
+                loading="lazy"
+              />
+            </a>
+          )}
+          {message.message_type === 'audio' && message.media_url && (
+            <audio controls src={message.media_url} className="max-w-full" />
+          )}
 
-        {renderItems.map((item, i) => {
-          if (item.type === 'text') {
+          {renderItems.map((item, i) => {
+            if (item.type === 'text') {
+              return (
+                <p
+                  key={`t-${i}`}
+                  className="whitespace-pre-wrap break-words text-sm text-gray-900"
+                >
+                  {item.value}
+                </p>
+              )
+            }
+            if (item.type === 'image') {
+              return (
+                <button
+                  type="button"
+                  key={`i-${i}-${item.src}`}
+                  onClick={() => setLightbox({ srcs: [item.src], index: 0 })}
+                  className="my-1 block w-full"
+                >
+                  <img
+                    src={item.src}
+                    alt=""
+                    className="max-h-80 w-full rounded object-cover"
+                    loading="lazy"
+                  />
+                </button>
+              )
+            }
             return (
-              <p
-                key={`t-${i}`}
-                className="whitespace-pre-wrap break-words text-sm text-gray-900"
-              >
-                {item.value}
-              </p>
+              <ImageCarousel
+                key={`g-${i}`}
+                srcs={item.srcs}
+                onImageClick={(index) => setLightbox({ srcs: item.srcs, index })}
+              />
             )
-          }
-          if (item.type === 'image') {
-            return (
-              <button
-                type="button"
-                key={`i-${i}-${item.src}`}
-                onClick={() => setLightbox({ srcs: [item.src], index: 0 })}
-                className="my-1 block w-full"
-              >
-                <img
-                  src={item.src}
-                  alt=""
-                  className="max-h-80 w-full rounded object-cover"
-                  loading="lazy"
-                />
-              </button>
-            )
-          }
-          return (
-            <ImageCarousel
-              key={`g-${i}`}
-              srcs={item.srcs}
-              onImageClick={(index) => setLightbox({ srcs: item.srcs, index })}
-            />
-          )
-        })}
+          })}
+        </div>
+
+        {overflowing && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-1 text-xs font-semibold text-[#075E54] hover:underline"
+          >
+            {expanded ? 'Ler menos' : 'Ler mais'}
+          </button>
+        )}
 
         <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-gray-500">
           <span>{formatTime(message.created_at)}</span>

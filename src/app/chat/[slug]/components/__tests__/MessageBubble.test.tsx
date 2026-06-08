@@ -4,6 +4,13 @@ import { render } from '@testing-library/react'
 import { MessageBubble } from '../MessageBubble'
 import type { ChatMessage } from '../../ChatClient'
 
+// jsdom não implementa ResizeObserver (usado pelo clamp de "Ler mais").
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 const baseMsg = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'm1',
   role: 'user',
