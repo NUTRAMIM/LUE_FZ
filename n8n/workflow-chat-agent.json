@@ -1329,62 +1329,6 @@
         ]
       ]
     },
-    "Expand Messages": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Calculate Wait",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Calculate Wait": {
-      "main": [
-        [
-          {
-            "node": "Wait Typing",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait Typing": {
-      "main": [
-        [
-          {
-            "node": "Insert Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Insert Message": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "OpenAI Chat Model - Splitter": {
       "ai_languageModel": [
         [
