@@ -129,4 +129,21 @@ describe('resolveWebhookUrl', () => {
     })
     expect(url).toBe('https://n8n/webhook')
   })
+
+  it('routes every store to python when CHAT_PY_STORE_IDS is "*"', () => {
+    const url = resolveWebhookUrl('any-store', {
+      N8N_WEBHOOK_URL: 'https://n8n/webhook',
+      CHAT_PY_WEBHOOK_URL: 'https://py/chat',
+      CHAT_PY_STORE_IDS: '*',
+    })
+    expect(url).toBe('https://py/chat')
+  })
+
+  it('falls back to n8n when wildcard is set but python url is missing', () => {
+    const url = resolveWebhookUrl('any-store', {
+      N8N_WEBHOOK_URL: 'https://n8n/webhook',
+      CHAT_PY_STORE_IDS: '*',
+    })
+    expect(url).toBe('https://n8n/webhook')
+  })
 })

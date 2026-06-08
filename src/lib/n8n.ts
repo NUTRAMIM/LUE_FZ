@@ -23,7 +23,8 @@ export function resolveWebhookUrl(
 ): string | undefined {
   const pyStores = (env.CHAT_PY_STORE_IDS ?? '')
     .split(',').map((s) => s.trim()).filter(Boolean)
-  if (env.CHAT_PY_WEBHOOK_URL && pyStores.includes(storeId)) {
+  const allStores = pyStores.includes('*')
+  if (env.CHAT_PY_WEBHOOK_URL && (allStores || pyStores.includes(storeId))) {
     return env.CHAT_PY_WEBHOOK_URL
   }
   return env.N8N_WEBHOOK_URL
