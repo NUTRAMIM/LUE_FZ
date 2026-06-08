@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation'
-import { getAuthedUser } from '@/lib/auth'
+import { getActiveStoreId } from '@/lib/active-store'
 import { getConversations, type ConversationRow } from '@/actions/conversas'
 import { ConversasView } from '@/components/conversas/ConversasView'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ConversasPage(props: PageProps<'/conversas'>) {
-  const user = await getAuthedUser()
-  if (!user) redirect('/login')
+  const storeId = await getActiveStoreId()
+  if (!storeId) redirect('/login')
 
   const sp = await props.searchParams
   const target = typeof sp.c === 'string' ? sp.c : null
@@ -26,7 +26,7 @@ export default async function ConversasPage(props: PageProps<'/conversas'>) {
 
   return (
     <ConversasView
-      storeId={user.id}
+      storeId={storeId}
       initialActive={initialActive}
       initialClosed={initialClosed}
       initialSelectedId={initialSelectedId}

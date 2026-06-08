@@ -95,7 +95,12 @@ export async function middleware(request: NextRequest) {
     membership = data ?? null
   }
 
-  if (user && needsBilling) {
+  // Agents (vendedores) nunca passam pelo billing gate: a assinatura é do dono
+  // e o RLS de store_subscriptions (auth.uid() = store_id) impede o agent de
+  // lê-la, então o gate sempre falharia e o jogaria pra /planos — que por sua
+  // vez devolve o agent pra /conversas, criando um loop de redirect (tela
+  // branca). Só o dono é cobrado, então só o dono é gated.
+  if (user && needsBilling && membership?.role !== 'agent') {
     const storeId = membership?.store_id ?? user.id
     const { data: sub, error: subError } = await supabase
       .from('store_subscriptions')

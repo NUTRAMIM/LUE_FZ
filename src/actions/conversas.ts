@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getActiveStoreId } from '@/lib/active-store'
 import { signedReadUrl } from '@/lib/chat-media'
 import { visitorName, truncatePreview } from '@/components/conversas/formatters'
 
@@ -32,14 +33,14 @@ export async function getConversations(
   filter: 'active' | 'closed',
 ): Promise<ConversationRow[]> {
   const supabase = await createClient()
-  const user = await getAuthedUser()
-  if (!user) return []
+  const storeId = await getActiveStoreId()
+  if (!storeId) return []
 
   const status = filter === 'active' ? 'ai_active' : 'closed'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc(
     'list_conversations_for_store',
-    { p_store_id: user.id, p_status: status },
+    { p_store_id: storeId, p_status: status },
   )
 
   if (error || !data) {
