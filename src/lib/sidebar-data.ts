@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getStoreContext } from '@/lib/active-store'
 import { getAppUrl } from '@/lib/app-url'
 import type { StoreRole } from '@/lib/store-role'
 
@@ -22,12 +23,8 @@ export async function getSidebarData(): Promise<SidebarData> {
     if (!user) return { role: 'owner', slug: null, appUrl }
 
     const supabase = await createClient()
-    const [memberRes, settingsRes] = await Promise.all([
-      supabase
-        .from('store_members')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle(),
+    const [ctx, settingsRes] = await Promise.all([
+      getStoreContext(),
       supabase
         .from('store_settings')
         .select('chat_slug')
@@ -35,8 +32,7 @@ export async function getSidebarData(): Promise<SidebarData> {
         .maybeSingle(),
     ])
 
-    const role: StoreRole =
-      memberRes.data?.role === 'agent' ? 'agent' : 'owner'
+    const role: StoreRole = ctx?.role ?? 'owner'
     const slug = settingsRes.data?.chat_slug ?? null
 
     return { role, slug, appUrl }
