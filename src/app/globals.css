@@ -281,6 +281,10 @@ body {
 ::-webkit-scrollbar-thumb { background: #DDD6FE; border-radius: 999px; border: 2px solid #F3F2F8; }
 ::-webkit-scrollbar-track { background: transparent; }
 
+/* Esconde a scrollbar nativa (usado quando há uma barra-espelho dedicada) */
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* ───── Form primitives ───── */
 
 .input {
