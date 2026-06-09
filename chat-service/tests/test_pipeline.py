@@ -183,3 +183,25 @@ async def test_category_dump_skips_text_insert_when_empty(db, llm, store):
     assistant_msgs = [m for m in db.inserted_messages if m["role"] == "assistant"]
     assert len(assistant_msgs) == 1
     assert "[produto]" in assistant_msgs[0]["content"]
+
+
+async def test_lead_state_reaches_agent_prompt(db, llm, store):
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "oi"}]
+    db.catalog = []
+    db.recent_messages = []
+    db.lead = {"id": "lead-1", "name": "Joana", "whatsapp": "55", "email": None,
+               "cep": None, "pedido": [{"produto": "Cropped", "qtd": 1}],
+               "forma_pagamento": "Pix", "forma_entrega": None}
+    llm.chat_responses = [
+        {"content": "oi Joana!"},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(mid="msg-1"))
+    system_msg = llm.chat_calls[0]["messages"][0]
+    assert system_msg["role"] == "system"
+    assert "Joana" in system_msg["content"]
+    assert "1x Cropped" in system_msg["content"]
+    assert "Pix" in system_msg["content"]
