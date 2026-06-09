@@ -14,6 +14,20 @@ function formatLeadDate(iso: string): string {
   })
 }
 
+function formatPedidoItem(item: {
+  produto: string
+  qtd: number
+  tamanho?: string | null
+  cor?: string | null
+}): string {
+  const extras = [
+    item.tamanho ? `tam ${item.tamanho}` : null,
+    item.cor ? `cor ${item.cor}` : null,
+  ].filter(Boolean)
+  const base = `${item.qtd}x ${item.produto}`
+  return extras.length ? `${base} (${extras.join(', ')})` : base
+}
+
 export function LeadsView({ leads }: { leads: LeadRow[] }) {
   const router = useRouter()
   const [tab, setTab] = useState<'novos' | 'contatados'>('novos')
@@ -211,6 +225,40 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                           <span className="text-ink-900 whitespace-pre-wrap">
                             {l.interestSummary}
                           </span>
+                        ) : (
+                          <span className="text-ink-400">Não informado</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="eyebrow text-ink-500">PEDIDO</div>
+                      <div className="text-[13px] mt-0.5">
+                        {l.pedido.length > 0 ? (
+                          <ul className="text-ink-900 list-none space-y-0.5">
+                            {l.pedido.map((item, i) => (
+                              <li key={i}>{formatPedidoItem(item)}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-ink-400">Nenhum item</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="eyebrow text-ink-500">FORMA DE PAGAMENTO</div>
+                      <div className="text-[13px] mt-0.5">
+                        {l.formaPagamento ? (
+                          <span className="text-ink-900">{l.formaPagamento}</span>
+                        ) : (
+                          <span className="text-ink-400">Não informado</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="eyebrow text-ink-500">FORMA DE ENTREGA</div>
+                      <div className="text-[13px] mt-0.5">
+                        {l.formaEntrega ? (
+                          <span className="text-ink-900">{l.formaEntrega}</span>
                         ) : (
                           <span className="text-ink-400">Não informado</span>
                         )}
