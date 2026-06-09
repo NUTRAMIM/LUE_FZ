@@ -132,4 +132,6 @@ def store():
         service_instructions="Atendimento das 9h às 18h.",
         seller_phone="5511999999999",
         instagram_handle="lue",
+        service_steps=["Confirme o tamanho antes de fechar"],
+        faq=[{"pergunta": "Fazem troca?", "resposta": "Sim, em até 7 dias."}],
     )
