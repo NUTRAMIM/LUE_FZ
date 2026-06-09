@@ -6,10 +6,11 @@ from app.config import settings
 log = logging.getLogger("chat-service")
 from app.models import AgentResult
 from app.agent.prompt import build_system_prompt
-from app.agent.tools import buscar_produtos, listar_categoria
+from app.agent.tools import buscar_produtos, listar_categoria, registrar_pedido
 
 TOOL_NAME = "BUSCAR_PRODUTOS"
 LISTAR_TOOL_NAME = "LISTAR_CATEGORIA"
+REGISTRAR_TOOL_NAME = "REGISTRAR_PEDIDO"
 MAX_TOOL_ROUNDS = 5
 
 TOOL_SCHEMA = {
@@ -54,9 +55,46 @@ TOOL_SCHEMA_LISTAR = {
     },
 }
 
+TOOL_SCHEMA_REGISTRAR = {
+    "type": "function",
+    "function": {
+        "name": REGISTRAR_TOOL_NAME,
+        "description": (
+            "Grava ou atualiza o pedido do cliente, a forma de pagamento e a "
+            "forma de entrega na ficha do lead. Chame sempre que o cliente "
+            "confirmar/alterar um item, a forma de pagamento ou a forma de "
+            "entrega. O campo `itens` SUBSTITUI o pedido inteiro — envie a lista "
+            "completa e atualizada."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "itens": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "produto": {"type": "string"},
+                            "qtd": {"type": "integer"},
+                            "tamanho": {"type": "string"},
+                            "cor": {"type": "string"},
+                            "preco": {"type": "number"},
+                        },
+                        "required": ["produto", "qtd"],
+                    },
+                },
+                "forma_pagamento": {"type": "string"},
+                "forma_entrega": {"type": "string"},
+            },
+            "required": ["itens"],
+        },
+    },
+}
 
-async def run_agent(llm, db, store, shown_list, chat_input, history) -> AgentResult:
-    messages = [{"role": "system", "content": build_system_prompt(store, shown_list)}]
+
+async def run_agent(llm, db, store, shown_list, chat_input, history,
+                    conversation_id=None, lead=None) -> AgentResult:
+    messages = [{"role": "system", "content": build_system_prompt(store, shown_list, lead)}]
     messages.extend(history)
     messages.append({"role": "user", "content": chat_input})
 
@@ -66,7 +104,7 @@ async def run_agent(llm, db, store, shown_list, chat_input, history) -> AgentRes
     for _ in range(MAX_TOOL_ROUNDS):
         resp = await llm.chat(
             model=settings.chat_model, messages=messages,
-            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR], max_tokens=4096)
+            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_REGISTRAR], max_tokens=4096)
 
         tool_calls = resp.get("tool_calls")
         if not tool_calls:
@@ -95,6 +133,12 @@ async def run_agent(llm, db, store, shown_list, chat_input, history) -> AgentRes
                     shown_product_ids.extend(ids)
                 log.info("LISTAR_CATEGORIA(%r) -> %d peças", args.get("categoria", ""), len(ids))
                 content = resumo
+            elif call["name"] == REGISTRAR_TOOL_NAME:
+                content = await registrar_pedido(
+                    db, store.id, conversation_id,
+                    args.get("itens", []), args.get("forma_pagamento"),
+                    args.get("forma_entrega"))
+                log.info("REGISTRAR_PEDIDO -> %s", content)
             else:
                 content = await buscar_produtos(
                     db, llm, store.id, args.get("consulta", ""), args.get("category", ""))

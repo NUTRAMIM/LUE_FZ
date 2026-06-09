@@ -1,6 +1,6 @@
 # tests/test_runner.py
 import json
-from app.agent.runner import run_agent, TOOL_NAME, LISTAR_TOOL_NAME
+from app.agent.runner import run_agent, TOOL_NAME, LISTAR_TOOL_NAME, REGISTRAR_TOOL_NAME
 
 
 async def test_returns_text_without_tool_call(db, llm, store):
@@ -82,8 +82,34 @@ async def test_listar_categoria_no_stock_collects_nothing(db, llm, store):
     assert out.text == "Não temos peças nessa categoria agora."
 
 
-async def test_both_tools_offered_to_llm(db, llm, store):
+async def test_all_tools_offered_to_llm(db, llm, store):
     llm.chat_responses = [{"content": "oi"}]
     await run_agent(llm, db, store, shown_list="", chat_input="oi", history=[])
     tool_names = {t["function"]["name"] for t in llm.chat_calls[0]["tools"]}
-    assert tool_names == {TOOL_NAME, LISTAR_TOOL_NAME}
+    assert tool_names == {TOOL_NAME, LISTAR_TOOL_NAME, REGISTRAR_TOOL_NAME}
+
+
+async def test_registrar_pedido_tool_is_routed(db, llm, store):
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "call_1", "name": REGISTRAR_TOOL_NAME,
+                         "arguments": json.dumps({
+                             "itens": [{"produto": "Cropped", "qtd": 1, "tamanho": "P"}],
+                             "forma_pagamento": "Pix", "forma_entrega": "Sedex"})}]},
+        {"content": "Anotado! Um vendedor te chama."},
+    ]
+    out = await run_agent(llm, db, store, shown_list="", chat_input="quero fechar",
+                          history=[], conversation_id="conv-1")
+    assert out.text == "Anotado! Um vendedor te chama."
+    assert db.order_upserts[0]["conversation_id"] == "conv-1"
+    assert db.order_upserts[0]["forma_pagamento"] == "Pix"
+    tool_msg = next(m for m in llm.chat_calls[1]["messages"] if m.get("role") == "tool")
+    assert "Pedido atualizado" in tool_msg["content"]
+
+
+async def test_lead_passed_into_system_prompt(db, llm, store):
+    llm.chat_responses = [{"content": "oi Maria!"}]
+    await run_agent(llm, db, store, shown_list="", chat_input="oi", history=[],
+                    conversation_id="conv-1", lead={"name": "Maria"})
+    system_msg = llm.chat_calls[0]["messages"][0]
+    assert system_msg["role"] == "system"
+    assert "Maria" in system_msg["content"]
