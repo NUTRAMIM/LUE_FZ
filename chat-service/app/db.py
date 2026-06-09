@@ -28,10 +28,13 @@ class Database:
         r = await self._pool.fetchrow(
             """SELECT id::text, store_name, categories, payment_methods,
                       delivery_methods, service_instructions, seller_phone,
-                      instagram_handle
+                      instagram_handle, service_steps, faq
                FROM store_settings WHERE id = $1""", store_id)
         if r is None:
             return None
+        faq = r["faq"]
+        if isinstance(faq, str):
+            faq = json.loads(faq)
         return StoreSettings(
             id=r["id"], store_name=r["store_name"],
             categories=list(r["categories"] or []),
@@ -39,7 +42,9 @@ class Database:
             delivery_methods=list(r["delivery_methods"] or []),
             service_instructions=r["service_instructions"] or "",
             seller_phone=r["seller_phone"] or "",
-            instagram_handle=r["instagram_handle"] or "")
+            instagram_handle=r["instagram_handle"] or "",
+            service_steps=list(r["service_steps"] or []),
+            faq=list(faq or []))
 
     async def get_shown_products(self, conversation_id):
         r = await self._pool.fetchrow(
@@ -93,10 +98,20 @@ class Database:
 
     async def get_lead(self, conversation_id, store_id):
         r = await self._pool.fetchrow(
-            """SELECT id::text, name, whatsapp, email, cep FROM leads
+            """SELECT id::text, name, whatsapp, email, cep,
+                      pedido, forma_pagamento, forma_entrega
+               FROM leads
                WHERE conversation_id = $1 AND store_id = $2 LIMIT 1""",
             conversation_id, store_id)
-        return dict(r) if r else None
+        if not r:
+            return None
+        d = dict(r)
+        pedido = d.get("pedido")
+        if isinstance(pedido, str):
+            d["pedido"] = json.loads(pedido)
+        elif pedido is None:
+            d["pedido"] = []
+        return d
 
     async def create_lead(self, conversation_id, store_id, name, whatsapp,
                           email, cep, source="chat"):
@@ -117,6 +132,20 @@ class Database:
             """UPDATE leads SET interest_summary=$3
                WHERE conversation_id=$1 AND store_id=$2""",
             conversation_id, store_id, interest_summary)
+
+    async def upsert_lead_order(self, conversation_id, store_id, pedido,
+                                forma_pagamento, forma_entrega):
+        await self._pool.execute(
+            """INSERT INTO leads (conversation_id, store_id, pedido,
+                                  forma_pagamento, forma_entrega, source)
+               VALUES ($1, $2, $3::jsonb, $4, $5, 'chat')
+               ON CONFLICT (conversation_id) DO UPDATE SET
+                 pedido = EXCLUDED.pedido,
+                 forma_pagamento = COALESCE(EXCLUDED.forma_pagamento, leads.forma_pagamento),
+                 forma_entrega   = COALESCE(EXCLUDED.forma_entrega, leads.forma_entrega),
+                 last_seen_at = now()""",
+            conversation_id, store_id, json.dumps(pedido),
+            forma_pagamento, forma_entrega)
 
     async def insert_knowledge_gap(self, store_id, conversation_id, question, tag):
         await self._pool.execute(

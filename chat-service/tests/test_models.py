@@ -63,3 +63,22 @@ def test_agent_result_holds_segments_and_ids():
                     shown_product_ids=["p1", "p2"])
     assert r.product_segments == ["[produto]X[/produto]"]
     assert r.shown_product_ids == ["p1", "p2"]
+
+
+from app.models import StoreSettings
+
+
+def test_store_settings_has_service_steps_and_faq_defaults():
+    s = StoreSettings(id="x", store_name="Loja")
+    assert s.service_steps == []
+    assert s.faq == []
+
+
+def test_store_settings_accepts_service_steps_and_faq():
+    s = StoreSettings(
+        id="x", store_name="Loja",
+        service_steps=["Pergunte o tamanho", "Ofereça combo"],
+        faq=[{"pergunta": "Troca?", "resposta": "Em 7 dias."}],
+    )
+    assert s.service_steps[0] == "Pergunte o tamanho"
+    assert s.faq[0]["resposta"] == "Em 7 dias."

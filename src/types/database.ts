@@ -181,6 +181,9 @@ export interface Database {
           contacted_at: string | null
           contacted_by: string | null
           contacted_by_name: string | null
+          pedido: Json
+          forma_pagamento: string | null
+          forma_entrega: string | null
         }
         Insert: {
           id?: string
@@ -199,6 +202,9 @@ export interface Database {
           contacted_at?: string | null
           contacted_by?: string | null
           contacted_by_name?: string | null
+          pedido?: Json
+          forma_pagamento?: string | null
+          forma_entrega?: string | null
         }
         Update: {
           id?: string
@@ -215,6 +221,9 @@ export interface Database {
           contacted_at?: string | null
           contacted_by?: string | null
           contacted_by_name?: string | null
+          pedido?: Json
+          forma_pagamento?: string | null
+          forma_entrega?: string | null
         }
         Relationships: []
       }

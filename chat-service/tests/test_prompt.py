@@ -43,3 +43,57 @@ def test_prompt_instructs_category_synonym_mapping(store):
 def test_prompt_has_tool_routing_decision(store):
     p = build_system_prompt(store, shown_list="")
     assert "decida pela intenção do cliente" in p
+
+
+import dataclasses
+
+
+def test_prompt_injects_lead_name_when_present(store):
+    p = build_system_prompt(store, shown_list="", lead={"name": "Maria"})
+    assert "Maria" in p
+
+
+def test_prompt_lead_name_empty_when_no_lead(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    # não deve aparecer a chave literal não-substituída
+    assert "{{nome_lead}}" not in p
+
+
+def test_prompt_shows_current_order_state(store):
+    lead = {"name": "Ana",
+            "pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],
+            "forma_pagamento": "Pix", "forma_entrega": "Sedex"}
+    p = build_system_prompt(store, shown_list="", lead=lead)
+    assert "2x Cropped" in p
+    assert "Pix" in p
+    assert "Sedex" in p
+
+
+def test_prompt_order_placeholder_when_empty(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    assert "(nenhum item ainda)" in p
+
+
+def test_prompt_includes_store_service_steps(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    assert "Confirme o tamanho antes de fechar" in p
+
+
+def test_prompt_includes_store_faq(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    assert "Fazem troca?" in p
+    assert "Sim, em até 7 dias." in p
+
+
+def test_prompt_omits_steps_and_faq_when_store_has_none(store):
+    bare = dataclasses.replace(store, service_steps=[], faq=[])
+    p = build_system_prompt(bare, shown_list="", lead=None)
+    assert "Etapas específicas desta loja" not in p
+    assert "Perguntas frequentes" not in p
+
+
+def test_prompt_documents_registrar_pedido_and_payment_question(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    assert "REGISTRAR_PEDIDO" in p
+    assert "forma de pagamento" in p
+    assert "forma de entrega" in p
