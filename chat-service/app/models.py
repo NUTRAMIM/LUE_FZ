@@ -39,6 +39,8 @@ class StoreSettings:
     service_instructions: str = ""
     seller_phone: str = ""
     instagram_handle: str = ""
+    service_steps: list[str] = field(default_factory=list)
+    faq: list[dict] = field(default_factory=list)
 
 
 @dataclass

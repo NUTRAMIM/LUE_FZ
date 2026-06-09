@@ -28,10 +28,13 @@ class Database:
         r = await self._pool.fetchrow(
             """SELECT id::text, store_name, categories, payment_methods,
                       delivery_methods, service_instructions, seller_phone,
-                      instagram_handle
+                      instagram_handle, service_steps, faq
                FROM store_settings WHERE id = $1""", store_id)
         if r is None:
             return None
+        faq = r["faq"]
+        if isinstance(faq, str):
+            faq = json.loads(faq)
         return StoreSettings(
             id=r["id"], store_name=r["store_name"],
             categories=list(r["categories"] or []),
@@ -39,7 +42,9 @@ class Database:
             delivery_methods=list(r["delivery_methods"] or []),
             service_instructions=r["service_instructions"] or "",
             seller_phone=r["seller_phone"] or "",
-            instagram_handle=r["instagram_handle"] or "")
+            instagram_handle=r["instagram_handle"] or "",
+            service_steps=list(r["service_steps"] or []),
+            faq=list(faq or []))
 
     async def get_shown_products(self, conversation_id):
         r = await self._pool.fetchrow(
