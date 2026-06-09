@@ -64,3 +64,55 @@ async def listar_categoria(db, store_id: str, categoria: str):
               "Escreva só uma frase curta de fecho perguntando se quer ver "
               "tamanho ou cor de alguma.")
     return ("\n".join(cards), ids, resumo)
+
+
+def _normalize_itens(itens) -> list:
+    norm = []
+    for it in itens or []:
+        if not isinstance(it, dict):
+            continue
+        produto = (it.get("produto") or "").strip()
+        if not produto:
+            continue
+        try:
+            qtd = int(it.get("qtd", 1))
+        except (TypeError, ValueError):
+            qtd = 1
+        norm.append({
+            "produto": produto,
+            "qtd": qtd,
+            "tamanho": it.get("tamanho") or None,
+            "cor": it.get("cor") or None,
+            "preco": it.get("preco") if isinstance(it.get("preco"), (int, float)) else None,
+        })
+    return norm
+
+
+def format_pedido(itens) -> str:
+    norm = _normalize_itens(itens)
+    if not norm:
+        return "(nenhum item ainda)"
+    partes = []
+    for it in norm:
+        base = f"{it['qtd']}x {it['produto']}"
+        extras = []
+        if it.get("tamanho"):
+            extras.append(f"tam {it['tamanho']}")
+        if it.get("cor"):
+            extras.append(f"cor {it['cor']}")
+        if extras:
+            base += " (" + ", ".join(extras) + ")"
+        partes.append(base)
+    return "; ".join(partes)
+
+
+async def registrar_pedido(db, store_id: str, conversation_id: str,
+                           itens, forma_pagamento, forma_entrega) -> str:
+    norm = _normalize_itens(itens)
+    pag = (forma_pagamento or "").strip() or None
+    ent = (forma_entrega or "").strip() or None
+    await db.upsert_lead_order(
+        conversation_id=conversation_id, store_id=store_id,
+        pedido=norm, forma_pagamento=pag, forma_entrega=ent)
+    return (f"Pedido atualizado: {len(norm)} item(ns), "
+            f"pagamento {pag or 'não definido'}, entrega {ent or 'não definido'}.")

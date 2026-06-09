@@ -1,6 +1,6 @@
 # tests/test_tools.py
 import json
-from app.agent.tools import buscar_produtos
+from app.agent.tools import buscar_produtos, registrar_pedido, format_pedido
 
 
 def _doc(name, category, cores):
@@ -135,3 +135,39 @@ async def test_listar_categoria_includes_all_colors(db):
                                   cores=[f"c{i}" for i in range(10)])]
     segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
     assert "Cores: " + ", ".join(f"c{i}" for i in range(10)) in segmento
+
+
+def test_format_pedido_empty():
+    assert format_pedido([]) == "(nenhum item ainda)"
+
+
+def test_format_pedido_lists_items():
+    itens = [
+        {"produto": "Cropped rosa", "qtd": 2, "tamanho": "P", "cor": "rosa"},
+        {"produto": "Legging", "qtd": 1, "tamanho": "M"},
+    ]
+    out = format_pedido(itens)
+    assert out == "2x Cropped rosa (tam P, cor rosa); 1x Legging (tam M)"
+
+
+async def test_registrar_pedido_upserts_and_confirms(db):
+    itens = [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}]
+    out = await registrar_pedido(db, "store-1", "conv-1", itens, "Pix", "Sedex")
+    assert db.order_upserts[0]["conversation_id"] == "conv-1"
+    assert db.order_upserts[0]["store_id"] == "store-1"
+    assert db.order_upserts[0]["pedido"] == [
+        {"produto": "Cropped", "qtd": 2, "tamanho": "P", "cor": None, "preco": None}
+    ]
+    assert db.order_upserts[0]["forma_pagamento"] == "Pix"
+    assert db.order_upserts[0]["forma_entrega"] == "Sedex"
+    assert "Pix" in out and "Sedex" in out
+
+
+async def test_registrar_pedido_drops_invalid_items(db):
+    itens = [{"produto": "", "qtd": 1}, {"qtd": 3}, {"produto": "Top", "qtd": "x"}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    # "" e sem produto são descartados; qtd inválida vira 1
+    assert db.order_upserts[0]["pedido"] == [
+        {"produto": "Top", "qtd": 1, "tamanho": None, "cor": None, "preco": None}
+    ]
+    assert db.order_upserts[0]["forma_pagamento"] is None
