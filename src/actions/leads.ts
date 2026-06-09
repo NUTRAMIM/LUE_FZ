@@ -3,6 +3,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
 
+export interface PedidoItem {
+  produto: string
+  qtd: number
+  tamanho?: string | null
+  cor?: string | null
+  preco?: number | null
+}
+
 export interface LeadRow {
   id: string
   name: string
@@ -14,6 +22,9 @@ export interface LeadRow {
   email: string | null
   cep: string | null
   conversationId: string | null
+  pedido: PedidoItem[]
+  formaPagamento: string | null
+  formaEntrega: string | null
 }
 
 // Lista os leads da loja. A RLS de membership (leads_select_member, migration
@@ -27,7 +38,7 @@ export async function getLeads(): Promise<LeadRow[]> {
   const { data, error } = await supabase
     .from('leads')
     .select(
-      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name, email, cep, conversation_id',
+      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name, email, cep, conversation_id, pedido, forma_pagamento, forma_entrega',
     )
     .order('created_at', { ascending: false })
     .limit(200)
@@ -47,6 +58,9 @@ export async function getLeads(): Promise<LeadRow[]> {
     email: l.email ?? null,
     cep: l.cep ?? null,
     conversationId: l.conversation_id ?? null,
+    pedido: Array.isArray(l.pedido) ? (l.pedido as unknown as PedidoItem[]) : [],
+    formaPagamento: l.forma_pagamento ?? null,
+    formaEntrega: l.forma_entrega ?? null,
   }))
 }
 
