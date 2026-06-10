@@ -128,6 +128,11 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                     </div>
                   )}
                 </div>
+                {l.valorTotal != null && (
+                  <div className="shrink-0 text-[12.5px] font-semibold text-ink-900 px-2 py-1 rounded-lg bg-brand-50 ring-1 ring-brand-200">
+                    {formatBRL(l.valorTotal)}
+                  </div>
+                )}
                 <div className="text-[12.5px] font-mono text-ink-600 shrink-0">
                   {l.whatsapp}
                 </div>
