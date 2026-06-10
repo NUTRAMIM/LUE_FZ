@@ -217,3 +217,22 @@ async def test_registrar_pedido_valor_total_none_sem_preco(db):
     out = await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
     assert db.order_upserts[0]["valor_total"] is None
     assert "não definido" in out
+
+
+async def test_registrar_pedido_completa_preco_pelo_catalogo(db):
+    # agente não mandou preço; o catálogo preenche pelo nome exato (case-insensitive)
+    db.product_prices = {"cropped rosa": 50.0}
+    itens = [{"produto": "Cropped Rosa", "qtd": 2}]
+    out = await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] == 50.0
+    assert db.order_upserts[0]["valor_total"] == 100.0
+    assert "R$ 100,00" in out
+
+
+async def test_registrar_pedido_preco_do_agente_tem_prioridade(db):
+    # se o agente já mandou preço, não sobrescreve pelo catálogo
+    db.product_prices = {"cropped": 999.0}
+    itens = [{"produto": "Cropped", "qtd": 1, "preco": 49.9}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] == 49.9
+    assert db.order_upserts[0]["valor_total"] == 49.9

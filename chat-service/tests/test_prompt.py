@@ -59,6 +59,20 @@ def test_prompt_lead_name_empty_when_no_lead(store):
     assert "{{nome_lead}}" not in p
 
 
+def test_prompt_shows_captured_contact_fields(store):
+    lead = {"name": "Ana", "whatsapp": "5511988887777", "email": "ana@x.com"}
+    p = build_system_prompt(store, shown_list="", lead=lead)
+    assert "5511988887777" in p
+    assert "ana@x.com" in p
+    assert "não peça de novo" in p or "NUNCA peça de novo" in p
+
+
+def test_prompt_marks_uncaptured_contact_fields(store):
+    p = build_system_prompt(store, shown_list="", lead={"name": "Ana"})
+    # whatsapp/email ausentes ficam marcados como não capturados
+    assert "(não capturado)" in p
+
+
 def test_prompt_shows_current_order_state(store):
     lead = {"name": "Ana",
             "pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],

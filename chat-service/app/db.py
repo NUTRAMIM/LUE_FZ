@@ -82,6 +82,13 @@ class Database:
             "SELECT id::text, name FROM products WHERE user_id = $1", store_id)
         return [dict(r) for r in rows]
 
+    async def get_product_prices(self, store_id):
+        rows = await self._pool.fetch(
+            "SELECT name, price FROM products WHERE user_id = $1 AND price IS NOT NULL",
+            store_id)
+        return {r["name"].strip().lower(): float(r["price"])
+                for r in rows if r["name"]}
+
     async def get_products_by_category(self, store_id, category):
         rows = await self._pool.fetch(
             """SELECT id::text, name, price, brand, tamanhos, cores, image_urls

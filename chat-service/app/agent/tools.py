@@ -88,6 +88,16 @@ def _normalize_itens(itens) -> list:
     return norm
 
 
+async def _fill_missing_prices(db, store_id, norm) -> None:
+    # quando o agente não informa o preço, completa pelo nome exato do catálogo
+    if all(it.get("preco") is not None for it in norm):
+        return
+    precos = await db.get_product_prices(store_id)
+    for it in norm:
+        if it.get("preco") is None:
+            it["preco"] = precos.get(it["produto"].strip().lower())
+
+
 def calcular_valor_total(itens) -> float | None:
     norm = _normalize_itens(itens)
     precos = [it["preco"] * it["qtd"] for it in norm if it.get("preco") is not None]
@@ -117,6 +127,7 @@ def format_pedido(itens) -> str:
 async def registrar_pedido(db, store_id: str, conversation_id: str,
                            itens, forma_pagamento, forma_entrega) -> str:
     norm = _normalize_itens(itens)
+    await _fill_missing_prices(db, store_id, norm)
     pag = (forma_pagamento or "").strip() or None
     ent = (forma_entrega or "").strip() or None
     total = calcular_valor_total(norm)

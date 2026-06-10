@@ -23,6 +23,7 @@ class FakeDB:
         self.inserted_gaps = []
         self.inserted_mentions = []
         self.order_upserts = []
+        self.product_prices = {}           # dict(lower(name) -> price)
 
     async def get_user_messages_in_window(self, conversation_id):
         return list(self.window_messages)
@@ -45,6 +46,9 @@ class FakeDB:
 
     async def get_catalog(self, store_id):
         return list(self.catalog)
+
+    async def get_product_prices(self, store_id):
+        return dict(self.product_prices)
 
     async def get_products_by_category(self, store_id, category):
         return [p for p in self.category_products
