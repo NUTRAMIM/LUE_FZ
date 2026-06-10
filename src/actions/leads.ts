@@ -25,6 +25,7 @@ export interface LeadRow {
   pedido: PedidoItem[]
   formaPagamento: string | null
   formaEntrega: string | null
+  valorTotal: number | null
 }
 
 // Lista os leads da loja. A RLS de membership (leads_select_member, migration
@@ -38,7 +39,7 @@ export async function getLeads(): Promise<LeadRow[]> {
   const { data, error } = await supabase
     .from('leads')
     .select(
-      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name, email, cep, conversation_id, pedido, forma_pagamento, forma_entrega',
+      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name, email, cep, conversation_id, pedido, forma_pagamento, forma_entrega, valor_total',
     )
     .order('created_at', { ascending: false })
     .limit(200)
@@ -61,6 +62,7 @@ export async function getLeads(): Promise<LeadRow[]> {
     pedido: Array.isArray(l.pedido) ? (l.pedido as unknown as PedidoItem[]) : [],
     formaPagamento: l.forma_pagamento ?? null,
     formaEntrega: l.forma_entrega ?? null,
+    valorTotal: l.valor_total ?? null,
   }))
 }
 

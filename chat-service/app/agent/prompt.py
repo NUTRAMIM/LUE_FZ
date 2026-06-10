@@ -130,7 +130,7 @@ Itens: {pedido_atual}
 Forma de pagamento: {forma_pagamento_atual}
 Forma de entrega: {forma_entrega_atual}
 
-Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Para saber o que já foi pedido, leia os campos acima ou o último ESTADO ATUAL DO PEDIDO da conversa — nunca reconstrua de cabeça e nunca confie no que você mesmo disse antes, pois pode estar desatualizado.
+Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Em CADA item preencha o campo `preco` com o preço unitário da peça (o mesmo valor que apareceu no card do produto, em reais, ex.: 99.90) — o sistema soma `preco × qtd` sozinho para calcular o total, então NÃO calcule nem informe o total você mesmo. Se não souber o preço de uma peça, deixe `preco` vazio. Para saber o que já foi pedido, leia os campos acima ou o último ESTADO ATUAL DO PEDIDO da conversa — nunca reconstrua de cabeça e nunca confie no que você mesmo disse antes, pois pode estar desatualizado.
 
 # Lead (captura + fechamento)
 Quando o cliente demonstrar intenção de compra/reserva ("quero comprar", "vou levar", "reserva pra mim", "como faço pra fechar"):

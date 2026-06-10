@@ -28,6 +28,13 @@ function formatPedidoItem(item: {
   return extras.length ? `${base} (${extras.join(', ')})` : base
 }
 
+function formatBRL(valor: number): string {
+  return valor.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+}
+
 export function LeadsView({ leads }: { leads: LeadRow[] }) {
   const router = useRouter()
   const [tab, setTab] = useState<'novos' | 'contatados'>('novos')
@@ -241,6 +248,18 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                           </ul>
                         ) : (
                           <span className="text-ink-400">Nenhum item</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="eyebrow text-ink-500">VALOR TOTAL</div>
+                      <div className="text-[13px] mt-0.5">
+                        {l.valorTotal != null ? (
+                          <span className="text-ink-900 font-medium">
+                            {formatBRL(l.valorTotal)}
+                          </span>
+                        ) : (
+                          <span className="text-ink-400">Não informado</span>
                         )}
                       </div>
                     </div>

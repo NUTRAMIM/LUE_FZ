@@ -99,7 +99,7 @@ class Database:
     async def get_lead(self, conversation_id, store_id):
         r = await self._pool.fetchrow(
             """SELECT id::text, name, whatsapp, email, cep,
-                      pedido, forma_pagamento, forma_entrega
+                      pedido, forma_pagamento, forma_entrega, valor_total
                FROM leads
                WHERE conversation_id = $1 AND store_id = $2 LIMIT 1""",
             conversation_id, store_id)
@@ -134,18 +134,19 @@ class Database:
             conversation_id, store_id, interest_summary)
 
     async def upsert_lead_order(self, conversation_id, store_id, pedido,
-                                forma_pagamento, forma_entrega):
+                                forma_pagamento, forma_entrega, valor_total=None):
         await self._pool.execute(
             """INSERT INTO leads (conversation_id, store_id, pedido,
-                                  forma_pagamento, forma_entrega, source)
-               VALUES ($1, $2, $3::jsonb, $4, $5, 'chat')
+                                  forma_pagamento, forma_entrega, valor_total, source)
+               VALUES ($1, $2, $3::jsonb, $4, $5, $6, 'chat')
                ON CONFLICT (conversation_id) DO UPDATE SET
                  pedido = EXCLUDED.pedido,
                  forma_pagamento = COALESCE(EXCLUDED.forma_pagamento, leads.forma_pagamento),
                  forma_entrega   = COALESCE(EXCLUDED.forma_entrega, leads.forma_entrega),
+                 valor_total     = EXCLUDED.valor_total,
                  last_seen_at = now()""",
             conversation_id, store_id, json.dumps(pedido),
-            forma_pagamento, forma_entrega)
+            forma_pagamento, forma_entrega, valor_total)
 
     async def insert_knowledge_gap(self, store_id, conversation_id, question, tag):
         await self._pool.execute(

@@ -88,6 +88,14 @@ def _normalize_itens(itens) -> list:
     return norm
 
 
+def calcular_valor_total(itens) -> float | None:
+    norm = _normalize_itens(itens)
+    precos = [it["preco"] * it["qtd"] for it in norm if it.get("preco") is not None]
+    if not precos:
+        return None
+    return round(sum(precos), 2)
+
+
 def format_pedido(itens) -> str:
     norm = _normalize_itens(itens)
     if not norm:
@@ -111,10 +119,14 @@ async def registrar_pedido(db, store_id: str, conversation_id: str,
     norm = _normalize_itens(itens)
     pag = (forma_pagamento or "").strip() or None
     ent = (forma_entrega or "").strip() or None
+    total = calcular_valor_total(norm)
     await db.upsert_lead_order(
         conversation_id=conversation_id, store_id=store_id,
-        pedido=norm, forma_pagamento=pag, forma_entrega=ent)
+        pedido=norm, forma_pagamento=pag, forma_entrega=ent,
+        valor_total=total)
+    total_str = _format_price(total) if total is not None else "não definido"
     return (
         "Pedido atualizado. ESTADO ATUAL (fonte da verdade, responda com base "
         f"exatamente nisto): Itens: {format_pedido(norm)}. "
+        f"Total: {total_str}. "
         f"Pagamento: {pag or 'não definido'}. Entrega: {ent or 'não definido'}.")
