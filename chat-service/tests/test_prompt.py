@@ -1,5 +1,5 @@
 # tests/test_prompt.py
-from app.agent.prompt import build_system_prompt
+from app.agent.prompt import build_system_prompt, build_order_state_reminder
 
 
 def test_prompt_includes_store_fields(store):
@@ -97,3 +97,19 @@ def test_prompt_documents_registrar_pedido_and_payment_question(store):
     assert "REGISTRAR_PEDIDO" in p
     assert "forma de pagamento" in p
     assert "forma de entrega" in p
+
+
+def test_order_state_reminder_renders_current_state():
+    lead = {"pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],
+            "forma_pagamento": "Pix", "forma_entrega": "Sedex"}
+    r = build_order_state_reminder(lead)
+    assert "2x Cropped" in r
+    assert "Pix" in r
+    assert "Sedex" in r
+    assert "DESATUALIZADA" in r
+
+
+def test_order_state_reminder_empty_when_no_lead():
+    r = build_order_state_reminder(None)
+    assert "(nenhum item ainda)" in r
+    assert "(não definido)" in r

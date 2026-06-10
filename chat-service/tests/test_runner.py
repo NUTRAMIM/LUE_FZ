@@ -113,3 +113,22 @@ async def test_lead_passed_into_system_prompt(db, llm, store):
     system_msg = llm.chat_calls[0]["messages"][0]
     assert system_msg["role"] == "system"
     assert "Maria" in system_msg["content"]
+
+
+async def test_order_state_reminder_injected_right_before_user(db, llm, store):
+    llm.chat_responses = [{"content": "seu pedido é 1x Legging"}]
+    lead = {"pedido": [{"produto": "Legging", "qtd": 1, "tamanho": "M"}],
+            "forma_pagamento": "Pix", "forma_entrega": None}
+    await run_agent(
+        llm, db, store, shown_list="", chat_input="qual meu pedido?",
+        history=[{"role": "assistant", "content": "você pediu 3x Top rosa"}],
+        conversation_id="conv-1", lead=lead)
+    msgs = llm.chat_calls[0]["messages"]
+    # a última mensagem é a do cliente; a imediatamente anterior é o lembrete de estado
+    assert msgs[-1]["role"] == "user"
+    reminder = msgs[-2]
+    assert reminder["role"] == "system"
+    assert "1x Legging" in reminder["content"]
+    assert "Pix" in reminder["content"]
+    # o lembrete vem DEPOIS do histórico (vence a ancoragem na conversa)
+    assert msgs.index(reminder) > 1

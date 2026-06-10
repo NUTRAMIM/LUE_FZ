@@ -5,7 +5,7 @@ from app.config import settings
 
 log = logging.getLogger("chat-service")
 from app.models import AgentResult
-from app.agent.prompt import build_system_prompt
+from app.agent.prompt import build_system_prompt, build_order_state_reminder
 from app.agent.tools import buscar_produtos, listar_categoria, registrar_pedido
 
 TOOL_NAME = "BUSCAR_PRODUTOS"
@@ -96,6 +96,7 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
                     conversation_id=None, lead=None) -> AgentResult:
     messages = [{"role": "system", "content": build_system_prompt(store, shown_list, lead)}]
     messages.extend(history)
+    messages.append({"role": "system", "content": build_order_state_reminder(lead)})
     messages.append({"role": "user", "content": chat_input})
 
     product_segments: list[str] = []

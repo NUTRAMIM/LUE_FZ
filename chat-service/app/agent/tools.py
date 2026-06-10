@@ -114,5 +114,7 @@ async def registrar_pedido(db, store_id: str, conversation_id: str,
     await db.upsert_lead_order(
         conversation_id=conversation_id, store_id=store_id,
         pedido=norm, forma_pagamento=pag, forma_entrega=ent)
-    return (f"Pedido atualizado: {len(norm)} item(ns), "
-            f"pagamento {pag or 'não definido'}, entrega {ent or 'não definido'}.")
+    return (
+        "Pedido atualizado. ESTADO ATUAL (fonte da verdade, responda com base "
+        f"exatamente nisto): Itens: {format_pedido(norm)}. "
+        f"Pagamento: {pag or 'não definido'}. Entrega: {ent or 'não definido'}.")

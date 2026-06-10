@@ -161,6 +161,8 @@ async def test_registrar_pedido_upserts_and_confirms(db):
     assert db.order_upserts[0]["forma_pagamento"] == "Pix"
     assert db.order_upserts[0]["forma_entrega"] == "Sedex"
     assert "Pix" in out and "Sedex" in out
+    # o retorno traz o pedido itemizado completo (estado autoritativo no turno)
+    assert "2x Cropped" in out
 
 
 async def test_registrar_pedido_drops_invalid_items(db):

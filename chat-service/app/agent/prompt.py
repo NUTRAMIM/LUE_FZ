@@ -25,6 +25,20 @@ def _faq_block(store: StoreSettings) -> str:
     return f"\n\n# Perguntas frequentes\nUse estas respostas para dúvidas comuns. Não invente o que não estiver aqui:\n{corpo}"
 
 
+def build_order_state_reminder(lead=None) -> str:
+    lead = lead or {}
+    pedido = format_pedido(lead.get("pedido") or [])
+    pag = (lead.get("forma_pagamento") or "").strip() or "(não definido)"
+    ent = (lead.get("forma_entrega") or "").strip() or "(não definido)"
+    return (
+        "ESTADO ATUAL DO PEDIDO (fonte única da verdade). Qualquer coisa dita "
+        "antes nesta conversa sobre itens, pagamento ou entrega pode estar "
+        "DESATUALIZADA — ignore e responda SEMPRE com base nestes dados:\n"
+        f"Itens: {pedido}\n"
+        f"Forma de pagamento: {pag}\n"
+        f"Forma de entrega: {ent}")
+
+
 def build_system_prompt(store: StoreSettings, shown_list: str, lead=None) -> str:
     lead = lead or {}
     nome_lead = (lead.get("name") or "").strip()
@@ -116,7 +130,7 @@ Itens: {pedido_atual}
 Forma de pagamento: {forma_pagamento_atual}
 Forma de entrega: {forma_entrega_atual}
 
-Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Para saber o que já foi pedido, leia os campos acima — nunca reconstrua de cabeça.
+Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Para saber o que já foi pedido, leia os campos acima ou o último ESTADO ATUAL DO PEDIDO da conversa — nunca reconstrua de cabeça e nunca confie no que você mesmo disse antes, pois pode estar desatualizado.
 
 # Lead (captura + fechamento)
 Quando o cliente demonstrar intenção de compra/reserva ("quero comprar", "vou levar", "reserva pra mim", "como faço pra fechar"):
