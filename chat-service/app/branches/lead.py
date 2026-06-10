@@ -20,6 +20,26 @@ Normalize:
 - cep: formato 00000-000.
 - nome: capitalizado ("João", não "joão")."""
 
+LEAD_SYSTEM_ATACADO = """Você é um extrator de informações de um cliente REVENDEDOR (atacado). Analise a mensagem do cliente e identifique se ele compartilhou algum destes dados:
+
+- nome (próprio do cliente, ex: "meu nome é João", "sou a Maria")
+- telefone (WhatsApp ou fixo — qualquer número com >= 10 dígitos)
+- email
+- cep (formato 00000-000 ou 00000000)
+- carro_chefe (o produto/categoria que ele mais revende ou procura como principal, ex: "vestidos de festa", "moda fitness", "conjuntos")
+
+Retorne APENAS um JSON puro, sem markdown e sem texto adicional, no formato:
+{"nome": "João" ou null, "telefone": "5511999999999" ou null, "email": "x@y.com" ou null, "cep": "01310-100" ou null, "carro_chefe": "vestidos de festa" ou null}
+
+Se nada foi compartilhado, retorne:
+{"nome": null, "telefone": null, "email": null, "cep": null, "carro_chefe": null}
+
+Normalize:
+- telefone: somente dígitos, com código do país (Brasil = 55).
+- cep: formato 00000-000.
+- nome: capitalizado ("João", não "joão").
+- carro_chefe: texto curto, minúsculo, sem aspas."""
+
 INTEREST_SYSTEM = """Você sintetiza o interesse do cliente para o vendedor humano que vai assumir. Em 1-2 frases (até ~200 caracteres), descreva: categoria/tipo de produto procurado, atributos mencionados (cor, tamanho, ocasião, estilo, faixa de preço). Não invente nada. Se a conversa não revelou interesse claro, devolva exatamente null. Sem markdown, sem aspas, sem prefixar com 'O cliente...' — vá direto ao ponto."""
 
 
@@ -35,14 +55,20 @@ def _parse_lead(raw: str) -> dict:
     try:
         obj = json.loads(_strip_fences(raw))
         return {"nome": obj.get("nome") or None, "telefone": obj.get("telefone") or None,
-                "email": obj.get("email") or None, "cep": obj.get("cep") or None}
+                "email": obj.get("email") or None, "cep": obj.get("cep") or None,
+                "carro_chefe": obj.get("carro_chefe") or None}
     except Exception:
-        return {"nome": None, "telefone": None, "email": None, "cep": None}
+        return {"nome": None, "telefone": None, "email": None, "cep": None,
+                "carro_chefe": None}
 
 
 async def run_lead(db, llm, ctx) -> None:
+    atacado = bool(getattr(ctx.store, "min_order_enabled", False))
+    system = LEAD_SYSTEM_ATACADO if atacado else LEAD_SYSTEM
+    tipo_cliente = "revendedor" if atacado else "varejo"
+
     resp = await llm.chat(model=settings.chat_model,
-                          messages=[{"role": "system", "content": LEAD_SYSTEM},
+                          messages=[{"role": "system", "content": system},
                                     {"role": "user", "content": ctx.chat_input}])
     parsed = _parse_lead(resp.get("content", ""))
     if not any(parsed.values()):
@@ -55,12 +81,16 @@ async def run_lead(db, llm, ctx) -> None:
             name=parsed["nome"] or existing.get("name"),
             whatsapp=parsed["telefone"] or existing.get("whatsapp"),
             email=parsed["email"] or existing.get("email"),
-            cep=parsed["cep"] or existing.get("cep"))
+            cep=parsed["cep"] or existing.get("cep"),
+            tipo_cliente=tipo_cliente,
+            carro_chefe=parsed["carro_chefe"] or existing.get("carro_chefe"))
     else:
         await db.create_lead(
             conversation_id=ctx.conversation_id, store_id=ctx.store.id,
             name=parsed["nome"], whatsapp=parsed["telefone"],
-            email=parsed["email"], cep=parsed["cep"], source="chat")
+            email=parsed["email"], cep=parsed["cep"],
+            tipo_cliente=tipo_cliente, carro_chefe=parsed["carro_chefe"],
+            source="chat")
 
     await _summarize_interest(db, llm, ctx)
 

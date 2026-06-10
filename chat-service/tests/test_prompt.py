@@ -113,6 +113,50 @@ def test_prompt_documents_registrar_pedido_and_payment_question(store):
     assert "forma de entrega" in p
 
 
+def _atacado(store):
+    return dataclasses.replace(store, min_order_enabled=True)
+
+
+def test_prompt_varejo_has_no_reseller_persona(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    assert "revendedor" not in p.lower()
+
+
+def test_prompt_atacado_treats_customer_as_reseller(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "revendedor" in low
+    assert "atacado" in low
+
+
+def test_prompt_atacado_uses_wholesale_jargon(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "carro-chefe" in low
+    assert "margem" in low
+    assert "grade" in low
+    assert "pronta-entrega" in low
+
+
+def test_prompt_atacado_asks_qualification(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "revenda ou consumo" in low
+    assert "cidade" in low
+
+
+def test_prompt_asks_cep_in_both_modes(store):
+    varejo = build_system_prompt(store, shown_list="", lead=None)
+    atacado = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    assert "CEP" in varejo
+    assert "CEP" in atacado
+
+
+def test_prompt_shows_captured_cep(store):
+    p = build_system_prompt(store, shown_list="", lead={"name": "Ana", "cep": "01310-100"})
+    assert "01310-100" in p
+
+
 def test_order_state_reminder_renders_current_state():
     lead = {"pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],
             "forma_pagamento": "Pix", "forma_entrega": "Sedex"}

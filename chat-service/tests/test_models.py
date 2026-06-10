@@ -74,6 +74,16 @@ def test_store_settings_has_service_steps_and_faq_defaults():
     assert s.faq == []
 
 
+def test_store_settings_min_order_enabled_defaults_false():
+    s = StoreSettings(id="x", store_name="Loja")
+    assert s.min_order_enabled is False
+
+
+def test_store_settings_accepts_min_order_enabled():
+    s = StoreSettings(id="x", store_name="Loja", min_order_enabled=True)
+    assert s.min_order_enabled is True
+
+
 def test_store_settings_accepts_service_steps_and_faq():
     s = StoreSettings(
         id="x", store_name="Loja",

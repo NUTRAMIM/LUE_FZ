@@ -128,6 +128,11 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                     </div>
                   )}
                 </div>
+                {l.tipoCliente === 'revendedor' && (
+                  <div className="shrink-0 eyebrow text-brand-700 px-2 py-1 rounded-lg bg-brand-50 ring-1 ring-brand-200">
+                    REVENDEDOR
+                  </div>
+                )}
                 {l.valorTotal != null && (
                   <div className="shrink-0 text-[12.5px] font-semibold text-ink-900 px-2 py-1 rounded-lg bg-brand-50 ring-1 ring-brand-200">
                     {formatBRL(l.valorTotal)}
@@ -230,6 +235,28 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                         )}
                       </div>
                     </div>
+                    <div>
+                      <div className="eyebrow text-ink-500">TIPO DE CLIENTE</div>
+                      <div className="text-[13px] mt-0.5">
+                        <span className="text-ink-900">
+                          {l.tipoCliente === 'revendedor'
+                            ? 'Revendedor (atacado)'
+                            : 'Varejo'}
+                        </span>
+                      </div>
+                    </div>
+                    {l.tipoCliente === 'revendedor' && (
+                      <div>
+                        <div className="eyebrow text-ink-500">CARRO-CHEFE</div>
+                        <div className="text-[13px] mt-0.5">
+                          {l.carroChefe ? (
+                            <span className="text-ink-900">{l.carroChefe}</span>
+                          ) : (
+                            <span className="text-ink-400">Não informado</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div className="md:col-span-2">
                       <div className="eyebrow text-ink-500">RESUMO DE INTERESSE</div>
                       <div className="text-[13px] mt-0.5">
