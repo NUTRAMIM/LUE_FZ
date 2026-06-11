@@ -125,24 +125,42 @@ def test_prompt_varejo_has_no_reseller_persona(store):
 def test_prompt_atacado_treats_customer_as_reseller(store):
     p = build_system_prompt(_atacado(store), shown_list="", lead=None)
     low = p.lower()
-    assert "revendedor" in low
+    assert "revende" in low
     assert "atacado" in low
 
 
-def test_prompt_atacado_uses_wholesale_jargon(store):
+def test_prompt_atacado_is_humanized_without_jargon(store):
     p = build_system_prompt(_atacado(store), shown_list="", lead=None)
     low = p.lower()
     assert "carro-chefe" in low
-    assert "margem" in low
-    assert "grade" in low
-    assert "pronta-entrega" in low
+    # o prompt instrui a falar simples, sem termo técnico de atacado
+    assert "fale simples" in low
+    assert "palavra técnica" in low
 
 
-def test_prompt_atacado_asks_qualification(store):
+def test_prompt_atacado_does_not_ask_city_for_freight(store):
     p = build_system_prompt(_atacado(store), shown_list="", lead=None)
     low = p.lower()
-    assert "revenda ou consumo" in low
-    assert "cidade" in low
+    assert "cidade" not in low
+    assert "região" not in low
+
+
+def test_prompt_atacado_understands_short_carro_chefe(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "respond" in low and "curto" in low
+
+
+def test_prompt_atacado_shows_category_after_carro_chefe(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    assert "LISTAR_CATEGORIA" in p
+    assert "já mostre" in p.lower()
+
+
+def test_prompt_atacado_bans_filler_openers(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "não comece" in low
 
 
 def test_prompt_asks_cep_in_both_modes(store):
