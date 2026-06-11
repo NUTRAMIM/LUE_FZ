@@ -1,4 +1,4 @@
--- 039_documents_video_url.sql
+-- 041_documents_video_url.sql
 -- Estende a logica da 034: alem de image_urls, copia tambem video_url do
 -- produto casado (por lower(name)+user_id) para o metadata do documento, para
 -- que o BUSCAR_PRODUTOS consiga enviar o video no carrossel.

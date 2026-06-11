@@ -1,4 +1,4 @@
--- 038_product_videos_bucket.sql
+-- 040_product_videos_bucket.sql
 -- Bucket publico para videos de produtos. Leitura publica (front consome por
 -- URL direta). Escrita/update/delete restritos ao dono via primeiro segmento
 -- do path (<user_id>/<uuid>.ext). Limite 20 MB.
