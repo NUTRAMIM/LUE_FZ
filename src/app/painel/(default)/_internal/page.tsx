@@ -48,29 +48,9 @@ export default async function AdminInternalPage({
     admin.from('store_settings').select('id, store_name'),
   ])
 
-  // The typed Supabase client resolves column-subset selects as `never` for
-  // some tables in this project (see billing.ts, chat.ts for the same pattern).
-  // We cast via `unknown` to the concrete shapes we know the DB returns.
-  type UsageSelect = {
-    store_id: string
-    prompt_tokens: number
-    completion_tokens: number
-    total_tokens: number
-    calls: number
-  }
-  type StoreSelect = { id: string; store_name: string }
-
-  const rows: UsageRow[] = ((usageRes.data as unknown as UsageSelect[]) ?? []).map((r) => ({
-    store_id: r.store_id,
-    prompt_tokens: r.prompt_tokens,
-    completion_tokens: r.completion_tokens,
-    total_tokens: r.total_tokens,
-    calls: r.calls,
-  }))
+  const rows: UsageRow[] = usageRes.data ?? []
   const names = new Map(
-    ((storesRes.data as unknown as StoreSelect[]) ?? []).map(
-      (s) => [s.id, s.store_name ?? '—'] as const,
-    ),
+    (storesRes.data ?? []).map((s) => [s.id, s.store_name] as const),
   )
   const porLoja = aggregateByStore(rows, names)
   const totais = sumUsage(porLoja)

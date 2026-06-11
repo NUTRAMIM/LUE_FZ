@@ -37,6 +37,7 @@ export interface Database {
           calls?: number
           updated_at?: string
         }
+        Relationships: []
       }
       products: {
         Row: {
