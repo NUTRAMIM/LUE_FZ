@@ -195,11 +195,13 @@ def test_prompt_shows_captured_cep(store):
 
 def test_order_state_reminder_renders_current_state():
     lead = {"pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],
-            "forma_pagamento": "Pix", "forma_entrega": "Sedex"}
+            "forma_pagamento": "Pix", "forma_entrega": "Sedex",
+            "valor_total": 199.9}
     r = build_order_state_reminder(lead)
     assert "2x Cropped" in r
     assert "Pix" in r
     assert "Sedex" in r
+    assert "199,90" in r
     assert "DESATUALIZADA" in r
 
 
@@ -207,3 +209,9 @@ def test_order_state_reminder_empty_when_no_lead():
     r = build_order_state_reminder(None)
     assert "(nenhum item ainda)" in r
     assert "(não definido)" in r
+
+
+def test_order_state_reminder_total_placeholder_when_missing():
+    lead = {"pedido": [{"produto": "Cropped", "qtd": 1}]}
+    r = build_order_state_reminder(lead)
+    assert "Valor total: (não definido)" in r

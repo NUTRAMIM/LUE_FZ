@@ -30,13 +30,17 @@ def build_order_state_reminder(lead=None) -> str:
     pedido = format_pedido(lead.get("pedido") or [])
     pag = (lead.get("forma_pagamento") or "").strip() or "(não definido)"
     ent = (lead.get("forma_entrega") or "").strip() or "(não definido)"
+    total = lead.get("valor_total")
+    total_str = (f"R$ {float(total):.2f}".replace(".", ",")
+                 if total is not None else "(não definido)")
     return (
         "ESTADO ATUAL DO PEDIDO (fonte única da verdade). Qualquer coisa dita "
         "antes nesta conversa sobre itens, pagamento ou entrega pode estar "
         "DESATUALIZADA — ignore e responda SEMPRE com base nestes dados:\n"
         f"Itens: {pedido}\n"
         f"Forma de pagamento: {pag}\n"
-        f"Forma de entrega: {ent}")
+        f"Forma de entrega: {ent}\n"
+        f"Valor total: {total_str}")
 
 
 def build_system_prompt(store: StoreSettings, shown_list: str, lead=None) -> str:
