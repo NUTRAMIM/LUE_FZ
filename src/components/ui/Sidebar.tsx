@@ -188,6 +188,7 @@ function SidebarBody({
   pathname,
   onNavigate,
   isAdmin,
+  storeName,
 }: {
   role: StoreRole
   slug: string | null
@@ -195,6 +196,7 @@ function SidebarBody({
   pathname: string | null
   onNavigate?: () => void
   isAdmin: boolean
+  storeName: string | null
 }) {
   const isOwner = role !== 'agent'
   const isConversas = pathname?.startsWith('/conversas') ?? false
@@ -221,7 +223,7 @@ function SidebarBody({
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-semibold text-ink-900 truncate">
-            Floricultura Zaira
+            {storeName || 'Minha loja'}
           </div>
           <div className="eyebrow text-ink-500 mt-0.5">PLANO PRO</div>
         </div>
@@ -345,11 +347,13 @@ export function Sidebar({
   slug,
   appUrl,
   isAdmin,
+  storeName,
 }: {
   role: StoreRole
   slug: string | null
   appUrl: string
   isAdmin: boolean
+  storeName: string | null
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -418,6 +422,7 @@ export function Sidebar({
           appUrl={appUrl}
           pathname={pathname}
           isAdmin={isAdmin}
+          storeName={storeName}
         />
       </aside>
 
@@ -462,6 +467,7 @@ export function Sidebar({
               pathname={pathname}
               onNavigate={() => setMobileOpen(false)}
               isAdmin={isAdmin}
+              storeName={storeName}
             />
           </aside>
         </>

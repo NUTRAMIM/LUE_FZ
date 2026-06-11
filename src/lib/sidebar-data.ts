@@ -10,6 +10,7 @@ export interface SidebarData {
   slug: string | null
   appUrl: string
   isAdmin: boolean
+  storeName: string | null
 }
 
 // Dados que a Sidebar precisa pra montar — papel do usuário (filtra itens
@@ -20,24 +21,25 @@ export async function getSidebarData(): Promise<SidebarData> {
   const appUrl = getAppUrl()
   try {
     const user = await getAuthedUser()
-    if (!user) return { role: 'owner', slug: null, appUrl, isAdmin: false }
+    if (!user) return { role: 'owner', slug: null, appUrl, isAdmin: false, storeName: null }
 
     const supabase = await createClient()
     const [ctx, settingsRes] = await Promise.all([
       getStoreContext(),
       supabase
         .from('store_settings')
-        .select('chat_slug')
+        .select('chat_slug, store_name')
         .eq('id', user.id)
         .maybeSingle(),
     ])
 
     const role: StoreRole = ctx?.role ?? 'owner'
     const slug = settingsRes.data?.chat_slug ?? null
+    const storeName = settingsRes.data?.store_name ?? null
 
-    return { role, slug, appUrl, isAdmin: isPlatformAdmin(user) }
+    return { role, slug, appUrl, isAdmin: isPlatformAdmin(user), storeName }
   } catch (err) {
     console.error('getSidebarData error', err)
-    return { role: 'owner', slug: null, appUrl, isAdmin: false }
+    return { role: 'owner', slug: null, appUrl, isAdmin: false, storeName: null }
   }
 }
