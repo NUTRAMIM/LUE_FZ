@@ -5,9 +5,9 @@ import { Icon } from '@/components/painel/Icons'
 import type { ConversationRow, MessageRow } from '@/actions/conversas'
 import {
   parseSegments,
-  groupConsecutiveImages,
+  groupConsecutiveMedia,
 } from '@/app/chat/[slug]/components/message-segments'
-import { ImageCarousel } from '@/app/chat/[slug]/components/ImageCarousel'
+import { MediaCarousel } from '@/app/chat/[slug]/components/MediaCarousel'
 import { ImageLightbox } from '@/app/chat/[slug]/components/ImageLightbox'
 import { avatarColor, avatarInitials } from './formatters'
 import { RelativeTime } from './RelativeTime'
@@ -54,7 +54,7 @@ function MessageContent({
   onImageClick: (srcs: string[], index: number) => void
 }) {
   const { segments } = parseSegments(content)
-  const renderItems = groupConsecutiveImages(segments)
+  const renderItems = groupConsecutiveMedia(segments)
   return (
     <div className="flex flex-col gap-1.5">
       {renderItems.map((item, i) => {
@@ -82,12 +82,32 @@ function MessageContent({
             </button>
           )
         }
-        // imageGroup — carrossel
+        if (item.type === 'video') {
+          return (
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <video
+              key={`v-${i}-${item.src}`}
+              src={item.src}
+              muted
+              loop
+              playsInline
+              autoPlay
+              controls
+              className="rounded-md max-w-[260px] block my-1"
+            />
+          )
+        }
+        // mediaGroup — carrossel
+        const imageSrcs = item.items
+          .filter((m) => m.type === 'image')
+          .map((m) => m.src)
         return (
           <div key={`g-${i}`} className="max-w-[260px]">
-            <ImageCarousel
-              srcs={item.srcs}
-              onImageClick={(idx) => onImageClick(item.srcs, idx)}
+            <MediaCarousel
+              items={item.items}
+              onImageClick={(src) =>
+                onImageClick(imageSrcs, Math.max(0, imageSrcs.indexOf(src)))
+              }
             />
           </div>
         )

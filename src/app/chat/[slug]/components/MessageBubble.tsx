@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChatMessage } from '../ChatClient'
 import type { TickState } from './cycle'
-import { parseSegments, groupConsecutiveImages } from './message-segments'
-import { ImageCarousel } from './ImageCarousel'
+import { parseSegments, groupConsecutiveMedia } from './message-segments'
+import { MediaCarousel } from './MediaCarousel'
 import { ImageLightbox } from './ImageLightbox'
 import { useSwipeToReply } from './useSwipeToReply'
 import { replyPreviewText, truncate } from './reply-helpers'
@@ -78,13 +78,13 @@ export function MessageBubble({
   const content = message.content ?? ''
   const isTypedImage = message.message_type === 'image'
 
-  const { segments, hasImage } =
+  const { segments, hasMedia } =
     content && !isTypedImage
       ? parseSegments(content)
-      : { segments: content ? [{ type: 'text' as const, value: content }] : [], hasImage: false }
+      : { segments: content ? [{ type: 'text' as const, value: content }] : [], hasMedia: false }
 
-  const renderItems = groupConsecutiveImages(segments)
-  const bubbleMaxWidth = hasImage ? 'max-w-[88%] sm:max-w-sm' : 'max-w-[75%]'
+  const renderItems = groupConsecutiveMedia(segments)
+  const bubbleMaxWidth = hasMedia ? 'max-w-[88%] sm:max-w-sm' : 'max-w-[75%]'
 
   return (
     <div
@@ -207,11 +207,35 @@ export function MessageBubble({
                 </button>
               )
             }
+            if (item.type === 'video') {
+              return (
+                // eslint-disable-next-line jsx-a11y/media-has-caption
+                <video
+                  key={`v-${i}-${item.src}`}
+                  src={item.src}
+                  muted
+                  loop
+                  playsInline
+                  autoPlay
+                  controls
+                  className="my-1 max-h-80 w-full rounded object-cover"
+                />
+              )
+            }
+            // mediaGroup
+            const imageSrcs = item.items
+              .filter((m) => m.type === 'image')
+              .map((m) => m.src)
             return (
-              <ImageCarousel
+              <MediaCarousel
                 key={`g-${i}`}
-                srcs={item.srcs}
-                onImageClick={(index) => setLightbox({ srcs: item.srcs, index })}
+                items={item.items}
+                onImageClick={(src) =>
+                  setLightbox({
+                    srcs: imageSrcs,
+                    index: Math.max(0, imageSrcs.indexOf(src)),
+                  })
+                }
               />
             )
           })}
