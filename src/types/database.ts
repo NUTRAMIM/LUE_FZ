@@ -9,6 +9,35 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      ai_usage_daily: {
+        Row: {
+          store_id: string
+          day: string
+          prompt_tokens: number
+          completion_tokens: number
+          total_tokens: number
+          calls: number
+          updated_at: string
+        }
+        Insert: {
+          store_id: string
+          day: string
+          prompt_tokens?: number
+          completion_tokens?: number
+          total_tokens?: number
+          calls?: number
+          updated_at?: string
+        }
+        Update: {
+          store_id?: string
+          day?: string
+          prompt_tokens?: number
+          completion_tokens?: number
+          total_tokens?: number
+          calls?: number
+          updated_at?: string
+        }
+      }
       products: {
         Row: {
           id: string
