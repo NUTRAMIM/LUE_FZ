@@ -28,7 +28,7 @@ class Database:
         r = await self._pool.fetchrow(
             """SELECT id::text, store_name, categories, payment_methods,
                       delivery_methods, service_instructions, seller_phone,
-                      instagram_handle, service_steps, faq
+                      instagram_handle, service_steps, faq, min_order_enabled
                FROM store_settings WHERE id = $1""", store_id)
         if r is None:
             return None
@@ -44,7 +44,8 @@ class Database:
             seller_phone=r["seller_phone"] or "",
             instagram_handle=r["instagram_handle"] or "",
             service_steps=list(r["service_steps"] or []),
-            faq=list(faq or []))
+            faq=list(faq or []),
+            min_order_enabled=bool(r["min_order_enabled"]))
 
     async def get_shown_products(self, conversation_id):
         r = await self._pool.fetchrow(
@@ -82,6 +83,13 @@ class Database:
             "SELECT id::text, name FROM products WHERE user_id = $1", store_id)
         return [dict(r) for r in rows]
 
+    async def get_product_prices(self, store_id):
+        rows = await self._pool.fetch(
+            "SELECT name, price FROM products WHERE user_id = $1 AND price IS NOT NULL",
+            store_id)
+        return {r["name"].strip().lower(): float(r["price"])
+                for r in rows if r["name"]}
+
     async def get_products_by_category(self, store_id, category):
         rows = await self._pool.fetch(
             """SELECT id::text, name, price, brand, tamanhos, cores, image_urls
@@ -99,7 +107,8 @@ class Database:
     async def get_lead(self, conversation_id, store_id):
         r = await self._pool.fetchrow(
             """SELECT id::text, name, whatsapp, email, cep,
-                      pedido, forma_pagamento, forma_entrega
+                      tipo_cliente, carro_chefe,
+                      pedido, forma_pagamento, forma_entrega, valor_total
                FROM leads
                WHERE conversation_id = $1 AND store_id = $2 LIMIT 1""",
             conversation_id, store_id)
@@ -114,18 +123,22 @@ class Database:
         return d
 
     async def create_lead(self, conversation_id, store_id, name, whatsapp,
-                          email, cep, source="chat"):
+                          email, cep, tipo_cliente="varejo", carro_chefe=None,
+                          source="chat"):
         await self._pool.execute(
             """INSERT INTO leads (conversation_id, store_id, name, whatsapp,
-                                  email, cep, source)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
-            conversation_id, store_id, name, whatsapp, email, cep, source)
+                                  email, cep, tipo_cliente, carro_chefe, source)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
+            conversation_id, store_id, name, whatsapp, email, cep,
+            tipo_cliente, carro_chefe, source)
 
-    async def update_lead(self, lead_id, name, whatsapp, email, cep):
+    async def update_lead(self, lead_id, name, whatsapp, email, cep,
+                          tipo_cliente="varejo", carro_chefe=None):
         await self._pool.execute(
             """UPDATE leads SET name=$2, whatsapp=$3, email=$4, cep=$5,
+                                tipo_cliente=$6, carro_chefe=$7,
                                 last_seen_at=now() WHERE id=$1""",
-            lead_id, name, whatsapp, email, cep)
+            lead_id, name, whatsapp, email, cep, tipo_cliente, carro_chefe)
 
     async def update_lead_interest(self, conversation_id, store_id, interest_summary):
         await self._pool.execute(
@@ -134,18 +147,19 @@ class Database:
             conversation_id, store_id, interest_summary)
 
     async def upsert_lead_order(self, conversation_id, store_id, pedido,
-                                forma_pagamento, forma_entrega):
+                                forma_pagamento, forma_entrega, valor_total=None):
         await self._pool.execute(
             """INSERT INTO leads (conversation_id, store_id, pedido,
-                                  forma_pagamento, forma_entrega, source)
-               VALUES ($1, $2, $3::jsonb, $4, $5, 'chat')
+                                  forma_pagamento, forma_entrega, valor_total, source)
+               VALUES ($1, $2, $3::jsonb, $4, $5, $6, 'chat')
                ON CONFLICT (conversation_id) DO UPDATE SET
                  pedido = EXCLUDED.pedido,
                  forma_pagamento = COALESCE(EXCLUDED.forma_pagamento, leads.forma_pagamento),
                  forma_entrega   = COALESCE(EXCLUDED.forma_entrega, leads.forma_entrega),
+                 valor_total     = EXCLUDED.valor_total,
                  last_seen_at = now()""",
             conversation_id, store_id, json.dumps(pedido),
-            forma_pagamento, forma_entrega)
+            forma_pagamento, forma_entrega, valor_total)
 
     async def insert_knowledge_gap(self, store_id, conversation_id, question, tag):
         await self._pool.execute(

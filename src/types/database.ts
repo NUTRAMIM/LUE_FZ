@@ -214,6 +214,9 @@ export interface Database {
           pedido: Json
           forma_pagamento: string | null
           forma_entrega: string | null
+          valor_total: number | null
+          tipo_cliente: string
+          carro_chefe: string | null
         }
         Insert: {
           id?: string
@@ -235,6 +238,9 @@ export interface Database {
           pedido?: Json
           forma_pagamento?: string | null
           forma_entrega?: string | null
+          valor_total?: number | null
+          tipo_cliente?: string
+          carro_chefe?: string | null
         }
         Update: {
           id?: string
@@ -254,6 +260,9 @@ export interface Database {
           pedido?: Json
           forma_pagamento?: string | null
           forma_entrega?: string | null
+          valor_total?: number | null
+          tipo_cliente?: string
+          carro_chefe?: string | null
         }
         Relationships: []
       }

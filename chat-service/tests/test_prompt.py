@@ -59,6 +59,20 @@ def test_prompt_lead_name_empty_when_no_lead(store):
     assert "{{nome_lead}}" not in p
 
 
+def test_prompt_shows_captured_contact_fields(store):
+    lead = {"name": "Ana", "whatsapp": "5511988887777", "email": "ana@x.com"}
+    p = build_system_prompt(store, shown_list="", lead=lead)
+    assert "5511988887777" in p
+    assert "ana@x.com" in p
+    assert "não peça de novo" in p or "NUNCA peça de novo" in p
+
+
+def test_prompt_marks_uncaptured_contact_fields(store):
+    p = build_system_prompt(store, shown_list="", lead={"name": "Ana"})
+    # whatsapp/email ausentes ficam marcados como não capturados
+    assert "(não capturado)" in p
+
+
 def test_prompt_shows_current_order_state(store):
     lead = {"name": "Ana",
             "pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],
@@ -97,6 +111,68 @@ def test_prompt_documents_registrar_pedido_and_payment_question(store):
     assert "REGISTRAR_PEDIDO" in p
     assert "forma de pagamento" in p
     assert "forma de entrega" in p
+
+
+def _atacado(store):
+    return dataclasses.replace(store, min_order_enabled=True)
+
+
+def test_prompt_varejo_has_no_reseller_persona(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    assert "revendedor" not in p.lower()
+
+
+def test_prompt_atacado_treats_customer_as_reseller(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "revende" in low
+    assert "atacado" in low
+
+
+def test_prompt_atacado_is_humanized_without_jargon(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "carro-chefe" in low
+    # o prompt instrui a falar simples, sem termo técnico de atacado
+    assert "fale simples" in low
+    assert "palavra técnica" in low
+
+
+def test_prompt_atacado_does_not_ask_city_for_freight(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "cidade" not in low
+    assert "região" not in low
+
+
+def test_prompt_atacado_understands_short_carro_chefe(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "respond" in low and "curto" in low
+
+
+def test_prompt_atacado_shows_category_after_carro_chefe(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    assert "LISTAR_CATEGORIA" in p
+    assert "já mostre" in p.lower()
+
+
+def test_prompt_atacado_bans_filler_openers(store):
+    p = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    low = p.lower()
+    assert "não comece" in low
+
+
+def test_prompt_asks_cep_in_both_modes(store):
+    varejo = build_system_prompt(store, shown_list="", lead=None)
+    atacado = build_system_prompt(_atacado(store), shown_list="", lead=None)
+    assert "CEP" in varejo
+    assert "CEP" in atacado
+
+
+def test_prompt_shows_captured_cep(store):
+    p = build_system_prompt(store, shown_list="", lead={"name": "Ana", "cep": "01310-100"})
+    assert "01310-100" in p
 
 
 def test_order_state_reminder_renders_current_state():
