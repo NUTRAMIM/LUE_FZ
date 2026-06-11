@@ -18,7 +18,10 @@ const AUTH_PROTECTED = [
   '/planos',
 ] as const
 
-const BILLING_GATED = ['/painel', '/estoque', '/loja', '/conversas'] as const
+// Billing gate desligado: após login vai direto pro /painel sem exigir
+// assinatura ativa. Pra reativar a cobrança obrigatória, devolva as rotas:
+// ['/painel', '/estoque', '/loja', '/conversas'].
+const BILLING_GATED = [] as const
 
 function ensureVisitorCookie(request: NextRequest): NextResponse {
   const raw = request.cookies.get(COOKIE_NAME)?.value
