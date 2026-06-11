@@ -38,11 +38,12 @@ from app.agent.tools import listar_categoria
 
 
 def _prod(pid, name, category, price=89.9, tamanhos=None, cores=None,
-          image_urls=None, is_available=True):
+          image_urls=None, is_available=True, video_url=None):
     return {"id": pid, "name": name, "category": category, "price": price,
             "brand": None, "tamanhos": tamanhos if tamanhos is not None else ["P", "M"],
             "cores": cores if cores is not None else ["preto", "branco"],
             "image_urls": image_urls if image_urls is not None else [f"http://img/{pid}.jpg"],
+            "video_url": video_url,
             "is_available": is_available}
 
 
@@ -135,6 +136,24 @@ async def test_listar_categoria_includes_all_colors(db):
                                   cores=[f"c{i}" for i in range(10)])]
     segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
     assert "Cores: " + ", ".join(f"c{i}" for i in range(10)) in segmento
+
+
+async def test_listar_categoria_card_appends_video_after_images(db):
+    db.category_products = [_prod("p1", "Com Video", "Tops",
+                                  image_urls=["http://img/p1-a.jpg", "http://img/p1-b.jpg"],
+                                  video_url="http://vid/p1.mp4")]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert segmento == (
+        "[produto]\n"
+        "Com Video\n"
+        "http://img/p1-a.jpg\n"
+        "http://img/p1-b.jpg\n"
+        "http://vid/p1.mp4\n"
+        "R$ 89,90\n"
+        "Tamanhos: P, M\n"
+        "Cores: preto, branco\n"
+        "[/produto]"
+    )
 
 
 def test_format_pedido_empty():

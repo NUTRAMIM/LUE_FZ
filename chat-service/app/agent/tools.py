@@ -39,6 +39,9 @@ def _build_card(p: dict) -> str:
     urls = p.get("image_urls") or []
     # todas as URLs em linhas consecutivas -> o front agrupa num carrossel
     lines.extend(urls)
+    video = p.get("video_url")
+    if video:
+        lines.append(video)
     if p.get("price") is not None:
         lines.append(_format_price(p["price"]))
     tamanhos = p.get("tamanhos") or []

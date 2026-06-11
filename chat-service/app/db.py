@@ -84,7 +84,8 @@ class Database:
 
     async def get_products_by_category(self, store_id, category):
         rows = await self._pool.fetch(
-            """SELECT id::text, name, price, brand, tamanhos, cores, image_urls
+            """SELECT id::text, name, price, brand, tamanhos, cores, image_urls,
+                      video_url
                FROM products
                WHERE user_id = $1 AND lower(category) = lower($2)
                  AND is_available = true
