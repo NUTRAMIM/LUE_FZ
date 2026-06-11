@@ -23,6 +23,7 @@ class FakeDB:
         self.inserted_gaps = []
         self.inserted_mentions = []
         self.order_upserts = []
+        self.daily_usage = []
 
     async def get_user_messages_in_window(self, conversation_id):
         return list(self.window_messages)
@@ -90,6 +91,11 @@ class FakeDB:
         self.inserted_mentions.append(
             {"store_id": store_id, "conversation_id": conversation_id,
              "product_id": product_id, "source": source})
+
+    async def record_daily_usage(self, store_id, prompt, completion, total, calls):
+        self.daily_usage.append(
+            {"store_id": store_id, "prompt": prompt, "completion": completion,
+             "total": total, "calls": calls})
 
 
 class FakeLLM:

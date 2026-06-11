@@ -77,3 +77,10 @@ async def process_message(db, llm, payload) -> None:
     log.info("usage da conversa %s: prompt=%d completion=%d total=%d calls=%d",
              payload.id_conversa, usage.prompt, usage.completion,
              usage.total, usage.calls)
+    if usage.calls > 0:
+        try:
+            await db.record_daily_usage(
+                store.id, usage.prompt, usage.completion,
+                usage.total, usage.calls)
+        except Exception:
+            log.exception("falha ao gravar ai_usage_daily (ignorada)")

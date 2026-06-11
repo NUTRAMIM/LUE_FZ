@@ -156,3 +156,17 @@ class Database:
         await self._pool.execute(
             """INSERT INTO product_mentions (store_id, conversation_id, product_id, source)
                VALUES ($1, $2, $3, $4)""", store_id, conversation_id, product_id, source)
+
+    async def record_daily_usage(self, store_id, prompt, completion, total, calls):
+        await self._pool.execute(
+            """INSERT INTO ai_usage_daily (store_id, day, prompt_tokens,
+                   completion_tokens, total_tokens, calls, updated_at)
+               VALUES ($1, (now() at time zone 'America/Sao_Paulo')::date,
+                   $2, $3, $4, $5, now())
+               ON CONFLICT (store_id, day) DO UPDATE SET
+                   prompt_tokens     = ai_usage_daily.prompt_tokens     + EXCLUDED.prompt_tokens,
+                   completion_tokens = ai_usage_daily.completion_tokens + EXCLUDED.completion_tokens,
+                   total_tokens      = ai_usage_daily.total_tokens      + EXCLUDED.total_tokens,
+                   calls             = ai_usage_daily.calls             + EXCLUDED.calls,
+                   updated_at        = now()""",
+            store_id, prompt, completion, total, calls)
