@@ -31,15 +31,19 @@ export function VideoUploader({
 
     const fd = new FormData()
     fd.append('file', files[0])
-    const result = await uploadProductVideo(fd)
-    if (!result.success || !result.url) {
-      onError(result.error ?? 'Falha no upload do video.')
-    } else {
-      onChange(result.url)
+    try {
+      const result = await uploadProductVideo(fd)
+      if (!result.success || !result.url) {
+        onError(result.error ?? 'Falha no upload do video.')
+      } else {
+        onChange(result.url)
+      }
+    } catch {
+      onError('Falha no upload do video. Tente um arquivo menor (máx 20MB).')
+    } finally {
+      onUploadingChange(false)
+      if (inputRef.current) inputRef.current.value = ''
     }
-
-    onUploadingChange(false)
-    if (inputRef.current) inputRef.current.value = ''
   }
 
   return (
