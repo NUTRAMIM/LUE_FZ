@@ -34,6 +34,7 @@ export interface SaveProductInput {
   tamanhos: string
   cores: string
   image_urls: string
+  video_url: string
 }
 
 function sanitizeText(input: unknown, maxLength: number): string {
@@ -110,6 +111,7 @@ export async function saveProduct(data: SaveProductInput): Promise<SaveProductRe
   const tamanhos = sanitizeStringList(data.tamanhos, MAX_LIST_ITEM)
   const cores = sanitizeStringList(data.cores, MAX_LIST_ITEM)
   const imageUrls = sanitizeUrlList(data.image_urls)
+  const videoUrl = sanitizeOptionalUrl(data.video_url)
 
   if (!id) return { success: false, error: 'Produto invalido.' }
   if (!name) return { success: false, error: 'Nome do produto e obrigatorio.' }
@@ -145,6 +147,7 @@ export async function saveProduct(data: SaveProductInput): Promise<SaveProductRe
       tamanhos,
       cores,
       image_urls: imageUrls.length ? imageUrls : null,
+      video_url: videoUrl,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -264,6 +267,80 @@ export async function uploadProductImage(
   return { success: true, url: data.publicUrl }
 }
 
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024
+const ALLOWED_VIDEO_MIMES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+])
+const VIDEO_EXT_BY_MIME: Record<string, string> = {
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+}
+
+export interface UploadProductVideoResult {
+  success: boolean
+  url?: string
+  error?: string
+}
+
+export async function uploadProductVideo(
+  formData: FormData,
+): Promise<UploadProductVideoResult> {
+  const supabase = await createClient()
+
+  const user = await getAuthedUser()
+  if (!user) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+  if ((await getStoreRole()) !== 'owner') {
+    return { success: false, error: 'Apenas o dono da loja pode subir videos.' }
+  }
+
+  const file = formData.get('file')
+  if (!(file instanceof File)) {
+    return { success: false, error: 'Arquivo invalido.' }
+  }
+  if (!ALLOWED_VIDEO_MIMES.has(file.type)) {
+    return { success: false, error: 'Formato nao suportado. Use MP4, WEBM ou MOV.' }
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    return { success: false, error: 'Video maior que 20MB.' }
+  }
+
+  const ext = VIDEO_EXT_BY_MIME[file.type]
+  const path = `${user.id}/${crypto.randomUUID()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('product-videos')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (uploadError) {
+    console.error('uploadProductVideo error:', uploadError)
+    return { success: false, error: 'Erro ao subir video. Tente novamente.' }
+  }
+
+  const { data } = supabase.storage.from('product-videos').getPublicUrl(path)
+  if (!data?.publicUrl) {
+    return { success: false, error: 'Erro ao gerar URL publica.' }
+  }
+  return { success: true, url: data.publicUrl }
+}
+
+function sanitizeOptionalUrl(input: unknown): string | null {
+  if (typeof input !== 'string') return null
+  const trimmed = input.trim().slice(0, MAX_URL)
+  if (!trimmed) return null
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+    return trimmed
+  } catch {
+    return null
+  }
+}
+
 export interface CreateProductInput {
   name: string
   description: string
@@ -272,6 +349,7 @@ export interface CreateProductInput {
   tamanhos: string[]
   cores: string[]
   image_urls: string[]
+  video_url: string
 }
 
 export interface CreateProductResult {
@@ -311,6 +389,7 @@ export async function createProduct(
   const imageUrls = sanitizeUrlList(
     Array.isArray(data.image_urls) ? data.image_urls.join('\n') : '',
   )
+  const videoUrl = sanitizeOptionalUrl(data.video_url)
 
   if (!name) return { success: false, error: 'Nome do produto e obrigatorio.' }
   if (price === null || price < 0 || price > MAX_PRICE) {
@@ -335,6 +414,7 @@ export async function createProduct(
         tamanhos,
         cores,
         image_urls: imageUrls.length ? imageUrls : null,
+        video_url: videoUrl,
       })
       .select('id')
       .single()
