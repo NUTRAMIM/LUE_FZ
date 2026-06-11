@@ -25,6 +25,7 @@ export interface Database {
           stock_min: number
           is_available: boolean
           image_urls: string[] | null
+          video_url: string | null
           variants: Json
           cores: string[]
           tamanhos: string[]
@@ -46,6 +47,7 @@ export interface Database {
           stock_quantity?: number
           stock_min?: number
           image_urls?: string[] | null
+          video_url?: string | null
           variants?: Json
           cores?: string[]
           tamanhos?: string[]
@@ -67,6 +69,7 @@ export interface Database {
           stock_quantity?: number
           stock_min?: number
           image_urls?: string[] | null
+          video_url?: string | null
           variants?: Json
           cores?: string[]
           tamanhos?: string[]
