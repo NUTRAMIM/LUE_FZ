@@ -15,13 +15,21 @@ DECLARE
   vid  text;
 BEGIN
   IF NEW.metadata ? 'name' AND NEW.metadata ? 'user_id' THEN
-    SELECT to_jsonb(p.image_urls), p.video_url
-      INTO imgs, vid
+    SELECT to_jsonb(p.image_urls)
+      INTO imgs
       FROM products p
      WHERE lower(p.name) = lower(NEW.metadata->>'name')
        AND p.user_id::text = NEW.metadata->>'user_id'
        AND p.image_urls IS NOT NULL
        AND array_length(p.image_urls, 1) > 0
+     LIMIT 1;
+
+    SELECT p.video_url
+      INTO vid
+      FROM products p
+     WHERE lower(p.name) = lower(NEW.metadata->>'name')
+       AND p.user_id::text = NEW.metadata->>'user_id'
+       AND p.video_url IS NOT NULL
      LIMIT 1;
 
     IF imgs IS NOT NULL THEN
