@@ -133,10 +133,9 @@ export function GapsConhecimento({
             Perguntas sem resposta
           </h2>
         </div>
-        <button className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1">
-          Abrir todos · {pending}{' '}
-          <Icon name="arrow" className="w-3.5 h-3.5" />
-        </button>
+        <span className="text-[12.5px] font-semibold text-ink-500">
+          {pending} pendente{pending === 1 ? '' : 's'}
+        </span>
       </div>
 
       {items.length === 0 ? (
@@ -144,7 +143,7 @@ export function GapsConhecimento({
           Nenhuma pergunta sem resposta na última semana.
         </div>
       ) : (
-        <ul className="divide-y divide-ink-100 border-t border-ink-100 flex-1">
+        <ul className="divide-y divide-ink-100 border-t border-ink-100 flex-1 max-h-[360px] overflow-y-auto">
           {items.map((g) => (
             <li key={g.question} className="px-5 sm:px-6 py-3">
               <div className="flex items-center gap-3">
