@@ -1,95 +1,94 @@
 import { describe, it, expect } from 'vitest'
-import { parseSegments, groupConsecutiveImages } from '../message-segments'
+import { parseSegments, groupConsecutiveMedia } from '../message-segments'
 
 describe('parseSegments', () => {
-  it('retorna texto único quando não há URL de imagem', () => {
-    const { segments, hasImage } = parseSegments('olá tudo bem?')
-    expect(hasImage).toBe(false)
+  it('retorna texto único quando não há URL de mídia', () => {
+    const { segments, hasMedia } = parseSegments('olá tudo bem?')
+    expect(hasMedia).toBe(false)
     expect(segments).toEqual([{ type: 'text', value: 'olá tudo bem?' }])
   })
 
   it('detecta URL de imagem isolada', () => {
-    const { segments, hasImage } = parseSegments('https://x.com/a.jpg')
-    expect(hasImage).toBe(true)
+    const { segments, hasMedia } = parseSegments('https://x.com/a.jpg')
+    expect(hasMedia).toBe(true)
     expect(segments).toEqual([{ type: 'image', src: 'https://x.com/a.jpg' }])
   })
 
-  it('intercala texto e múltiplas imagens preservando ordem', () => {
-    const text = 'veja: https://x.com/a.jpg e https://x.com/b.png aqui'
-    const { segments } = parseSegments(text)
-    expect(segments).toEqual([
-      { type: 'text', value: 'veja:' },
-      { type: 'image', src: 'https://x.com/a.jpg' },
-      { type: 'text', value: 'e' },
-      { type: 'image', src: 'https://x.com/b.png' },
-      { type: 'text', value: 'aqui' },
+  it('detecta URL de vídeo (mp4/webm/mov)', () => {
+    const { segments, hasMedia } = parseSegments(
+      'a https://x.com/v.mp4 b https://x.com/w.webm c https://x.com/z.mov',
+    )
+    expect(hasMedia).toBe(true)
+    expect(segments.filter((s) => s.type === 'video')).toEqual([
+      { type: 'video', src: 'https://x.com/v.mp4' },
+      { type: 'video', src: 'https://x.com/w.webm' },
+      { type: 'video', src: 'https://x.com/z.mov' },
     ])
   })
 
-  it('reconhece jpg, jpeg, png, webp, gif com querystring', () => {
-    const { segments } = parseSegments(
-      'a https://x.com/1.jpg b https://x.com/2.jpeg?w=100 c https://x.com/3.PNG d https://x.com/4.webp e https://x.com/5.gif',
-    )
-    const images = segments.filter((s) => s.type === 'image')
-    expect(images).toHaveLength(5)
+  it('intercala imagens e vídeo preservando ordem', () => {
+    const text = 'https://x.com/a.jpg https://x.com/b.png https://x.com/v.mp4'
+    const { segments } = parseSegments(text)
+    expect(segments).toEqual([
+      { type: 'image', src: 'https://x.com/a.jpg' },
+      { type: 'image', src: 'https://x.com/b.png' },
+      { type: 'video', src: 'https://x.com/v.mp4' },
+    ])
+  })
+
+  it('reconhece vídeo com querystring', () => {
+    const { segments } = parseSegments('https://x.com/v.mp4?token=abc')
+    expect(segments).toEqual([{ type: 'video', src: 'https://x.com/v.mp4?token=abc' }])
   })
 })
 
-describe('groupConsecutiveImages', () => {
+describe('groupConsecutiveMedia', () => {
   it('mantém array vazio', () => {
-    expect(groupConsecutiveImages([])).toEqual([])
-  })
-
-  it('preserva texto isolado', () => {
-    expect(groupConsecutiveImages([{ type: 'text', value: 'oi' }])).toEqual([
-      { type: 'text', value: 'oi' },
-    ])
+    expect(groupConsecutiveMedia([])).toEqual([])
   })
 
   it('mantém uma imagem solitária como image', () => {
-    expect(
-      groupConsecutiveImages([{ type: 'image', src: 'a.jpg' }]),
-    ).toEqual([{ type: 'image', src: 'a.jpg' }])
+    expect(groupConsecutiveMedia([{ type: 'image', src: 'a.jpg' }])).toEqual([
+      { type: 'image', src: 'a.jpg' },
+    ])
   })
 
-  it('agrupa 2+ imagens consecutivas em imageGroup', () => {
+  it('mantém um vídeo solitário como video', () => {
+    expect(groupConsecutiveMedia([{ type: 'video', src: 'v.mp4' }])).toEqual([
+      { type: 'video', src: 'v.mp4' },
+    ])
+  })
+
+  it('agrupa imagens + vídeo final num mediaGroup, com vídeo por último', () => {
     expect(
-      groupConsecutiveImages([
+      groupConsecutiveMedia([
         { type: 'image', src: 'a.jpg' },
         { type: 'image', src: 'b.jpg' },
-        { type: 'image', src: 'c.jpg' },
+        { type: 'video', src: 'v.mp4' },
       ]),
-    ).toEqual([{ type: 'imageGroup', srcs: ['a.jpg', 'b.jpg', 'c.jpg'] }])
+    ).toEqual([
+      {
+        type: 'mediaGroup',
+        items: [
+          { type: 'image', src: 'a.jpg' },
+          { type: 'image', src: 'b.jpg' },
+          { type: 'video', src: 'v.mp4' },
+        ],
+      },
+    ])
   })
 
-  it('mantém imagens separadas por texto como isoladas', () => {
+  it('mídia separada por texto não agrupa', () => {
     expect(
-      groupConsecutiveImages([
+      groupConsecutiveMedia([
         { type: 'image', src: 'a.jpg' },
         { type: 'text', value: 'meio' },
-        { type: 'image', src: 'b.jpg' },
+        { type: 'video', src: 'v.mp4' },
       ]),
     ).toEqual([
       { type: 'image', src: 'a.jpg' },
       { type: 'text', value: 'meio' },
-      { type: 'image', src: 'b.jpg' },
-    ])
-  })
-
-  it('agrupa só onde há ≥2 consecutivas, mantendo isoladas como isoladas', () => {
-    expect(
-      groupConsecutiveImages([
-        { type: 'text', value: 'a' },
-        { type: 'image', src: '1.jpg' },
-        { type: 'image', src: '2.jpg' },
-        { type: 'text', value: 'b' },
-        { type: 'image', src: '3.jpg' },
-      ]),
-    ).toEqual([
-      { type: 'text', value: 'a' },
-      { type: 'imageGroup', srcs: ['1.jpg', '2.jpg'] },
-      { type: 'text', value: 'b' },
-      { type: 'image', src: '3.jpg' },
+      { type: 'video', src: 'v.mp4' },
     ])
   })
 })
