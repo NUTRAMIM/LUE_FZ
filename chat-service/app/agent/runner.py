@@ -140,11 +140,18 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
                     args.get("itens", []), args.get("forma_pagamento"),
                     args.get("forma_entrega"))
                 log.info("REGISTRAR_PEDIDO -> %s", content)
-            else:
-                content = await buscar_produtos(
+            elif call["name"] == TOOL_NAME:
+                segmento, ids, resumo = await buscar_produtos(
                     db, llm, store.id, args.get("consulta", ""), args.get("category", ""))
-                log.info("BUSCAR_PRODUTOS(consulta=%r, category=%r)",
-                         args.get("consulta", ""), args.get("category", ""))
+                if segmento:
+                    product_segments.append(segmento)
+                    shown_product_ids.extend(ids)
+                log.info("BUSCAR_PRODUTOS(consulta=%r, category=%r) -> %d cards",
+                         args.get("consulta", ""), args.get("category", ""),
+                         segmento.count("[produto]") if segmento else 0)
+                content = resumo
+            else:
+                content = ""
             messages.append({"role": "tool", "tool_call_id": call["id"],
                              "content": content})
 

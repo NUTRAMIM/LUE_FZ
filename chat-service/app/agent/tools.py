@@ -3,7 +3,7 @@ import json
 from app.config import settings
 
 
-async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str) -> str:
+async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str):
     embedding = await llm.embed(settings.embed_model, consulta)
     cat = (category or "").strip()
 
@@ -15,19 +15,29 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str) 
             embedding=embedding, match_count=settings.match_count,
             user_id=store_id, category=None)
 
-    produtos = []
+    if not rows:
+        return ("", [], "Não encontrei peças para esse pedido. Peça ao cliente "
+                "mais detalhes (cor, tamanho ou ocasião) numa frase curta.")
+
+    cards = []
     for r in rows:
-        m = r.get("metadata", {})
-        produtos.append({
+        m = r.get("metadata", {}) or {}
+        imgs = m.get("image_urls")
+        if not imgs:
+            single = m.get("image_url")
+            imgs = [single] if single else []
+        cards.append(_build_card({
             "name": m.get("name"),
             "price": m.get("price"),
-            "category": m.get("category"),
-            "brand": m.get("brand"),
             "tamanhos": m.get("tamanhos") or [],
-            "cores": ", ".join(m.get("cores") or []),
-            "image_url": m.get("image_url"),
-        })
-    return json.dumps(produtos, ensure_ascii=False)
+            "cores": m.get("cores") or [],
+            "image_urls": imgs,
+            "video_url": m.get("video_url"),
+        }))
+
+    resumo = (f"Mostrei {len(rows)} peças ao cliente. Escreva só uma frase curta "
+              "de fecho perguntando se quer ver tamanho ou cor de alguma.")
+    return ("\n".join(cards), [], resumo)
 
 
 def _format_price(price) -> str:

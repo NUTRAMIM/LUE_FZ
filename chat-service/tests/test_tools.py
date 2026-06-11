@@ -1,37 +1,58 @@
 # tests/test_tools.py
-import json
 from app.agent.tools import buscar_produtos, registrar_pedido, format_pedido
 
 
-def _doc(name, category, cores):
-    return {"content": name, "similarity": 0.5,
-            "metadata": {"name": name, "category": category, "price": 99.9,
-                         "tamanhos": ["P", "M"], "cores": cores,
-                         "brand": None, "image_url": f"http://x/{name}"}}
+def _doc(name, category, cores, image_urls=None, video_url=None):
+    md = {"name": name, "category": category, "price": 99.9,
+          "tamanhos": ["P", "M"], "cores": cores, "brand": None,
+          "image_url": f"http://x/{name}"}
+    if image_urls is not None:
+        md["image_urls"] = image_urls
+    if video_url is not None:
+        md["video_url"] = video_url
+    return {"content": name, "similarity": 0.5, "metadata": md}
 
 
-async def test_buscar_produtos_includes_all_colors(db, llm):
-    db.match_results = [_doc("Top Alça", "top", [f"c{i}" for i in range(10)])]
-    out = await buscar_produtos(db, llm, "store-1", "top floral", "top")
-    data = json.loads(out)
-    assert data[0]["name"] == "Top Alça"
-    assert data[0]["cores"] == ", ".join(f"c{i}" for i in range(10))
+async def test_buscar_produtos_builds_cards_with_video_last(db, llm):
+    db.match_results = [_doc("Top Alça", "top", ["rosa", "azul"],
+                             image_urls=["http://img/a.jpg", "http://img/b.jpg"],
+                             video_url="http://vid/a.mp4")]
+    segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "top floral", "top")
+    assert ids == []
+    assert segmento == (
+        "[produto]\n"
+        "Top Alça\n"
+        "http://img/a.jpg\n"
+        "http://img/b.jpg\n"
+        "http://vid/a.mp4\n"
+        "R$ 99,90\n"
+        "Tamanhos: P, M\n"
+        "Cores: rosa, azul\n"
+        "[/produto]"
+    )
+    assert "Mostrei 1" in resumo
     assert llm.embed_calls == ["top floral"]
 
 
-async def test_category_fallback_when_filtered_empty(db, llm):
-    # só existe doc na categoria "vestido"; busca por "top" volta vazio e refaz sem categoria
+async def test_buscar_produtos_falls_back_to_single_image_url(db, llm):
+    # quando o metadata não tem image_urls (plural), usa image_url (singular)
+    db.match_results = [_doc("Vestido", "vestido", ["azul"])]
+    segmento, _, _ = await buscar_produtos(db, llm, "store-1", "algo", "vestido")
+    assert "http://x/Vestido" in segmento
+
+
+async def test_buscar_produtos_category_fallback_when_filtered_empty(db, llm):
     db.match_results = [_doc("Vestido Longo", "vestido", ["azul"])]
-    out = await buscar_produtos(db, llm, "store-1", "algo", "top")
-    data = json.loads(out)
-    assert len(data) == 1
-    assert data[0]["name"] == "Vestido Longo"
+    segmento, _, _ = await buscar_produtos(db, llm, "store-1", "algo", "top")
+    assert "Vestido Longo" in segmento
 
 
-async def test_empty_result_returns_empty_list(db, llm):
+async def test_buscar_produtos_empty_returns_empty_segment(db, llm):
     db.match_results = []
-    out = await buscar_produtos(db, llm, "store-1", "x", "")
-    assert json.loads(out) == []
+    segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "x", "")
+    assert segmento == ""
+    assert ids == []
+    assert resumo
 
 
 from app.agent.tools import listar_categoria
