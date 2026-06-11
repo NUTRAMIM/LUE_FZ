@@ -27,6 +27,7 @@ interface FacilZapProduct {
   preco: number
   preco_promocional: number | null
   imagens: string[]
+  video: string | null
   controlar_estoque: boolean
   estoque: number | null
   variacoes: FacilZapVariation[] | null
@@ -213,7 +214,7 @@ export function extractVariantOptions(
 
 type ProductInsert = Database['public']['Tables']['products']['Insert']
 
-function mapProduct(p: FacilZapProduct, userId: string): ProductInsert {
+export function mapProduct(p: FacilZapProduct, userId: string): ProductInsert {
   const hasPromo =
     p.preco_promocional !== null &&
     p.preco_promocional !== undefined &&
@@ -244,6 +245,7 @@ function mapProduct(p: FacilZapProduct, userId: string): ProductInsert {
     brand: null,
     stock_quantity: p.estoque !== null && p.estoque !== undefined ? p.estoque : 0,
     image_urls: Array.isArray(p.imagens) ? p.imagens.slice(0, 3) : [],
+    video_url: p.video ?? null,
     cores: opts.cores,
     tamanhos: opts.tamanhos,
     attributes: JSON.parse(JSON.stringify({

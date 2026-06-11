@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractVariantOptions } from '../inventory/sync'
+import { extractVariantOptions, mapProduct } from '../inventory/sync'
 
 function v(nome: string) {
   return { id: nome, nome, preco: 0, preco_promocional: null }
@@ -82,5 +82,37 @@ describe('extractVariantOptions - typos (fuzzy conservador)', () => {
       v('Rose M'),
     ])
     expect(cores).toEqual(['Rosa', 'Rose'])
+  })
+})
+
+function baseProduct(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '123',
+    nome: 'Camiseta',
+    descricao: null,
+    categorias: [],
+    link: null,
+    preco: 50,
+    preco_promocional: null,
+    imagens: ['http://x/a.jpg'],
+    controlar_estoque: false,
+    estoque: 5,
+    variacoes: null,
+    ...overrides,
+  }
+}
+
+describe('mapProduct - video', () => {
+  it('mapeia o campo video para video_url', () => {
+    const mapped = mapProduct(
+      baseProduct({ video: 'http://x/v.mp4' }) as never,
+      'user-1',
+    )
+    expect(mapped.video_url).toBe('http://x/v.mp4')
+  })
+
+  it('usa null quando não há video', () => {
+    const mapped = mapProduct(baseProduct() as never, 'user-1')
+    expect(mapped.video_url).toBeNull()
   })
 })
