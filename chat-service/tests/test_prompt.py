@@ -163,6 +163,24 @@ def test_prompt_atacado_bans_filler_openers(store):
     assert "não comece" in low
 
 
+def test_prompt_instructs_continuity_not_restart(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    low = p.lower()
+    assert "não recomece" in low
+    assert "primeiro contato" in low
+
+
+def test_prompt_atacado_shows_captured_carro_chefe(store):
+    lead = {"name": "Bia", "carro_chefe": "calça"}
+    p = build_system_prompt(_atacado(store), shown_list="", lead=lead)
+    assert "Carro-chefe: calça" in p
+
+
+def test_prompt_varejo_omits_carro_chefe_line(store):
+    p = build_system_prompt(store, shown_list="", lead={"name": "Ana"})
+    assert "Carro-chefe:" not in p
+
+
 def test_prompt_asks_cep_in_both_modes(store):
     varejo = build_system_prompt(store, shown_list="", lead=None)
     atacado = build_system_prompt(_atacado(store), shown_list="", lead=None)

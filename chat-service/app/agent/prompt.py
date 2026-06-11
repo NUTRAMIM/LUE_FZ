@@ -52,8 +52,11 @@ def build_system_prompt(store: StoreSettings, shown_list: str, lead=None) -> str
     whatsapp_cap = whatsapp_lead or "(não capturado)"
     email_cap = email_lead or "(não capturado)"
     cep_cap = cep_lead or "(não capturado)"
+    carro_chefe_lead = (lead.get("carro_chefe") or "").strip()
 
     atacado = bool(store.min_order_enabled)
+    carro_chefe_linha = (
+        f"\nCarro-chefe: {carro_chefe_lead or '(não capturado)'}" if atacado else "")
     categorias = ", ".join(store.categories)
     pagamento = ", ".join(store.payment_methods)
     entrega = ", ".join(store.delivery_methods)
@@ -117,6 +120,8 @@ Siga estas etapas na ordem, com bom senso (pule o que não fizer sentido):
 4. Captura de lead + pagamento/entrega — quando houver intenção de compra (ver seção Lead).
 5. Encaminhamento — confirme os dados e avise que um vendedor assume.
 
+Estas etapas são um GUIA, não um script rígido — seja maleável. SEMPRE leia o histórico da conversa e os blocos de estado abaixo (pedido atual, dados já capturados) antes de responder. Se o cliente já foi atendido nesta conversa, já se identificou ou já tem pedido em andamento, NÃO recomece do zero nem cumprimente como se fosse a primeira vez: retome de onde a conversa parou, naturalmente, como quem já conhece o cliente. A saudação de abertura é só no PRIMEIRO contato da conversa. Se ele sumir e voltar depois de um tempo, continue de onde estava — sem reapresentar a loja e sem refazer perguntas que ele já respondeu.
+
 # Qual ferramenta de produto usar (decida ANTES de chamar qualquer uma)
 Para todo pedido de produto, decida pela intenção do cliente:
 - Quer VER uma categoria inteira, SEM filtro? Sinais: "me mostra os X", "quais X vocês têm", "quero ver todos os X", "todos os seus X", "me mostre suas X", "lista os X". → use LISTAR_CATEGORIA (mostra TODAS as peças da categoria, ignora o teto de 3).
@@ -171,7 +176,7 @@ Forma de entrega: {forma_entrega_atual}
 Nome: {nome_cap}
 WhatsApp: {whatsapp_cap}
 Email: {email_cap}
-CEP: {cep_cap}
+CEP: {cep_cap}{carro_chefe_linha}
 Qualquer campo marcado "(não capturado)" ainda não foi informado — só esses você pode pedir. NUNCA peça de novo um dado que já aparece preenchido aqui.
 
 Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Em CADA item preencha o campo `preco` com o preço unitário da peça (o mesmo valor que apareceu no card do produto, em reais, ex.: 99.90) — o sistema soma `preco × qtd` sozinho para calcular o total, então NÃO calcule nem informe o total você mesmo. Se não souber o preço de uma peça, deixe `preco` vazio. Para saber o que já foi pedido, leia os campos acima ou o último ESTADO ATUAL DO PEDIDO da conversa — nunca reconstrua de cabeça e nunca confie no que você mesmo disse antes, pois pode estar desatualizado.
