@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Drawer } from '@/components/ui/Drawer'
 import { Input, Label } from '@/components/ui/Input'
 import { ImageUploader, MAX_PRODUCT_IMAGES } from './ImageUploader'
+import { VideoUploader } from './VideoUploader'
 import type { Product } from '@/types/product'
 
 function formatOptionalNumber(value: unknown): string {
@@ -44,6 +45,7 @@ export function ProductEditDrawer({
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(false)
   const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export function ProductEditDrawer({
       setError(null)
       setLoading(false)
       setImageUrls([])
+      setVideoUrl(null)
       setUploading(false)
       return
     }
@@ -60,6 +63,7 @@ export function ProductEditDrawer({
     setError(null)
     setProduct(null)
     setImageUrls([])
+    setVideoUrl(null)
     getProductDetails(productId)
       .then((p) => {
         if (cancelled) return
@@ -68,6 +72,7 @@ export function ProductEditDrawer({
         } else {
           setProduct(p)
           setImageUrls(p.image_urls ?? [])
+          setVideoUrl(p.video_url ?? null)
         }
         setLoading(false)
       })
@@ -113,6 +118,7 @@ export function ProductEditDrawer({
       tamanhos: String(formData.get('tamanhos') ?? ''),
       cores: String(formData.get('cores') ?? ''),
       image_urls: imageUrls.join('\n'),
+      video_url: videoUrl ?? '',
     }
 
     startTransition(async () => {
@@ -239,6 +245,14 @@ export function ProductEditDrawer({
               uploading={uploading}
               onUploadingChange={setUploading}
               inputId="ep-images"
+            />
+            <VideoUploader
+              url={videoUrl}
+              onChange={setVideoUrl}
+              onError={setError}
+              uploading={uploading}
+              onUploadingChange={setUploading}
+              inputId="ep-video"
             />
             {imageUrls.length > MAX_PRODUCT_IMAGES && (
               <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">

@@ -12,6 +12,7 @@ import { Drawer } from '@/components/ui/Drawer'
 import { Input, Label } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
 import { ImageUploader } from './ImageUploader'
+import { VideoUploader } from './VideoUploader'
 
 const TAMANHOS_PREDEFINIDOS = [
   'PP','P','M','G','GG','XGG',
@@ -39,6 +40,7 @@ export function ProductCreateDrawer({
   const [tamanhos, setTamanhos] = useState<string[]>([])
   const [cores, setCores] = useState<string[]>([])
   const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
   function resetForm() {
@@ -49,6 +51,7 @@ export function ProductCreateDrawer({
     setTamanhos([])
     setCores([])
     setImageUrls([])
+    setVideoUrl(null)
     setError(null)
   }
 
@@ -69,6 +72,7 @@ export function ProductCreateDrawer({
       tamanhos,
       cores,
       image_urls: imageUrls,
+      video_url: videoUrl ?? '',
     }
     startTransition(async () => {
       const result = await createProduct(payload)
@@ -115,6 +119,15 @@ export function ProductCreateDrawer({
           uploading={uploading}
           onUploadingChange={setUploading}
           inputId="cp-images"
+        />
+
+        <VideoUploader
+          url={videoUrl}
+          onChange={setVideoUrl}
+          onError={setError}
+          uploading={uploading}
+          onUploadingChange={setUploading}
+          inputId="cp-video"
         />
 
         <div>
