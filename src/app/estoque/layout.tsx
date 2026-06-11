@@ -6,10 +6,10 @@ export default async function EstoqueLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { role, slug, appUrl } = await getSidebarData()
+  const { role, slug, appUrl, isAdmin } = await getSidebarData()
   return (
     <div className="flex flex-col md:flex-row md:h-screen bg-gray-100">
-      <Sidebar role={role} slug={slug} appUrl={appUrl} />
+      <Sidebar role={role} slug={slug} appUrl={appUrl} isAdmin={isAdmin} />
       <main className="flex-1 md:overflow-auto">
         {children}
       </main>

@@ -164,6 +164,11 @@ const I: Record<string, ReactNode> = {
       <path d="M17 19h4" />
     </g>
   ),
+  shield: (
+    <g>
+      <path d="M12 3 5 6v5c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6l-7-3Z" />
+    </g>
+  ),
   filter: (
     <g>
       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
