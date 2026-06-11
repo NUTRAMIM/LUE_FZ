@@ -199,11 +199,7 @@ export async function saveStoreSettings(data: {
 
   if (dbError) {
     console.error('store_settings upsert error:', dbError)
-    // DIAGNÓSTICO TEMPORÁRIO: expõe a causa real do Postgres para depurar prod.
-    const detail = [dbError.message, dbError.details, dbError.hint, dbError.code]
-      .filter(Boolean)
-      .join(' | ')
-    return { success: false, error: `Erro ao salvar: ${detail || 'desconhecido'}` }
+    return { success: false, error: 'Erro ao salvar configurações. Tente novamente.' }
   }
 
   return { success: true }
