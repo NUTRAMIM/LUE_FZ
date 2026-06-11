@@ -9,6 +9,36 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      ai_usage_daily: {
+        Row: {
+          store_id: string
+          day: string
+          prompt_tokens: number
+          completion_tokens: number
+          total_tokens: number
+          calls: number
+          updated_at: string
+        }
+        Insert: {
+          store_id: string
+          day: string
+          prompt_tokens?: number
+          completion_tokens?: number
+          total_tokens?: number
+          calls?: number
+          updated_at?: string
+        }
+        Update: {
+          store_id?: string
+          day?: string
+          prompt_tokens?: number
+          completion_tokens?: number
+          total_tokens?: number
+          calls?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           id: string
@@ -187,6 +217,9 @@ export interface Database {
           pedido: Json
           forma_pagamento: string | null
           forma_entrega: string | null
+          valor_total: number | null
+          tipo_cliente: string
+          carro_chefe: string | null
         }
         Insert: {
           id?: string
@@ -208,6 +241,9 @@ export interface Database {
           pedido?: Json
           forma_pagamento?: string | null
           forma_entrega?: string | null
+          valor_total?: number | null
+          tipo_cliente?: string
+          carro_chefe?: string | null
         }
         Update: {
           id?: string
@@ -227,6 +263,9 @@ export interface Database {
           pedido?: Json
           forma_pagamento?: string | null
           forma_entrega?: string | null
+          valor_total?: number | null
+          tipo_cliente?: string
+          carro_chefe?: string | null
         }
         Relationships: []
       }

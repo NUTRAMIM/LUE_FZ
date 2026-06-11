@@ -187,12 +187,14 @@ function SidebarBody({
   appUrl,
   pathname,
   onNavigate,
+  isAdmin,
 }: {
   role: StoreRole
   slug: string | null
   appUrl: string
   pathname: string | null
   onNavigate?: () => void
+  isAdmin: boolean
 }) {
   const isOwner = role !== 'agent'
   const isConversas = pathname?.startsWith('/conversas') ?? false
@@ -279,6 +281,20 @@ function SidebarBody({
                   </li>
                 )
               })}
+              {isAdmin && (
+                <li>
+                  <Link
+                    href="/painel/_internal"
+                    onClick={onNavigate}
+                    className={`nav-link ${
+                      pathname?.startsWith('/painel/_internal') ? 'active' : ''
+                    }`}
+                  >
+                    <Icon name="shield" className="w-[18px] h-[18px]" />
+                    Admin
+                  </Link>
+                </li>
+              )}
             </ul>
           </>
         )}
@@ -328,10 +344,12 @@ export function Sidebar({
   role,
   slug,
   appUrl,
+  isAdmin,
 }: {
   role: StoreRole
   slug: string | null
   appUrl: string
+  isAdmin: boolean
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -399,6 +417,7 @@ export function Sidebar({
           slug={slug}
           appUrl={appUrl}
           pathname={pathname}
+          isAdmin={isAdmin}
         />
       </aside>
 
@@ -442,6 +461,7 @@ export function Sidebar({
               appUrl={appUrl}
               pathname={pathname}
               onNavigate={() => setMobileOpen(false)}
+              isAdmin={isAdmin}
             />
           </aside>
         </>

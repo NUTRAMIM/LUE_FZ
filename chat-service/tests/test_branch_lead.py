@@ -42,3 +42,52 @@ async def test_updates_existing_lead(db, llm, store):
     assert db.updated_leads[0]["name"] == "João"
     # interest "null" → não atualiza
     assert db.interest_updates == []
+
+
+import dataclasses
+
+
+def _atacado(store):
+    return dataclasses.replace(store, min_order_enabled=True)
+
+
+async def test_varejo_marks_tipo_cliente_varejo(db, llm, store):
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "quero um top"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": "Maria", "telefone": "5511999998888",
+                                "email": None, "cep": None})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(store))
+    assert db.created_leads[0]["tipo_cliente"] == "varejo"
+    assert db.created_leads[0].get("carro_chefe") is None
+
+
+async def test_atacado_extracts_carro_chefe_and_marks_reseller(db, llm, store):
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "revendo vestido"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": "Bia", "telefone": "5511988887777",
+                                "email": None, "cep": None,
+                                "carro_chefe": "vestidos de festa"})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(_atacado(store)))
+    assert db.created_leads[0]["tipo_cliente"] == "revendedor"
+    assert db.created_leads[0]["carro_chefe"] == "vestidos de festa"
+
+
+async def test_atacado_update_preserves_existing_carro_chefe(db, llm, store):
+    db.lead = {"id": "lead-1", "name": "Bia", "whatsapp": None, "email": None,
+               "cep": None, "carro_chefe": "moda fitness"}
+    db.recent_messages = [{"role": "user", "content": "meu cep é 01310-100"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": None, "telefone": None, "email": None,
+                                "cep": "01310-100", "carro_chefe": None})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(_atacado(store)))
+    assert db.updated_leads[0]["carro_chefe"] == "moda fitness"
+    assert db.updated_leads[0]["tipo_cliente"] == "revendedor"
+    assert db.updated_leads[0]["cep"] == "01310-100"

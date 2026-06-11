@@ -41,6 +41,7 @@ class StoreSettings:
     instagram_handle: str = ""
     service_steps: list[str] = field(default_factory=list)
     faq: list[dict] = field(default_factory=list)
+    min_order_enabled: bool = False
 
 
 @dataclass

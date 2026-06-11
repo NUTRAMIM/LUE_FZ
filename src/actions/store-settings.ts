@@ -16,13 +16,6 @@ const MAX_URL_LENGTH = 500
 
 const INSTAGRAM_HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/
 
-const VALID_PAYMENT_METHODS = [
-  'PIX',
-  'Cartão de Crédito',
-  'Cartão de Débito',
-  'Boleto Bancário',
-]
-
 const VALID_SERVICE_STEPS = [
   'Saudação',
   'Identificar necessidade',
@@ -30,9 +23,7 @@ const VALID_SERVICE_STEPS = [
   'Capturar contato',
 ]
 
-const VALID_DELIVERY_METHODS = [
-  'Correios',
-]
+const MAX_METHOD_LENGTH = 100
 
 const VALID_MIN_ORDER_LOGIC = ['all', 'any'] as const
 type MinOrderLogic = typeof VALID_MIN_ORDER_LOGIC[number]
@@ -135,8 +126,8 @@ export async function saveStoreSettings(data: {
   const storeName = sanitizeText(data.store_name, MAX_STORE_NAME_LENGTH)
   const serviceInstructions = sanitizeText(data.service_instructions, MAX_INSTRUCTIONS_LENGTH)
   const serviceSteps = sanitizeArray(data.service_steps, VALID_SERVICE_STEPS)
-  const paymentMethods = sanitizeArray(data.payment_methods, VALID_PAYMENT_METHODS)
-  const deliveryMethods = sanitizeArray(data.delivery_methods, VALID_DELIVERY_METHODS)
+  const paymentMethods = sanitizeStringArray(data.payment_methods, MAX_METHOD_LENGTH)
+  const deliveryMethods = sanitizeStringArray(data.delivery_methods, MAX_METHOD_LENGTH)
   const categories = sanitizeStringArray(data.categories, 100)
   const sellerPhone = sanitizePhone(data.seller_phone)
   const instagramHandle = sanitizeInstagramHandle(data.instagram_handle)

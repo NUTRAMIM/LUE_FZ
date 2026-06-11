@@ -23,6 +23,8 @@ class FakeDB:
         self.inserted_gaps = []
         self.inserted_mentions = []
         self.order_upserts = []
+        self.daily_usage = []
+        self.product_prices = {}           # dict(lower(name) -> price)
 
     async def get_user_messages_in_window(self, conversation_id):
         return list(self.window_messages)
@@ -45,6 +47,9 @@ class FakeDB:
 
     async def get_catalog(self, store_id):
         return list(self.catalog)
+
+    async def get_product_prices(self, store_id):
+        return dict(self.product_prices)
 
     async def get_products_by_category(self, store_id, category):
         return [p for p in self.category_products
@@ -70,16 +75,16 @@ class FakeDB:
              "interest_summary": interest_summary})
 
     async def upsert_lead_order(self, conversation_id, store_id, pedido,
-                                forma_pagamento, forma_entrega):
+                                forma_pagamento, forma_entrega, valor_total=None):
         self.order_upserts.append(
             {"conversation_id": conversation_id, "store_id": store_id,
              "pedido": pedido, "forma_pagamento": forma_pagamento,
-             "forma_entrega": forma_entrega})
+             "forma_entrega": forma_entrega, "valor_total": valor_total})
         # reflete o estado para leituras subsequentes de get_lead no mesmo teste
         if self.lead is None:
             self.lead = {}
         self.lead.update({"pedido": pedido, "forma_pagamento": forma_pagamento,
-                          "forma_entrega": forma_entrega})
+                          "forma_entrega": forma_entrega, "valor_total": valor_total})
 
     async def insert_knowledge_gap(self, store_id, conversation_id, question, tag):
         self.inserted_gaps.append(
@@ -90,6 +95,11 @@ class FakeDB:
         self.inserted_mentions.append(
             {"store_id": store_id, "conversation_id": conversation_id,
              "product_id": product_id, "source": source})
+
+    async def record_daily_usage(self, store_id, prompt, completion, total, calls):
+        self.daily_usage.append(
+            {"store_id": store_id, "prompt": prompt, "completion": completion,
+             "total": total, "calls": calls})
 
 
 class FakeLLM:

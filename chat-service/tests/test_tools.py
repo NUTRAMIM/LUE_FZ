@@ -1,5 +1,6 @@
 # tests/test_tools.py
-from app.agent.tools import buscar_produtos, registrar_pedido, format_pedido
+from app.agent.tools import (buscar_produtos, registrar_pedido, format_pedido,
+                             calcular_valor_total)
 
 
 def _doc(name, category, cores, image_urls=None, video_url=None):
@@ -213,3 +214,65 @@ async def test_registrar_pedido_drops_invalid_items(db):
         {"produto": "Top", "qtd": 1, "tamanho": None, "cor": None, "preco": None}
     ]
     assert db.order_upserts[0]["forma_pagamento"] is None
+
+
+def test_calcular_valor_total_soma_preco_vezes_qtd():
+    itens = [
+        {"produto": "Cropped", "qtd": 2, "preco": 50.0},
+        {"produto": "Legging", "qtd": 1, "preco": 89.9},
+    ]
+    assert calcular_valor_total(itens) == 189.9
+
+
+def test_calcular_valor_total_ignora_itens_sem_preco():
+    itens = [
+        {"produto": "Cropped", "qtd": 2, "preco": 50.0},
+        {"produto": "Brinde", "qtd": 1},
+    ]
+    assert calcular_valor_total(itens) == 100.0
+
+
+def test_calcular_valor_total_none_quando_nenhum_preco():
+    itens = [{"produto": "Cropped", "qtd": 2}, {"produto": "Top", "qtd": 1}]
+    assert calcular_valor_total(itens) is None
+
+
+def test_calcular_valor_total_vazio():
+    assert calcular_valor_total([]) is None
+
+
+async def test_registrar_pedido_calcula_e_grava_valor_total(db):
+    itens = [
+        {"produto": "Cropped", "qtd": 2, "preco": 50.0},
+        {"produto": "Legging", "qtd": 1, "preco": 89.9},
+    ]
+    out = await registrar_pedido(db, "store-1", "conv-1", itens, "Pix", "Sedex")
+    assert db.order_upserts[0]["valor_total"] == 189.9
+    # total formatado em R$ aparece no retorno autoritativo
+    assert "R$ 189,90" in out
+
+
+async def test_registrar_pedido_valor_total_none_sem_preco(db):
+    itens = [{"produto": "Cropped", "qtd": 2}]
+    out = await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["valor_total"] is None
+    assert "não definido" in out
+
+
+async def test_registrar_pedido_completa_preco_pelo_catalogo(db):
+    # agente não mandou preço; o catálogo preenche pelo nome exato (case-insensitive)
+    db.product_prices = {"cropped rosa": 50.0}
+    itens = [{"produto": "Cropped Rosa", "qtd": 2}]
+    out = await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] == 50.0
+    assert db.order_upserts[0]["valor_total"] == 100.0
+    assert "R$ 100,00" in out
+
+
+async def test_registrar_pedido_preco_do_agente_tem_prioridade(db):
+    # se o agente já mandou preço, não sobrescreve pelo catálogo
+    db.product_prices = {"cropped": 999.0}
+    itens = [{"produto": "Cropped", "qtd": 1, "preco": 49.9}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] == 49.9
+    assert db.order_upserts[0]["valor_total"] == 49.9
