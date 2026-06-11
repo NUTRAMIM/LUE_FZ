@@ -66,7 +66,7 @@ function addCustomValue(
   return [...arr, finalValue]
 }
 
-function parseInstagramInput(value: string): string {
+function extractInstagramHandle(value: string): string {
   let v = value.trim()
   if (!v) return ''
   // Strip protocol and host so we can keep just the path segment
@@ -77,6 +77,12 @@ function parseInstagramInput(value: string): string {
   // Drop any leading @ (one or many) and filter to allowed chars
   v = v.replace(/^@+/, '').replace(/[^a-zA-Z0-9._]/g, '')
   return v.slice(0, 30)
+}
+
+// Normaliza handle ou link colado para a URL canônica do perfil.
+function normalizeInstagramUrl(value: string): string {
+  const handle = extractInstagramHandle(value)
+  return handle ? `https://instagram.com/${handle}` : ''
 }
 
 function formatPhone(value: string): string {
@@ -196,8 +202,8 @@ export function LojaForm({
   const [storeBio, setStoreBio] = useState(settings?.store_bio ?? '')
   const [logoUrl, setLogoUrl] = useState(settings?.logo_url ?? '')
   const [sellerPhone, setSellerPhone] = useState(settings?.seller_phone ?? '')
-  const [instagramHandle, setInstagramHandle] = useState(
-    settings?.instagram_handle ?? '',
+  const [instagramUrl, setInstagramUrl] = useState(
+    normalizeInstagramUrl(settings?.instagram_handle ?? ''),
   )
   const [serviceSteps, setServiceSteps] = useState<string[]>(
     settings?.service_steps ?? [],
@@ -300,7 +306,7 @@ export function LojaForm({
       delivery_methods: deliveryMethods,
       categories,
       seller_phone: sellerPhone,
-      instagram_handle: instagramHandle,
+      instagram_handle: normalizeInstagramUrl(instagramUrl),
       store_bio: storeBio,
       logo_url: logoUrl,
       min_order_enabled: minOrderEnabled,
@@ -500,28 +506,18 @@ export function LojaForm({
             <label className="label" htmlFor="ig">
               Instagram
             </label>
-            <div className="adorn">
-              <span className="pre">@</span>
-              <input
-                id="ig"
-                type="text"
-                maxLength={500}
-                value={instagramHandle}
-                onChange={(e) =>
-                  setInstagramHandle(parseInstagramInput(e.target.value))
-                }
-                onPaste={(e) => {
-                  const pasted = e.clipboardData.getData('text')
-                  if (/instagram\.com|^\s*@/i.test(pasted)) {
-                    e.preventDefault()
-                    setInstagramHandle(parseInstagramInput(pasted))
-                  }
-                }}
-                placeholder="floricultura.zaira ou cole o link"
-              />
-            </div>
+            <input
+              id="ig"
+              className="input"
+              type="text"
+              maxLength={500}
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+              onBlur={(e) => setInstagramUrl(normalizeInstagramUrl(e.target.value))}
+              placeholder="https://instagram.com/floricultura.zaira"
+            />
             <p className="helper mt-1.5">
-              Cole o link do perfil ou digite o @. Salvamos só o handle.
+              Cole o link do perfil ou digite o @. Salvamos o link completo.
             </p>
           </div>
         </div>

@@ -10,7 +10,7 @@ def test_prompt_includes_store_fields(store):
     assert "Entrega: correios" in p
     assert "Atendimento das 9h às 18h." in p
     assert "5511999999999" in p
-    assert "@lue" in p
+    assert "https://instagram.com/lue" in p
     assert "Top Alça" in p
 
 

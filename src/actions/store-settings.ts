@@ -14,8 +14,6 @@ const MAX_BIO_LENGTH = 280
 const MAX_HANDLE_LENGTH = 30
 const MAX_URL_LENGTH = 500
 
-const INSTAGRAM_HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/
-
 const VALID_SERVICE_STEPS = [
   'Saudação',
   'Identificar necessidade',
@@ -57,9 +55,19 @@ function sanitizePhone(input: unknown): string {
   return input.replace(/\D/g, '').slice(0, 11)
 }
 
-function sanitizeInstagramHandle(input: unknown): string {
+// Aceita handle (@usuario) ou link colado e devolve a URL canônica do perfil.
+function sanitizeInstagramUrl(input: unknown): string {
   if (typeof input !== 'string') return ''
-  return input.replace(/^@+/, '').trim().slice(0, MAX_HANDLE_LENGTH)
+  let v = input.trim()
+  if (!v) return ''
+  v = v.replace(/^https?:\/\//i, '').replace(/^www\./i, '')
+  v = v.replace(/^(?:m\.|mobile\.)?instagram\.com\//i, '')
+  v = v.split(/[/?#]/)[0]
+  const handle = v
+    .replace(/^@+/, '')
+    .replace(/[^a-zA-Z0-9._]/g, '')
+    .slice(0, MAX_HANDLE_LENGTH)
+  return handle ? `https://instagram.com/${handle}` : ''
 }
 
 function sanitizeMinOrderQuantity(input: unknown): number | null {
@@ -130,7 +138,7 @@ export async function saveStoreSettings(data: {
   const deliveryMethods = sanitizeStringArray(data.delivery_methods, MAX_METHOD_LENGTH)
   const categories = sanitizeStringArray(data.categories, 100)
   const sellerPhone = sanitizePhone(data.seller_phone)
-  const instagramHandle = sanitizeInstagramHandle(data.instagram_handle)
+  const instagramUrl = sanitizeInstagramUrl(data.instagram_handle)
   const storeBio = sanitizeText(data.store_bio, MAX_BIO_LENGTH)
   const logoUrl = sanitizeLogoUrl(data.logo_url)
   const minOrderEnabled = data.min_order_enabled === true
@@ -153,8 +161,10 @@ export async function saveStoreSettings(data: {
   if (sellerPhone && (sellerPhone.length < 10 || sellerPhone.length > 11)) {
     return { success: false, error: 'Número de WhatsApp deve ter 10 ou 11 dígitos (DDD + número).' }
   }
-  if (instagramHandle && !INSTAGRAM_HANDLE_REGEX.test(instagramHandle)) {
-    return { success: false, error: 'Instagram inválido. Use letras, números, ponto ou underline.' }
+  const instagramRaw =
+    typeof data.instagram_handle === 'string' ? data.instagram_handle.trim() : ''
+  if (instagramRaw && !instagramUrl) {
+    return { success: false, error: 'Instagram inválido. Cole o link do perfil (instagram.com/seu_usuario).' }
   }
   if (minOrderEnabled && minOrderQuantity === null && minOrderValue === null) {
     return { success: false, error: 'Informe quantidade mínima ou valor mínimo.' }
@@ -172,7 +182,7 @@ export async function saveStoreSettings(data: {
         delivery_methods: deliveryMethods,
         categories,
         seller_phone: sellerPhone,
-        instagram_handle: instagramHandle,
+        instagram_handle: instagramUrl,
         store_bio: storeBio,
         logo_url: logoUrl,
         min_order_enabled: minOrderEnabled,
