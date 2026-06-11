@@ -4,7 +4,11 @@ import { isPlatformAdmin } from '../platform-admin'
 const ORIGINAL = process.env.PLATFORM_ADMIN_EMAILS
 
 afterEach(() => {
-  process.env.PLATFORM_ADMIN_EMAILS = ORIGINAL
+  if (ORIGINAL === undefined) {
+    delete process.env.PLATFORM_ADMIN_EMAILS
+  } else {
+    process.env.PLATFORM_ADMIN_EMAILS = ORIGINAL
+  }
 })
 
 describe('isPlatformAdmin', () => {
