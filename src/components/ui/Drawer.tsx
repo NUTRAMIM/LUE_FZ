@@ -20,11 +20,16 @@ export function Drawer({
 }) {
   const panelRef = useRef<HTMLElement>(null)
 
+  // onClose muda de identidade a cada render do pai; mantê-lo num ref evita
+  // re-rodar o effect de foco a cada tecla (o que roubava o foco dos inputs).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!open) return
     const previouslyFocused = document.activeElement as HTMLElement | null
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -34,7 +39,7 @@ export function Drawer({
       document.body.style.overflow = ''
       previouslyFocused?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
 
   return (
     <div
