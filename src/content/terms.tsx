@@ -32,9 +32,8 @@ export function TermsDocument() {
       <Section id="t1" title="1. Identificação das partes">
         <p>
           Estes Termos de Uso e a Política de Privacidade regem o uso da
-          plataforma LUE FZ (&quot;Plataforma&quot;), de titularidade de
-          [RAZÃO SOCIAL], inscrita no CNPJ sob nº [CNPJ], com sede em
-          [CIDADE/UF] (&quot;LUE&quot;, &quot;nós&quot;). &quot;Usuário&quot; ou
+          plataforma LUE FZ (&quot;Plataforma&quot;, &quot;LUE&quot;,
+          &quot;nós&quot;). &quot;Usuário&quot; ou
           &quot;Lojista&quot; é a pessoa física ou jurídica que cria uma conta e
           contrata a Plataforma. &quot;Cliente final&quot; é o consumidor que
           interage com o atendimento da loja do Usuário.
@@ -101,7 +100,8 @@ export function TermsDocument() {
           consentimentos necessários junto aos seus Clientes finais. A LUE adota
           medidas de segurança razoáveis e trata os dados conforme as instruções
           do Usuário e esta Política. Solicitações de titulares e comunicação de
-          incidentes devem ser direcionadas a [DPO] / [EMAIL].
+          incidentes podem ser direcionadas pelos canais de atendimento da
+          Plataforma.
         </p>
       </Section>
 
@@ -161,9 +161,9 @@ export function TermsDocument() {
 
       <Section id="t14" title="14. Lei aplicável e foro">
         <p>
-          Estes Termos são regidos pelas leis brasileiras. Fica eleito o foro da
-          comarca de [CIDADE/UF] para dirimir quaisquer controvérsias, com
-          renúncia a qualquer outro, por mais privilegiado que seja.
+          Estes Termos são regidos pelas leis brasileiras. Fica eleito o foro do
+          domicílio do Usuário para dirimir quaisquer controvérsias decorrentes
+          destes Termos.
         </p>
       </Section>
 
