@@ -9,6 +9,33 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      terms_acceptances: {
+        Row: {
+          id: string
+          user_id: string
+          terms_version: string
+          accepted_at: string
+          ip: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          terms_version: string
+          accepted_at?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          terms_version?: string
+          accepted_at?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       ai_usage_daily: {
         Row: {
           store_id: string
