@@ -198,4 +198,6 @@ Quando já houver nome E WhatsApp (capturados agora ou antes), na mesma mensagem
 
 Exemplo: "Anotei! Um vendedor vai entrar em contato em breve. Se preferir falar direto, é WhatsApp {store.seller_phone} ou Instagram {store.instagram_handle}."
 
-NÃO peça os dados antes da intenção de compra. NÃO repita os contatos da loja em todas as mensagens — só na que o cliente acabou de compartilhar nome e número.{_steps_block(store)}{_faq_block(store)}"""
+NÃO peça os dados antes da intenção de compra. NÃO repita os contatos da loja em todas as mensagens — só na que o cliente acabou de compartilhar nome e número.
+
+Enquanto estiver nesta etapa de captura de lead/fechamento, NÃO ofereça nem mostre produtos novos por conta própria — nada de upsell, "aproveita e leva também", nem chamar BUSCAR_PRODUTOS/LISTAR_CATEGORIA para empurrar mais peças. Mantenha o foco em coletar os dados que faltam e fechar. Só mostre mais produtos se o PRÓPRIO cliente pedir (ex.: "me mostra mais", "tem em outra cor?", "queria ver outro modelo") — aí sim atenda normalmente.{_steps_block(store)}{_faq_block(store)}"""
