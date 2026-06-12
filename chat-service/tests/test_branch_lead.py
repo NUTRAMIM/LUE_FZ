@@ -44,6 +44,45 @@ async def test_updates_existing_lead(db, llm, store):
     assert db.interest_updates == []
 
 
+async def test_cep_misclassified_as_phone_is_corrected(db, llm, store):
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "meu cep é 01310100"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": None, "telefone": "01310100",
+                                "email": None, "cep": None})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(store, "meu cep é 01310100"))
+    assert db.created_leads[0]["whatsapp"] is None
+    assert db.created_leads[0]["cep"] == "01310-100"
+
+
+async def test_phone_misclassified_as_cep_is_corrected(db, llm, store):
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "meu zap 11999998888"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": "11999998888"})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(store, "meu zap 11999998888"))
+    assert db.created_leads[0]["cep"] is None
+    assert db.created_leads[0]["whatsapp"] == "5511999998888"
+
+
+async def test_phone_without_ddi_gets_55_and_cep_keeps_format(db, llm, store):
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "11988887777 e cep 22041-011"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": None, "telefone": "(11) 98888-7777",
+                                "email": None, "cep": "22041011"})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(store, "tel e cep"))
+    assert db.created_leads[0]["whatsapp"] == "5511988887777"
+    assert db.created_leads[0]["cep"] == "22041-011"
+
+
 import dataclasses
 
 

@@ -1,19 +1,34 @@
 # app/branches/lead.py
 import json
+import re
+
 from app.config import settings
+
+_DISAMBIGUA_NUMEROS = """REGRA CRÍTICA — telefone vs. cep (ambos são só números, NÃO confunda):
+- Conte os dígitos do número (ignore espaços, traços, parênteses, +).
+- 8 dígitos => é CEP, NUNCA telefone. Ex.: "01310100", "22041-011".
+- 10 a 13 dígitos => é TELEFONE/WhatsApp, NUNCA cep. Sempre tem DDD. Ex.: "11999998888", "(21) 98888-7777", "5511999998888".
+- Na dúvida, decida pela contagem de dígitos: 8 = cep; 10+ = telefone.
+- Um mesmo número nunca vai nos dois campos ao mesmo tempo."""
 
 LEAD_SYSTEM = """Você é um extrator de informações pessoais. Analise a mensagem do cliente e identifique se ele compartilhou algum destes dados:
 
 - nome (próprio do cliente, ex: "meu nome é João", "sou a Maria")
-- telefone (WhatsApp ou fixo — qualquer número com >= 10 dígitos)
+- telefone (WhatsApp ou fixo — 10 a 13 dígitos, sempre com DDD)
 - email
-- cep (formato 00000-000 ou 00000000)
+- cep (exatamente 8 dígitos, formato 00000-000)
+
+""" + _DISAMBIGUA_NUMEROS + """
 
 Retorne APENAS um JSON puro, sem markdown e sem texto adicional, no formato:
 {"nome": "João" ou null, "telefone": "5511999999999" ou null, "email": "x@y.com" ou null, "cep": "01310-100" ou null}
 
 Se nada foi compartilhado, retorne:
 {"nome": null, "telefone": null, "email": null, "cep": null}
+
+Exemplos:
+- "meu zap é (11) 99999-8888" => {"nome": null, "telefone": "5511999998888", "email": null, "cep": null}
+- "meu cep é 01310100" => {"nome": null, "telefone": null, "email": null, "cep": "01310-100"}
 
 Normalize:
 - telefone: somente dígitos, com código do país (Brasil = 55).
@@ -23,10 +38,12 @@ Normalize:
 LEAD_SYSTEM_ATACADO = """Você é um extrator de informações de um cliente REVENDEDOR (atacado). Analise a mensagem do cliente e identifique se ele compartilhou algum destes dados:
 
 - nome (próprio do cliente, ex: "meu nome é João", "sou a Maria")
-- telefone (WhatsApp ou fixo — qualquer número com >= 10 dígitos)
+- telefone (WhatsApp ou fixo — 10 a 13 dígitos, sempre com DDD)
 - email
-- cep (formato 00000-000 ou 00000000)
+- cep (exatamente 8 dígitos, formato 00000-000)
 - carro_chefe (o produto/categoria que ele mais revende ou procura como principal, ex: "vestidos de festa", "moda fitness", "conjuntos")
+
+""" + _DISAMBIGUA_NUMEROS + """
 
 Retorne APENAS um JSON puro, sem markdown e sem texto adicional, no formato:
 {"nome": "João" ou null, "telefone": "5511999999999" ou null, "email": "x@y.com" ou null, "cep": "01310-100" ou null, "carro_chefe": "vestidos de festa" ou null}
@@ -51,12 +68,30 @@ def _strip_fences(raw: str) -> str:
     return s.strip()
 
 
+def _normalize_numbers(parsed: dict) -> dict:
+    """Reclassifica telefone/cep pela contagem de dígitos. No Brasil as faixas
+    não se sobrepõem (cep = 8 dígitos; telefone = 10-13), então o tamanho
+    decide com segurança e corrige trocas feitas pelo LLM."""
+    telefone, cep = None, None
+    for valor in (parsed.get("telefone"), parsed.get("cep")):
+        d = re.sub(r"\D", "", valor or "")
+        if len(d) == 8:
+            cep = cep or d
+        elif 10 <= len(d) <= 13:
+            telefone = telefone or (("55" + d) if len(d) in (10, 11) else d)
+        # tamanhos fora dessas faixas: descarta (provável ruído)
+    parsed["telefone"] = telefone
+    parsed["cep"] = f"{cep[:5]}-{cep[5:]}" if cep else None
+    return parsed
+
+
 def _parse_lead(raw: str) -> dict:
     try:
         obj = json.loads(_strip_fences(raw))
-        return {"nome": obj.get("nome") or None, "telefone": obj.get("telefone") or None,
-                "email": obj.get("email") or None, "cep": obj.get("cep") or None,
-                "carro_chefe": obj.get("carro_chefe") or None}
+        parsed = {"nome": obj.get("nome") or None, "telefone": obj.get("telefone") or None,
+                  "email": obj.get("email") or None, "cep": obj.get("cep") or None,
+                  "carro_chefe": obj.get("carro_chefe") or None}
+        return _normalize_numbers(parsed)
     except Exception:
         return {"nome": None, "telefone": None, "email": None, "cep": None,
                 "carro_chefe": None}
