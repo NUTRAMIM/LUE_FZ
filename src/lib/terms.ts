@@ -3,7 +3,7 @@ import type { Database } from '@/types/database'
 
 // Versao corrente dos termos. Bump desta string re-dispara o gate de aceite
 // para todos os owners (eles precisam aceitar a nova versao).
-export const TERMS_VERSION = '2026-06-11'
+export const TERMS_VERSION = '2026-06-12'
 
 export type StoreRole = 'owner' | 'agent'
 
