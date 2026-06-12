@@ -24,17 +24,10 @@ const AUTH_PROTECTED = [
 // ['/painel', '/estoque', '/loja', '/conversas'].
 const BILLING_GATED = [] as const
 
-// Rotas que exigem aceite dos Termos para o owner. /termos fica de fora
-// (precisa abrir para aceitar) e nao entra aqui para nao criar loop.
-const TERMS_GATED = [
-  '/painel',
-  '/estoque',
-  '/loja',
-  '/conversas',
-  '/equipe',
-  '/leads',
-  '/planos',
-] as const
+// Gate de Termos desligado por enquanto: nenhuma rota exige aceite, então o
+// owner nunca e mandado para /termos. Pra reativar, devolva as rotas:
+// ['/painel', '/estoque', '/loja', '/conversas', '/equipe', '/leads', '/planos'].
+const TERMS_GATED = [] as const
 
 function ensureVisitorCookie(request: NextRequest): NextResponse {
   const raw = request.cookies.get(COOKIE_NAME)?.value

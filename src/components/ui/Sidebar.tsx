@@ -337,12 +337,6 @@ function SidebarBody({
             </button>
           </form>
         </div>
-        <a
-          href="/termos"
-          className="mt-1 block px-2 text-[11px] text-ink-400 hover:text-ink-600"
-        >
-          Termos de Uso e Privacidade
-        </a>
       </div>
     </>
   )
