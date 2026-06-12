@@ -7,6 +7,7 @@ import {
   generateVisitorId,
   parseVisitorCookieValue,
 } from '@/lib/visitor-cookie'
+import { hasAcceptedCurrentTerms } from '@/lib/terms'
 
 const AUTH_PROTECTED = [
   '/painel',
@@ -22,6 +23,18 @@ const AUTH_PROTECTED = [
 // assinatura ativa. Pra reativar a cobrança obrigatória, devolva as rotas:
 // ['/painel', '/estoque', '/loja', '/conversas'].
 const BILLING_GATED = [] as const
+
+// Rotas que exigem aceite dos Termos para o owner. /termos fica de fora
+// (precisa abrir para aceitar) e nao entra aqui para nao criar loop.
+const TERMS_GATED = [
+  '/painel',
+  '/estoque',
+  '/loja',
+  '/conversas',
+  '/equipe',
+  '/leads',
+  '/planos',
+] as const
 
 function ensureVisitorCookie(request: NextRequest): NextResponse {
   const raw = request.cookies.get(COOKIE_NAME)?.value
@@ -96,6 +109,18 @@ export async function middleware(request: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
     membership = data ?? null
+  }
+
+  // Gate de Termos de Uso: owner sem aceite da versao atual vai para /termos.
+  // Agents nunca sao gateados (a relacao contratual e do dono).
+  const needsTerms = TERMS_GATED.some((p) => pathname.startsWith(p))
+  if (user && needsTerms && membership?.role !== 'agent') {
+    const accepted = await hasAcceptedCurrentTerms(supabase, user.id)
+    if (!accepted) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/termos'
+      return NextResponse.redirect(url)
+    }
   }
 
   // Agents (vendedores) nunca passam pelo billing gate: a assinatura é do dono
