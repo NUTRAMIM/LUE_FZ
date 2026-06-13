@@ -164,7 +164,10 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-[11px] text-slate-400">
-          © 2026 LUE · Acesso seguro
+          © 2026 LUE · Acesso seguro ·{' '}
+          <a href="/termos" className="underline hover:text-slate-600">
+            Termos e Privacidade
+          </a>
         </p>
       </div>
     </div>
