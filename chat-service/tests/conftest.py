@@ -110,8 +110,10 @@ class FakeLLM:
         self.chat_calls = []
         self.embed_calls = []
 
-    async def chat(self, model, messages, tools=None, max_tokens=None):
-        self.chat_calls.append({"messages": messages, "tools": tools})
+    async def chat(self, model, messages, tools=None, max_tokens=None,
+                   reasoning_effort=None):
+        self.chat_calls.append({"model": model, "messages": messages, "tools": tools,
+                                "reasoning_effort": reasoning_effort})
         record_usage("chat", 10, 4, 14)
         return self.chat_responses.pop(0)
 

@@ -74,8 +74,8 @@ async def process_message(db, llm, payload) -> None:
         if isinstance(r, Exception):
             log.error("branch failed: %r", r)
 
-    log.info("usage da conversa %s: prompt=%d completion=%d total=%d calls=%d",
-             payload.id_conversa, usage.prompt, usage.completion,
+    log.info("usage da conversa %s: prompt=%d (cached=%d) completion=%d total=%d calls=%d",
+             payload.id_conversa, usage.prompt, usage.cached, usage.completion,
              usage.total, usage.calls)
     if usage.calls > 0:
         try:

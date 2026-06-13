@@ -5,7 +5,9 @@ from app.config import settings
 
 log = logging.getLogger("chat-service")
 from app.models import AgentResult
-from app.agent.prompt import build_system_prompt, build_order_state_reminder
+from app.agent.prompt import (
+    STATIC_PROMPT, build_store_prompt, build_dynamic_state,
+    build_order_state_reminder)
 from app.agent.tools import buscar_produtos, listar_categoria, registrar_pedido
 
 TOOL_NAME = "BUSCAR_PRODUTOS"
@@ -94,8 +96,17 @@ TOOL_SCHEMA_REGISTRAR = {
 
 async def run_agent(llm, db, store, shown_list, chat_input, history,
                     conversation_id=None, lead=None) -> AgentResult:
-    messages = [{"role": "system", "content": build_system_prompt(store, shown_list, lead)}]
+    # Ordem pensada pra maximizar prompt caching da OpenAI (casa por prefixo
+    # exato): primeiro o bloco GLOBAL-estático (idêntico p/ toda loja), depois o
+    # POR-LOJA-estático (estável na conversa), só então o histórico e o estado
+    # dinâmico do turno. Assim o prefixo estável é reaproveitado entre os rounds
+    # de tool da mesma mensagem e entre mensagens da conversa.
+    messages = [
+        {"role": "system", "content": STATIC_PROMPT},
+        {"role": "system", "content": build_store_prompt(store)},
+    ]
     messages.extend(history)
+    messages.append({"role": "system", "content": build_dynamic_state(store, shown_list, lead)})
     messages.append({"role": "system", "content": build_order_state_reminder(lead)})
     messages.append({"role": "user", "content": chat_input})
 
@@ -105,7 +116,8 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
     for _ in range(MAX_TOOL_ROUNDS):
         resp = await llm.chat(
             model=settings.chat_model, messages=messages,
-            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_REGISTRAR], max_tokens=4096)
+            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_REGISTRAR], max_tokens=4096,
+            reasoning_effort=settings.foreground_reasoning_effort)
 
         tool_calls = resp.get("tool_calls")
         if not tool_calls:
@@ -155,7 +167,8 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
             messages.append({"role": "tool", "tool_call_id": call["id"],
                              "content": content})
 
-    resp = await llm.chat(model=settings.chat_model, messages=messages, max_tokens=4096)
+    resp = await llm.chat(model=settings.chat_model, messages=messages, max_tokens=4096,
+                          reasoning_effort=settings.foreground_reasoning_effort)
     return AgentResult(
         text=resp.get("content") or "",
         product_segments=product_segments,

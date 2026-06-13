@@ -31,9 +31,10 @@ Se is_gap=false, devolva question="" e tag="OUTROS"."""
 
 async def run_gap(db, llm, ctx) -> None:
     resp = await llm.chat(
-        model=settings.chat_model,
+        model=settings.background_model,
         messages=[{"role": "system", "content": _gap_system(ctx.store)},
-                  {"role": "user", "content": f"Mensagem do cliente: {ctx.chat_input}"}])
+                  {"role": "user", "content": f"Mensagem do cliente: {ctx.chat_input}"}],
+        reasoning_effort="minimal")
     try:
         obj = json.loads(_strip_fences(resp.get("content", "")))
         is_gap = bool(obj.get("is_gap"))
