@@ -200,8 +200,10 @@ async def test_lead_state_reaches_agent_prompt(db, llm, store):
         {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
     ]
     await process_message(db, llm, _payload(mid="msg-1"))
-    system_msg = llm.chat_calls[0]["messages"][0]
-    assert system_msg["role"] == "system"
-    assert "Joana" in system_msg["content"]
-    assert "1x Cropped" in system_msg["content"]
-    assert "Pix" in system_msg["content"]
+    # estado do lead/pedido vai nos blocos de sistema (dinâmico + lembrete),
+    # não necessariamente na 1ª mensagem (que é o prefixo estático cacheável).
+    system_blob = "\n".join(m["content"] for m in llm.chat_calls[0]["messages"]
+                            if m["role"] == "system")
+    assert "Joana" in system_blob
+    assert "1x Cropped" in system_blob
+    assert "Pix" in system_blob

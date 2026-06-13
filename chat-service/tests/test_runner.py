@@ -110,9 +110,39 @@ async def test_lead_passed_into_system_prompt(db, llm, store):
     llm.chat_responses = [{"content": "oi Maria!"}]
     await run_agent(llm, db, store, shown_list="", chat_input="oi", history=[],
                     conversation_id="conv-1", lead={"name": "Maria"})
-    system_msg = llm.chat_calls[0]["messages"][0]
-    assert system_msg["role"] == "system"
-    assert "Maria" in system_msg["content"]
+    # o lead vai no bloco dinâmico (não no prefixo estático cacheável), então
+    # procura em qualquer mensagem de sistema, não necessariamente na primeira.
+    system_contents = [m["content"] for m in llm.chat_calls[0]["messages"]
+                       if m["role"] == "system"]
+    assert any("Maria" in c for c in system_contents)
+
+
+async def test_static_prompt_is_first_and_has_no_tenant_data(db, llm, store):
+    # o prefixo cacheável (1ª mensagem) deve ser 100% global — sem dado de loja
+    # nem de lead, senão o cache quebra e há risco multi-tenant.
+    llm.chat_responses = [{"content": "oi"}]
+    await run_agent(llm, db, store, shown_list="Top Alça", chat_input="oi", history=[],
+                    conversation_id="conv-1", lead={"name": "Maria", "whatsapp": "5511988887777"})
+    first = llm.chat_calls[0]["messages"][0]
+    assert first["role"] == "system"
+    assert "Maria" not in first["content"]
+    assert "5511988887777" not in first["content"]
+    assert store.store_name not in first["content"]
+    assert "Top Alça" not in first["content"]
+
+
+async def test_foreground_reasoning_effort_default_is_none(db, llm, store):
+    llm.chat_responses = [{"content": "oi"}]
+    await run_agent(llm, db, store, shown_list="", chat_input="oi", history=[])
+    assert llm.chat_calls[0]["reasoning_effort"] is None
+
+
+async def test_foreground_reasoning_effort_is_passed_when_set(db, llm, store, monkeypatch):
+    from app.agent import runner
+    monkeypatch.setattr(runner.settings, "foreground_reasoning_effort", "low")
+    llm.chat_responses = [{"content": "oi"}]
+    await run_agent(llm, db, store, shown_list="", chat_input="oi", history=[])
+    assert llm.chat_calls[0]["reasoning_effort"] == "low"
 
 
 async def test_order_state_reminder_injected_right_before_user(db, llm, store):

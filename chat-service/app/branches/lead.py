@@ -102,7 +102,10 @@ async def run_lead(db, llm, ctx) -> None:
     system = LEAD_SYSTEM_ATACADO if atacado else LEAD_SYSTEM
     tipo_cliente = "revendedor" if atacado else "varejo"
 
-    resp = await llm.chat(model=settings.chat_model,
+    # Extração de lead fica no lead_model (default gpt-5-mini). NÃO usar
+    # reasoning_effort=minimal aqui: contar dígitos de telefone/cep se beneficia
+    # de algum raciocínio, e falso-negativo de telefone = lead perdido.
+    resp = await llm.chat(model=settings.lead_model,
                           messages=[{"role": "system", "content": system},
                                     {"role": "user", "content": ctx.chat_input}])
     parsed = _parse_lead(resp.get("content", ""))
@@ -134,9 +137,10 @@ async def _summarize_interest(db, llm, ctx) -> None:
     recent = await db.get_recent_messages(ctx.conversation_id, limit=10)
     text = "\n".join(f"{m['role']}: {m['content']}" for m in recent)
     resp = await llm.chat(
-        model=settings.chat_model,
+        model=settings.background_model,
         messages=[{"role": "system", "content": INTEREST_SYSTEM},
-                  {"role": "user", "content": f"Mensagens recentes (mais recente primeiro):\n{text}"}])
+                  {"role": "user", "content": f"Mensagens recentes (mais recente primeiro):\n{text}"}],
+        reasoning_effort="minimal")
     cleaned = _strip_fences(resp.get("content", ""))
     if not cleaned or cleaned.lower() == "null":
         return
