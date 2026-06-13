@@ -14,7 +14,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [view, setView] = useState<'login' | 'signup' | 'forgot'>('login')
+  const isSignUp = view === 'signup'
+  const isForgot = view === 'forgot'
   const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -24,6 +26,22 @@ export default function LoginPage() {
 
     const supabase = createClient()
 
+    if (isForgot) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
+      })
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        return
+      }
+      setSuccessMsg(
+        'Se existir uma conta com esse e-mail, enviamos um link para redefinir a senha.',
+      )
+      setLoading(false)
+      return
+    }
+
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) {
@@ -32,7 +50,7 @@ export default function LoginPage() {
         return
       }
       setError(null)
-      setIsSignUp(false)
+      setView('login')
       setPassword('')
       setSuccessMsg('Conta criada! Verifique seu email para confirmar, depois faça login.')
       setLoading(false)
@@ -74,12 +92,18 @@ export default function LoginPage() {
 
         <div className="rounded-2xl border border-white bg-white/95 p-8 shadow-[0_30px_80px_-30px_rgba(76,29,149,0.35)] backdrop-blur-sm">
           <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-            {isSignUp ? 'Criar uma conta' : 'Bem-vindo de volta'}
+            {isForgot
+              ? 'Recuperar senha'
+              : isSignUp
+                ? 'Criar uma conta'
+                : 'Bem-vindo de volta'}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            {isSignUp
-              ? 'Configure seu acesso em 30 segundos.'
-              : 'Entre para acessar seu painel.'}
+            {isForgot
+              ? 'Enviaremos um link para redefinir sua senha.'
+              : isSignUp
+                ? 'Configure seu acesso em 30 segundos.'
+                : 'Entre para acessar seu painel.'}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-7 space-y-5">
@@ -99,22 +123,37 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <IconLock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="••••••••"
-                  className="pl-10"
-                />
+            {!isForgot && (
+              <div>
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <IconLock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    className="pl-10"
+                  />
+                </div>
+                <div className="mt-1.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView('forgot')
+                      setError(null)
+                      setSuccessMsg(null)
+                    }}
+                    className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                  >
+                    Esqueceu a senha?
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <div className="bg-danger-soft border-danger/20 rounded-lg border px-3 py-2">
@@ -129,10 +168,20 @@ export default function LoginPage() {
 
             <Button type="submit" disabled={loading} size="lg" className="w-full">
               {loading ? (
-                isSignUp ? 'Criando...' : 'Entrando...'
+                isForgot ? (
+                  'Enviando...'
+                ) : isSignUp ? (
+                  'Criando...'
+                ) : (
+                  'Entrando...'
+                )
               ) : (
                 <>
-                  {isSignUp ? 'Criar conta' : 'Entrar'}
+                  {isForgot
+                    ? 'Enviar link'
+                    : isSignUp
+                      ? 'Criar conta'
+                      : 'Entrar'}
                   <IconArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -148,18 +197,37 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-5 text-center text-sm text-slate-600">
-            {isSignUp ? 'Já tem uma conta?' : 'Ainda não tem conta?'}{' '}
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp)
-                setError(null)
-                setSuccessMsg(null)
-              }}
-              className="font-semibold text-brand-600 transition-colors hover:text-brand-700"
-            >
-              {isSignUp ? 'Fazer login' : 'Criar conta'}
-            </button>
+            {isForgot ? (
+              <>
+                Lembrou a senha?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('login')
+                    setError(null)
+                    setSuccessMsg(null)
+                  }}
+                  className="font-semibold text-brand-600 transition-colors hover:text-brand-700"
+                >
+                  Voltar ao login
+                </button>
+              </>
+            ) : (
+              <>
+                {isSignUp ? 'Já tem uma conta?' : 'Ainda não tem conta?'}{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView(isSignUp ? 'login' : 'signup')
+                    setError(null)
+                    setSuccessMsg(null)
+                  }}
+                  className="font-semibold text-brand-600 transition-colors hover:text-brand-700"
+                >
+                  {isSignUp ? 'Fazer login' : 'Criar conta'}
+                </button>
+              </>
+            )}
           </p>
         </div>
 
