@@ -18,7 +18,7 @@ export async function acceptTerms() {
   const userAgent = h.get('user-agent') ?? null
 
   const supabase = await createClient()
-  await supabase.from('terms_acceptances').upsert(
+  const { error } = await supabase.from('terms_acceptances').upsert(
     {
       user_id: user.id,
       terms_version: TERMS_VERSION,
@@ -27,6 +27,19 @@ export async function acceptTerms() {
     },
     { onConflict: 'user_id,terms_version', ignoreDuplicates: true },
   )
+
+  // Aceite e prova de consentimento: nao pode falhar em silencio. Se o upsert
+  // falhar, o middleware mandaria o owner de volta pro /termos num loop. Logamos
+  // e devolvemos o erro pra tela em vez de fingir que deu certo.
+  if (error) {
+    console.error('acceptTerms upsert error', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    })
+    redirect(`/termos?erro=${encodeURIComponent(error.message)}`)
+  }
 
   redirect('/painel')
 }

@@ -5,7 +5,13 @@ import { acceptTerms } from '@/actions/terms'
 
 // Envolve o documento (passado como children) com checkbox obrigatorio e
 // botao de aceite. O botao so habilita quando a caixa esta marcada.
-export function TermosAceite({ children }: { children: React.ReactNode }) {
+export function TermosAceite({
+  children,
+  error,
+}: {
+  children: React.ReactNode
+  error?: string
+}) {
   const [agreed, setAgreed] = useState(false)
 
   return (
@@ -23,6 +29,18 @@ export function TermosAceite({ children }: { children: React.ReactNode }) {
       <div className="max-h-[55vh] overflow-y-auto rounded-2xl border border-ink-200 bg-white p-5 sm:p-7">
         {children}
       </div>
+
+      {error && (
+        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-[13px] font-semibold text-red-700">
+            Não foi possível registrar seu aceite. Tente novamente — se
+            persistir, mostre esta mensagem ao suporte:
+          </p>
+          <p className="mt-1 break-words font-mono text-[12px] text-red-600">
+            {error}
+          </p>
+        </div>
+      )}
 
       <form action={acceptTerms} className="mt-5">
         <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-ink-50 p-4">

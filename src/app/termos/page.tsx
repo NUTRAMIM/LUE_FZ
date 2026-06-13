@@ -6,7 +6,12 @@ import { TermosAceite } from '@/components/termos/TermosAceite'
 
 export const dynamic = 'force-dynamic'
 
-export default async function TermosPage() {
+export default async function TermosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ erro?: string }>
+}) {
+  const { erro } = await searchParams
   const user = await getAuthedUser()
 
   // Owner logado que ainda nao aceitou a versao atual ve o formulario de aceite.
@@ -15,7 +20,7 @@ export default async function TermosPage() {
     const accepted = await hasAcceptedCurrentTerms(supabase, user.id)
     if (!accepted) {
       return (
-        <TermosAceite>
+        <TermosAceite error={erro}>
           <TermsDocument />
         </TermosAceite>
       )
