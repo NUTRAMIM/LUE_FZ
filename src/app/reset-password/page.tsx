@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Wordmark } from '@/components/ui/Wordmark'
@@ -13,7 +13,17 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // Só chega aqui com sessão de recovery (estabelecida por /auth/confirm).
+  // Sem sessão, o link não veio do fluxo válido — avisa antes do submit.
+  const [hasSession, setHasSession] = useState<boolean | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data }) => {
+      setHasSession(!!data.session)
+    })
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -61,6 +71,15 @@ export default function ResetPasswordPage() {
             Escolha uma nova senha para sua conta.
           </p>
 
+          {hasSession === false && (
+            <div className="bg-danger-soft border-danger/20 mt-5 rounded-lg border px-3 py-2">
+              <p className="text-danger text-sm font-medium">
+                Este link expirou ou não é válido. Volte ao login e use
+                &quot;Esqueceu a senha?&quot; para receber um novo.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="mt-7 space-y-5">
             <div>
               <Label htmlFor="password">Nova senha</Label>
@@ -102,7 +121,12 @@ export default function ResetPasswordPage() {
               </div>
             )}
 
-            <Button type="submit" disabled={loading} size="lg" className="w-full">
+            <Button
+              type="submit"
+              disabled={loading || hasSession === false}
+              size="lg"
+              className="w-full"
+            >
               {loading ? (
                 'Salvando...'
               ) : (

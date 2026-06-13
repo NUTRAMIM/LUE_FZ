@@ -40,6 +40,14 @@ export async function POST(request: Request) {
   }
 
   const { user, email_data } = data
+  if (!user?.email || !email_data?.token_hash || !email_data?.email_action_type) {
+    console.error('send-email hook: payload com formato inesperado')
+    return Response.json(
+      { error: { http_code: 400, message: 'Payload inválido.' } },
+      { status: 400 },
+    )
+  }
+
   const template = pickTemplate(email_data.email_action_type)
   const actionUrl = buildActionUrl(email_data)
 
