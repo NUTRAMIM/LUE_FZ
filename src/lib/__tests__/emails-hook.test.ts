@@ -32,23 +32,29 @@ describe('pickTemplate', () => {
 
 describe('buildActionUrl', () => {
   it('monta URL de recovery com token_hash, type e next encodados', () => {
-    const url = buildActionUrl({
-      token_hash: 'abc123',
-      email_action_type: 'recovery',
-      site_url: 'https://ialue.com.br',
-    })
+    const url = buildActionUrl(
+      { token_hash: 'abc123', email_action_type: 'recovery' },
+      'https://ialue.com.br',
+    )
     expect(url).toBe(
       'https://ialue.com.br/auth/confirm?token_hash=abc123&type=recovery&next=%2Freset-password',
     )
   })
 
   it('usa /painel pra signup', () => {
-    const url = buildActionUrl({
-      token_hash: 'tok',
-      email_action_type: 'signup',
-      site_url: 'https://ialue.com.br',
-    })
+    const url = buildActionUrl(
+      { token_hash: 'tok', email_action_type: 'signup' },
+      'https://ialue.com.br',
+    )
     expect(url).toContain('type=signup')
     expect(url).toContain('next=%2Fpainel')
+  })
+
+  it('usa o baseUrl passado, ignorando qualquer site_url do payload', () => {
+    const url = buildActionUrl(
+      { token_hash: 'tok', email_action_type: 'recovery' },
+      'https://ialue.com.br',
+    )
+    expect(url.startsWith('https://ialue.com.br/auth/confirm')).toBe(true)
   })
 })

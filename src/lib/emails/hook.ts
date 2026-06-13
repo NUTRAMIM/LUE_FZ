@@ -9,7 +9,6 @@ import {
 export interface HookEmailData {
   token_hash: string
   email_action_type: string
-  site_url: string
 }
 
 /** Para onde `/auth/confirm` redireciona após verificar o token. */
@@ -30,12 +29,15 @@ export function pickTemplate(actionType: string): EmailTemplate {
   }
 }
 
-/** Monta o link de ação que vai no e-mail, apontando para /auth/confirm. */
-export function buildActionUrl(data: HookEmailData): string {
+// Monta o link de ação que vai no e-mail, apontando para /auth/confirm.
+// `baseUrl` é a URL pública da app (getAppUrl()), NÃO o `site_url` do payload do
+// Supabase — assim o link não depende da config "Site URL" do dashboard, que é
+// fácil de errar e mandaria o usuário pra um host errado (ex.: *.supabase.co).
+export function buildActionUrl(data: HookEmailData, baseUrl: string): string {
   const params = new URLSearchParams({
     token_hash: data.token_hash,
     type: data.email_action_type,
     next: nextFor(data.email_action_type),
   })
-  return `${data.site_url}/auth/confirm?${params.toString()}`
+  return `${baseUrl}/auth/confirm?${params.toString()}`
 }

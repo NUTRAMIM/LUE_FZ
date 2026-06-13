@@ -1,6 +1,7 @@
 import { Webhook } from 'standardwebhooks'
 import { getResend } from '@/lib/resend'
 import { pickTemplate, buildActionUrl } from '@/lib/emails/hook'
+import { getAppUrl } from '@/lib/app-url'
 
 interface SendEmailPayload {
   user: { email: string }
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
   }
 
   const template = pickTemplate(email_data.email_action_type)
-  const actionUrl = buildActionUrl(email_data)
+  const actionUrl = buildActionUrl(email_data, getAppUrl())
 
   const { error } = await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
