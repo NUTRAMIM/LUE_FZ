@@ -19,7 +19,10 @@ def _record(label, usage):
 
 class LLMClient:
     def __init__(self, api_key: str):
-        self._client = AsyncOpenAI(api_key=api_key)
+        # max_retries acima do default (2): a SDK retenta erros transitórios de
+        # conexão (DNS/getaddrinfo, timeouts) com backoff, dando resiliência a
+        # blips de rede em produção.
+        self._client = AsyncOpenAI(api_key=api_key, max_retries=5)
 
     async def chat(self, model, messages, tools=None, max_tokens=None,
                    reasoning_effort=None) -> dict:
