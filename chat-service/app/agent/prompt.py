@@ -65,7 +65,24 @@ Cores: rosa, branco
 https://link
 [/produto]
 
-Omita campo vazio. As tags [produto]...[/produto] vão só em volta de cada produto — a frase curta de abertura fica fora delas."""
+Omita campo vazio. As tags [produto]...[/produto] vão só em volta de cada produto — a frase curta de abertura fica fora delas.
+
+# Lead (captura + fechamento)
+Quando o cliente demonstrar intenção de compra/reserva ("quero comprar", "vou levar", "reserva pra mim", "como faço pra fechar"):
+1. Registre o pedido com REGISTRAR_PEDIDO (itens + o que já souber de pagamento/entrega).
+2. Olhe o bloco "Dados de contato já capturados" e o ESTADO ATUAL DO PEDIDO e peça, de uma vez e em frase corrida natural, SOMENTE o que ainda está faltando — ou seja, só os campos marcados "(não capturado)" / "(não definido)". Os campos que pedir são, dentre estes: nome, WhatsApp, email, CEP (pra calcular o frete), forma de pagamento e forma de entrega — para pagamento e entrega, use as opções listadas na seção "A loja". NUNCA repita um dado que já está preenchido. Se TUDO já estiver preenchido, NÃO pergunte nada — pule direto para o encaminhamento (passo abaixo).
+
+Exemplo (faltando só CEP, pagamento e entrega): "Show, vou anotar! Só me passa seu CEP e me diz como prefere pagar e receber?"
+
+Conforme o cliente responder pagamento/entrega, chame REGISTRAR_PEDIDO de novo para gravar.
+
+Quando já houver nome E WhatsApp (capturados agora ou antes), na mesma mensagem em que confirmar os dados avise que um vendedor vai entrar em contato e ofereça os contatos da loja (o WhatsApp e o Instagram da seção "A loja") como alternativa para ele falar direto.
+
+Exemplo: "Anotei! Um vendedor vai entrar em contato em breve. Se preferir falar direto, te passo o WhatsApp e o Instagram da loja."
+
+NÃO peça os dados antes da intenção de compra. NÃO repita os contatos da loja em todas as mensagens — só na que o cliente acabou de compartilhar nome e número.
+
+Enquanto estiver nesta etapa de captura de lead/fechamento, NÃO ofereça nem mostre produtos novos por conta própria — nada de upsell, "aproveita e leva também", nem chamar BUSCAR_PRODUTOS/LISTAR_CATEGORIA para empurrar mais peças. Mantenha o foco em coletar os dados que faltam e fechar. Só mostre mais produtos se o PRÓPRIO cliente pedir (ex.: "me mostra mais", "tem em outra cor?", "queria ver outro modelo") — aí sim atenda normalmente."""
 
 
 def _steps_block(store: StoreSettings) -> str:
@@ -157,24 +174,7 @@ Pagamento: {pagamento}
 Entrega: {entrega}
 Instruções: {store.service_instructions}
 Contato do vendedor: {store.seller_phone}
-Instagram da loja: {store.instagram_handle}
-
-# Lead (captura + fechamento)
-Quando o cliente demonstrar intenção de compra/reserva ("quero comprar", "vou levar", "reserva pra mim", "como faço pra fechar"):
-1. Registre o pedido com REGISTRAR_PEDIDO (itens + o que já souber de pagamento/entrega).
-2. Olhe os blocos "Dados de contato já capturados" e "Pedido atual" acima e peça, de uma vez e em frase corrida natural, SOMENTE o que ainda está faltando — ou seja, só os campos marcados "(não capturado)" / "(não definido)". Os campos que pedir são, dentre estes: nome, WhatsApp, email, CEP (pra calcular o frete), forma de pagamento (opções: {pagamento}) e forma de entrega (opções: {entrega}). NUNCA repita um dado que já está preenchido. Se TUDO já estiver preenchido, NÃO pergunte nada — pule direto para o encaminhamento (passo abaixo).
-
-Exemplo (faltando só CEP, pagamento e entrega): "Show, vou anotar! Só me passa seu CEP e me diz como prefere pagar ({pagamento}) e receber ({entrega})?"
-
-Conforme o cliente responder pagamento/entrega, chame REGISTRAR_PEDIDO de novo para gravar.
-
-Quando já houver nome E WhatsApp (capturados agora ou antes), na mesma mensagem em que confirmar os dados avise que um vendedor vai entrar em contato e ofereça os contatos da loja como alternativa para ele falar direto.
-
-Exemplo: "Anotei! Um vendedor vai entrar em contato em breve. Se preferir falar direto, é WhatsApp {store.seller_phone} ou Instagram {store.instagram_handle}."
-
-NÃO peça os dados antes da intenção de compra. NÃO repita os contatos da loja em todas as mensagens — só na que o cliente acabou de compartilhar nome e número.
-
-Enquanto estiver nesta etapa de captura de lead/fechamento, NÃO ofereça nem mostre produtos novos por conta própria — nada de upsell, "aproveita e leva também", nem chamar BUSCAR_PRODUTOS/LISTAR_CATEGORIA para empurrar mais peças. Mantenha o foco em coletar os dados que faltam e fechar. Só mostre mais produtos se o PRÓPRIO cliente pedir (ex.: "me mostra mais", "tem em outra cor?", "queria ver outro modelo") — aí sim atenda normalmente.{_steps_block(store)}{_faq_block(store)}"""
+Instagram da loja: {store.instagram_handle}{_steps_block(store)}{_faq_block(store)}"""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -188,9 +188,6 @@ def build_dynamic_state(store: StoreSettings, shown_list: str, lead=None) -> str
     whatsapp_lead = (lead.get("whatsapp") or "").strip()
     email_lead = (lead.get("email") or "").strip()
     cep_lead = (lead.get("cep") or "").strip()
-    pedido_atual = format_pedido(lead.get("pedido") or [])
-    forma_pagamento_atual = (lead.get("forma_pagamento") or "").strip() or "(não definido)"
-    forma_entrega_atual = (lead.get("forma_entrega") or "").strip() or "(não definido)"
     nome_cap = nome_lead or "(não capturado)"
     whatsapp_cap = whatsapp_lead or "(não capturado)"
     email_cap = email_lead or "(não capturado)"
@@ -209,11 +206,6 @@ def build_dynamic_state(store: StoreSettings, shown_list: str, lead=None) -> str
 
 Não repita esses produtos. Exceção: se o cliente pedir explicitamente um deles pelo nome.
 
-# Pedido atual deste cliente (fonte da verdade — NÃO dependa da memória)
-Itens: {pedido_atual}
-Forma de pagamento: {forma_pagamento_atual}
-Forma de entrega: {forma_entrega_atual}
-
 # Dados de contato já capturados deste cliente (fonte da verdade — NÃO dependa da memória)
 Nome: {nome_cap}
 WhatsApp: {whatsapp_cap}
@@ -221,7 +213,7 @@ Email: {email_cap}
 CEP: {cep_cap}{carro_chefe_linha}
 Qualquer campo marcado "(não capturado)" ainda não foi informado — só esses você pode pedir. NUNCA peça de novo um dado que já aparece preenchido aqui.
 
-Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Em CADA item preencha o campo `preco` com o preço unitário da peça (o mesmo valor que apareceu no card do produto, em reais, ex.: 99.90) — o sistema soma `preco × qtd` sozinho para calcular o total, então NÃO calcule nem informe o total você mesmo. Se não souber o preço de uma peça, deixe `preco` vazio. Para saber o que já foi pedido, leia os campos acima ou o último ESTADO ATUAL DO PEDIDO da conversa — nunca reconstrua de cabeça e nunca confie no que você mesmo disse antes, pois pode estar desatualizado."""
+Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Em CADA item preencha o campo `preco` com o preço unitário da peça (o mesmo valor que apareceu no card do produto, em reais, ex.: 99.90) — o sistema soma `preco × qtd` sozinho para calcular o total, então NÃO calcule nem informe o total você mesmo. Se não souber o preço de uma peça, deixe `preco` vazio. Para saber o que já foi pedido, leia o ESTADO ATUAL DO PEDIDO da conversa — nunca reconstrua de cabeça e nunca confie no que você mesmo disse antes, pois pode estar desatualizado."""
 
 
 # Compat: monta o prompt completo (estático + loja + dinâmico) numa string só.
