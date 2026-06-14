@@ -29,6 +29,7 @@ const brl = (usd: number) =>
 const usdFmt = (usd: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(usd)
 const pct = (f: number) => `${Math.round(f * 100)}%`
+const dataBr = (d: string) => d.split('-').reverse().join('/')
 
 export default async function AdminInternalPage({
   searchParams,
@@ -50,7 +51,7 @@ export default async function AdminInternalPage({
   const [usageRes, storesRes, ativRes] = await Promise.all([
     admin
       .from('ai_usage_daily')
-      .select('store_id, model, prompt_tokens, completion_tokens, total_tokens, cached_tokens, calls')
+      .select('store_id, day, model, prompt_tokens, completion_tokens, total_tokens, cached_tokens, calls')
       .gte('day', start),
     admin.from('store_settings').select('id, store_name'),
     admin.rpc('painel_atividade_ia', { p_inicio: start }),
@@ -69,6 +70,13 @@ export default async function AdminInternalPage({
   const porLoja = aggregateByStore(rows, names, counts)
   const totais = sumUsage(porLoja)
   const erro = Boolean(usageRes.error || storesRes.error || ativRes.error)
+
+  // O custo só cobre os dias com registro de uso (logging começou recentemente).
+  // Se o uso mais antigo do período for depois do início do período, o custo é
+  // parcial — avisamos, porque atendimentos/mensagens vão mais pra trás.
+  const usageDays = (usageRes.data ?? []).map((r) => r.day as string)
+  const costSince = usageDays.length ? usageDays.reduce((m, d) => (d < m ? d : m)) : null
+  const custoParcial = Boolean(costSince && costSince > start)
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-8">
@@ -116,6 +124,13 @@ export default async function AdminInternalPage({
               icon={<Icon name="sparkle" className="h-4 w-4" />}
             />
           </div>
+
+          {custoParcial && costSince ? (
+            <p className="mt-3 text-xs text-slate-500">
+              O custo cobre só os dias com registro de uso (desde {dataBr(costSince)}).
+              Atendimentos e mensagens podem incluir conversas anteriores a essa data.
+            </p>
+          ) : null}
 
           <Card className="mt-6 overflow-hidden p-0">
             <div className="border-b border-slate-200/80 px-5 py-4">
