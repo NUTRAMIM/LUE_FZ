@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { syncInventoryFromUrl } from '@/lib/inventory/sync'
+
+// Comparação constante no tempo do Bearer secret (evita timing attack byte-a-byte
+// que o `!==` curto-circuitado permitiria). Tamanhos diferentes => falha direto.
+function secretMatches(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 interface StoreResult {
   store_id: string
@@ -26,7 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const auth = request.headers.get('authorization') ?? ''
   const provided = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : ''
-  if (provided !== expected) {
+  if (!secretMatches(provided, expected)) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
   }
 

@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getAuthedUser } from '@/lib/auth'
 import { getActiveStoreId } from '@/lib/active-store'
 import { signedReadUrl } from '@/lib/chat-media'
 import { visitorName, truncatePreview } from '@/components/conversas/formatters'
@@ -76,13 +75,17 @@ export async function getMessages(
   conversationId: string,
 ): Promise<MessageRow[]> {
   const supabase = await createClient()
-  const user = await getAuthedUser()
-  if (!user) return []
+  const storeId = await getActiveStoreId()
+  if (!storeId) return []
 
   const { data, error } = await supabase
     .from('messages')
     .select('id, role, content, message_type, media_path, created_at')
     .eq('conversation_id', conversationId)
+    // Defense-in-depth: amarra a leitura à loja ativa do usuário (messages.store_id
+    // é NOT NULL e denormalizado da conversa). Não depende só da RLS para impedir
+    // que um membro de outra loja leia mensagens passando um conversationId arbitrário.
+    .eq('store_id', storeId)
     .order('created_at', { ascending: true })
     .limit(500)
 
@@ -107,13 +110,16 @@ export async function markConversationRead(
   conversationId: string,
 ): Promise<{ success: boolean }> {
   const supabase = await createClient()
-  const user = await getAuthedUser()
-  if (!user) return { success: false }
+  const storeId = await getActiveStoreId()
+  if (!storeId) return { success: false }
 
   const { error } = await supabase
     .from('conversations')
     .update({ last_read_at: new Date().toISOString() })
     .eq('id', conversationId)
+    // Defense-in-depth: só marca como lida uma conversa da loja ativa do usuário,
+    // não qualquer conversa cujo UUID seja passado.
+    .eq('store_id', storeId)
 
   if (error) {
     console.error('markConversationRead error', error)
