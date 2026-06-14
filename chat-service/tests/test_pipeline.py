@@ -91,7 +91,9 @@ async def test_happy_path_inserts_assistant_and_runs_branches(db, llm, store):
 
 async def test_logs_token_usage_summary(db, llm, store, caplog):
     db.store = store
-    db.window_messages = [{"id": "msg-1", "content": "quero um top"}]
+    # mensagem com contato (telefone) E pergunta → dispara os 3 (agente+lead+gap)
+    msg = "meu zap é 11999998888, vocês entregam em SP?"
+    db.window_messages = [{"id": "msg-1", "content": msg}]
     db.catalog = []
     db.recent_messages = []
     llm.chat_responses = [
@@ -101,10 +103,42 @@ async def test_logs_token_usage_summary(db, llm, store, caplog):
         {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
     ]
     with caplog.at_level("INFO", logger="chat-service"):
-        await process_message(db, llm, _payload(mid="msg-1"))
+        await process_message(db, llm, _payload(msg=msg, mid="msg-1"))
     summary = [r for r in caplog.records if "total=42" in r.getMessage()]
     assert summary, "esperava log de resumo de tokens com total acumulado"
     assert "calls=3" in summary[0].getMessage()
+
+
+async def test_gating_skips_background_for_plain_greeting(db, llm, store):
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "oi tudo bem"}]
+    db.catalog = []
+    db.recent_messages = []
+    llm.chat_responses = [{"content": "oi! como posso te ajudar?"}]  # só o agente
+    await process_message(db, llm, _payload(msg="oi tudo bem", mid="msg-1"))
+    # saudação sem contato e sem pergunta → lead e gap PULADOS (1 chamada só)
+    assert len(llm.chat_calls) == 1
+    assert db.created_leads == [] and db.updated_leads == []
+    assert db.inserted_gaps == []
+
+
+async def test_gating_runs_lead_when_phone_present(db, llm, store):
+    db.store = store
+    msg = "meu zap é 11999998888"
+    db.window_messages = [{"id": "msg-1", "content": msg}]
+    db.catalog = []
+    db.recent_messages = []
+    llm.chat_responses = [
+        {"content": "anotado!"},                                          # agente
+        {"content": json.dumps({"nome": None, "telefone": "11999998888",  # extração lead
+                                "email": None, "cep": None})},
+        {"content": "cliente quer fechar pedido"},                        # resumo interesse
+    ]
+    await process_message(db, llm, _payload(msg=msg, mid="msg-1"))
+    # contato presente → lead roda (extração + resumo de interesse); gap PULADO
+    assert len(llm.chat_calls) == 3
+    assert db.created_leads and db.created_leads[0]["whatsapp"] == "5511999998888"
+    assert db.inserted_gaps == []   # sem pergunta → gap não rodou
 
 
 async def test_agent_failure_inserts_instability_system_message(db, llm, store):

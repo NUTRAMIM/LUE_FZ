@@ -97,6 +97,30 @@ def _parse_lead(raw: str) -> dict:
                 "carro_chefe": None}
 
 
+_CONTACT_NAME_RE = re.compile(
+    r"\b(meu nome|me chamo|sou a |sou o |aqui (é|eh|quem fala)|"
+    r"pode (me )?chamar|nome (é|eh)|chamo)\b", re.I)
+_ASKED_PERSONAL_RE = re.compile(
+    r"\b(nome|whats|zap|telefone|celular|cep|e-?mail|contato|seus? dados?)\b", re.I)
+
+
+def should_extract_lead(chat_input: str, history=None) -> bool:
+    """Gate barato pra evitar chamar o extrator (mini) em TODA mensagem. Só vale
+    rodar se a mensagem tem cara de dado de contato (telefone/cep/email/nome) OU
+    se o cliente está respondendo a um pedido de dado pessoal da IA (cobre
+    respostas curtas tipo só o nome ou só o CEP). Na dúvida, roda — perder lead
+    custa mais que uma chamada extra. `history` vem recente-primeiro."""
+    txt = chat_input or ""
+    if "@" in txt or _CONTACT_NAME_RE.search(txt):
+        return True
+    if len(re.sub(r"\D", "", txt)) >= 8:        # telefone (10-13) ou cep (8 dígitos)
+        return True
+    for m in (history or []):                    # só a última fala da IA importa
+        if m.get("role") == "assistant":
+            return bool(_ASKED_PERSONAL_RE.search(m.get("content") or ""))
+    return False
+
+
 async def run_lead(db, llm, ctx) -> None:
     atacado = bool(getattr(ctx.store, "min_order_enabled", False))
     system = LEAD_SYSTEM_ATACADO if atacado else LEAD_SYSTEM
