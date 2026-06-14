@@ -1,5 +1,6 @@
 # app/branches/gap.py
 import json
+import re
 from app.config import settings
 from app.branches.lead import _strip_fences
 
@@ -27,6 +28,20 @@ Marque is_gap=true APENAS se:
 Marque is_gap=false se: saudação, comentário, declaração de interesse, pergunta sobre produto/cor/tamanho específico, ou pergunta já coberta pelas instruções acima.
 
 Se is_gap=false, devolva question="" e tag="OUTROS"."""
+
+
+_QUESTION_RE = re.compile(
+    r"\?|\b(qual|quais|quanto|quantos|quanta|quantas|quando|onde|cad[eê]|como|"
+    r"por que|porque|por quê|tem|t[eê]m|teria|h[aá] |posso|consigo|consegue|"
+    r"d[aá] pra|aceita|aceitam|fazem|faz |entrega|entregam|envia|enviam|demora|"
+    r"prazo|troca|garantia|funciona|precisa|vale a pena)\b", re.I)
+
+
+def looks_like_question(chat_input: str) -> bool:
+    """Gate barato pro gap: só roda a detecção se a mensagem parece pergunta.
+    Erra pro lado de rodar (nano é barato); o objetivo é pular saudação, elogio,
+    'quero comprar' e confirmações — que não têm lacuna nenhuma a detectar."""
+    return bool(_QUESTION_RE.search(chat_input or ""))
 
 
 async def run_gap(db, llm, ctx) -> None:

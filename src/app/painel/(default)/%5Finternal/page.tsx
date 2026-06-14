@@ -6,8 +6,10 @@ import {
   resolvePeriodStart,
   aggregateByStore,
   sumUsage,
+  USD_BRL,
   type Periodo,
   type UsageRow,
+  type StoreCounts,
 } from '@/lib/admin-usage'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { StatCard } from '@/components/ui/StatCard'
@@ -22,6 +24,12 @@ const PERIODOS: Periodo[] = ['dia', 'semana', 'mes']
 const LABEL: Record<Periodo, string> = { dia: 'hoje', semana: 'últimos 7 dias', mes: 'este mês' }
 
 const fmt = (n: number) => new Intl.NumberFormat('pt-BR').format(n)
+const brl = (usd: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(usd * USD_BRL)
+const usdFmt = (usd: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(usd)
+const pct = (f: number) => `${Math.round(f * 100)}%`
+const dataBr = (d: string) => d.split('-').reverse().join('/')
 
 export default async function AdminInternalPage({
   searchParams,
@@ -40,27 +48,41 @@ export default async function AdminInternalPage({
 
   // Leitura via service-role (ignora RLS) — só acontece após o gate de admin.
   const admin = createAdminClient()
-  const [usageRes, storesRes] = await Promise.all([
+  const [usageRes, storesRes, ativRes] = await Promise.all([
     admin
       .from('ai_usage_daily')
-      .select('store_id, prompt_tokens, completion_tokens, total_tokens, calls')
+      .select('store_id, day, model, prompt_tokens, completion_tokens, total_tokens, cached_tokens, calls')
       .gte('day', start),
     admin.from('store_settings').select('id, store_name'),
+    admin.rpc('painel_atividade_ia', { p_inicio: start }),
   ])
 
   const rows: UsageRow[] = usageRes.data ?? []
   const names = new Map(
     (storesRes.data ?? []).map((s) => [s.id, s.store_name] as const),
   )
-  const porLoja = aggregateByStore(rows, names)
+  const counts = new Map<string, StoreCounts>(
+    (ativRes.data ?? []).map((a: { store_id: string; ia_mensagens: number; atendimentos: number }) => [
+      a.store_id,
+      { iaMessages: Number(a.ia_mensagens), attendances: Number(a.atendimentos) },
+    ]),
+  )
+  const porLoja = aggregateByStore(rows, names, counts)
   const totais = sumUsage(porLoja)
-  const erro = Boolean(usageRes.error || storesRes.error)
+  const erro = Boolean(usageRes.error || storesRes.error || ativRes.error)
+
+  // O custo só cobre os dias com registro de uso (logging começou recentemente).
+  // Se o uso mais antigo do período for depois do início do período, o custo é
+  // parcial — avisamos, porque atendimentos/mensagens vão mais pra trás.
+  const usageDays = (usageRes.data ?? []).map((r) => r.day as string)
+  const costSince = usageDays.length ? usageDays.reduce((m, d) => (d < m ? d : m)) : null
+  const custoParcial = Boolean(costSince && costSince > start)
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-8">
       <PageHeader
         title="Admin · Plataforma"
-        subtitle="Consumo de tokens da IA por loja"
+        subtitle="Custo e consumo da IA por loja"
         actions={<PeriodSelector active={periodo} />}
       />
 
@@ -74,32 +96,41 @@ export default async function AdminInternalPage({
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard
-              label={`Tokens · ${LABEL[periodo]}`}
-              value={fmt(totais.total)}
+              label={`Custo · ${LABEL[periodo]}`}
+              value={brl(totais.costUsd)}
+              hint={usdFmt(totais.costUsd)}
               tone="brand"
               emphasis="value"
-              icon={<Icon name="sparkle" className="h-4 w-4" />}
+              icon={<Icon name="receipt" className="h-4 w-4" />}
             />
             <StatCard
-              label="Prompt"
-              value={fmt(totais.prompt)}
+              label="Atendimentos"
+              value={fmt(totais.attendances)}
               tone="info"
-              hint={`Completion: ${fmt(totais.completion)}`}
+              icon={<Icon name="msgSq" className="h-4 w-4" />}
+            />
+            <StatCard
+              label="Mensagens IA"
+              value={fmt(totais.iaMessages)}
+              tone="neutral"
+              hint={`${fmt(totais.calls)} chamadas`}
               icon={<Icon name="ai" className="h-4 w-4" />}
             />
             <StatCard
-              label="Chamadas"
-              value={fmt(totais.calls)}
-              tone="neutral"
-              icon={<Icon name="send" className="h-4 w-4" />}
-            />
-            <StatCard
-              label="Lojas ativas"
-              value={fmt(totais.stores)}
+              label="Cacheado"
+              value={pct(totais.cachedPct)}
               tone="success"
-              icon={<Icon name="store" className="h-4 w-4" />}
+              hint={`${fmt(totais.total)} tokens`}
+              icon={<Icon name="sparkle" className="h-4 w-4" />}
             />
           </div>
+
+          {custoParcial && costSince ? (
+            <p className="mt-3 text-xs text-slate-500">
+              O custo cobre só os dias com registro de uso (desde {dataBr(costSince)}).
+              Atendimentos e mensagens podem incluir conversas anteriores a essa data.
+            </p>
+          ) : null}
 
           <Card className="mt-6 overflow-hidden p-0">
             <div className="border-b border-slate-200/80 px-5 py-4">
@@ -121,30 +152,24 @@ export default async function AdminInternalPage({
                   <thead>
                     <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                       <th className="px-5 py-3">Loja</th>
-                      <th className="px-5 py-3 text-right">Prompt</th>
-                      <th className="px-5 py-3 text-right">Completion</th>
-                      <th className="px-5 py-3 text-right">Total</th>
-                      <th className="px-5 py-3 text-right">Chamadas</th>
+                      <th className="px-5 py-3 text-right">Atend.</th>
+                      <th className="px-5 py-3 text-right">Msgs IA</th>
+                      <th className="px-5 py-3 text-right">Tokens</th>
+                      <th className="px-5 py-3 text-right">% cache</th>
+                      <th className="px-5 py-3 text-right">Custo (R$)</th>
+                      <th className="px-5 py-3 text-right">R$/atend.</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {porLoja.map((s) => (
                       <tr key={s.storeId} className="hover:bg-slate-50/60">
-                        <td className="px-5 py-3 font-medium text-slate-900">
-                          {s.storeName}
-                        </td>
-                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">
-                          {fmt(s.prompt)}
-                        </td>
-                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">
-                          {fmt(s.completion)}
-                        </td>
-                        <td className="px-5 py-3 text-right tabular-nums font-semibold text-slate-900">
-                          {fmt(s.total)}
-                        </td>
-                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">
-                          {fmt(s.calls)}
-                        </td>
+                        <td className="px-5 py-3 font-medium text-slate-900">{s.storeName}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">{fmt(s.attendances)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">{fmt(s.iaMessages)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">{fmt(s.total)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">{pct(s.cachedPct)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums font-semibold text-slate-900">{brl(s.costUsd)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-slate-600">{brl(s.costPerAttendanceUsd)}</td>
                       </tr>
                     ))}
                   </tbody>

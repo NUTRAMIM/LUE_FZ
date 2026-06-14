@@ -26,8 +26,8 @@ from app.llm import LLMClient
 from app.db import Database
 from app.models import Context
 from app.agent.runner import run_agent
-from app.branches.lead import run_lead
-from app.branches.gap import run_gap
+from app.branches.lead import run_lead, should_extract_lead
+from app.branches.gap import run_gap, looks_like_question
 from app.usage import start_usage
 from tests.conftest import FakeDB  # banco em memória, não toca produção
 
@@ -153,8 +153,11 @@ async def main():
             db.lead["id"] = "e2e-lead"
         ctx = Context(store=store, conversation_id="e2e-conv",
                       chat_input=user_text, ai_output=result.text)
-        await run_lead(db, llm, ctx)
-        await run_gap(db, llm, ctx)
+        # mesmo gating do pipeline: lead/gap só quando há sinal
+        if should_extract_lead(user_text, db.recent_messages):
+            await run_lead(db, llm, ctx)
+        if looks_like_question(user_text):
+            await run_gap(db, llm, ctx)
         reply = (result.text or "").replace("\n", " ")[:90]
         print(f"T{i} cliente: {user_text}")
         print(f"   IA: {reply}{' …' if result.text and len(result.text) > 90 else ''}\n")

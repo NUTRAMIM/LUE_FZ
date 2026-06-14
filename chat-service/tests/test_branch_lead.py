@@ -1,7 +1,43 @@
 # tests/test_branch_lead.py
 import json
-from app.branches.lead import run_lead
+from app.branches.lead import run_lead, should_extract_lead
 from app.models import Context, Lead
+
+
+def test_should_extract_lead_on_phone():
+    assert should_extract_lead("meu zap é (11) 98888-7777")
+
+
+def test_should_extract_lead_on_email():
+    assert should_extract_lead("manda no ana@x.com")
+
+
+def test_should_extract_lead_on_name_intro():
+    assert should_extract_lead("oi, meu nome é Ana")
+
+
+def test_should_extract_lead_on_cep_digits():
+    assert should_extract_lead("01310-100")
+
+
+def test_should_extract_lead_skips_greeting():
+    assert not should_extract_lead("oi, tudo bem")
+
+
+def test_should_extract_lead_skips_product_request():
+    assert not should_extract_lead("queria ver vestidos")
+
+
+def test_should_extract_lead_on_bare_reply_after_ia_asked():
+    # cliente responde só o nome logo após a IA pedir dados pessoais
+    history = [{"role": "user", "content": "Ana Beatriz"},
+               {"role": "assistant", "content": "Qual seu nome e WhatsApp?"}]
+    assert should_extract_lead("Ana Beatriz", history)
+
+
+def test_should_extract_lead_skips_bare_reply_when_ia_didnt_ask():
+    history = [{"role": "assistant", "content": "Achei esses tops pra você!"}]
+    assert not should_extract_lead("o segundo", history)
 
 
 def _ctx(store, msg="quero comprar, sou a Maria, 11999998888"):

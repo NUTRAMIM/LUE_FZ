@@ -3,7 +3,7 @@ from openai import AsyncOpenAI
 from app.usage import record_usage
 
 
-def _record(label, usage):
+def _record(label, usage, model):
     if usage is None:
         return
     # embeddings usage não tem completion_tokens — só chat completions tem.
@@ -11,7 +11,7 @@ def _record(label, usage):
     # do cache (cobrados ~90% mais barato nos GPT-5) — métrica do ganho do cache.
     details = getattr(usage, "prompt_tokens_details", None)
     cached = (getattr(details, "cached_tokens", 0) or 0) if details else 0
-    record_usage(label, getattr(usage, "prompt_tokens", 0) or 0,
+    record_usage(label, model, getattr(usage, "prompt_tokens", 0) or 0,
                  getattr(usage, "completion_tokens", 0) or 0,
                  getattr(usage, "total_tokens", 0) or 0,
                  cached)
@@ -39,7 +39,7 @@ class LLMClient:
         if reasoning_effort:
             kwargs["reasoning_effort"] = reasoning_effort
         resp = await self._client.chat.completions.create(**kwargs)
-        _record("chat", getattr(resp, "usage", None))
+        _record("chat", getattr(resp, "usage", None), model)
         msg = resp.choices[0].message
         tool_calls = None
         if msg.tool_calls:
@@ -50,5 +50,5 @@ class LLMClient:
     async def embed(self, model, text) -> list[float]:
         resp = await self._client.embeddings.create(
             model=model, input=text, dimensions=1536)
-        _record("embed", getattr(resp, "usage", None))
+        _record("embed", getattr(resp, "usage", None), model)
         return resp.data[0].embedding

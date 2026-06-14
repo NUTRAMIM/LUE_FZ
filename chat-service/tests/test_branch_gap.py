@@ -1,7 +1,23 @@
 # tests/test_branch_gap.py
 import json
-from app.branches.gap import run_gap
+from app.branches.gap import run_gap, looks_like_question
 from app.models import Context
+
+
+def test_looks_like_question_with_qmark():
+    assert looks_like_question("vocês entregam em SP?")
+
+
+def test_looks_like_question_interrogative_without_qmark():
+    assert looks_like_question("vocês fazem troca")
+
+
+def test_looks_like_question_skips_greeting():
+    assert not looks_like_question("oi tudo bem")
+
+
+def test_looks_like_question_skips_purchase_intent():
+    assert not looks_like_question("quero comprar esse")
 
 
 def _ctx(store, msg):

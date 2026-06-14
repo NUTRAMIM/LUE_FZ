@@ -3,8 +3,8 @@ import asyncio
 import logging
 from app.buffer import resolve_window
 from app.agent.runner import run_agent
-from app.branches.lead import run_lead
-from app.branches.gap import run_gap
+from app.branches.lead import run_lead, should_extract_lead
+from app.branches.gap import run_gap, looks_like_question
 from app.branches.mentions import run_mentions
 from app.models import Context
 from app.config import settings
@@ -64,12 +64,16 @@ async def process_message(db, llm, payload) -> None:
 
     ctx = Context(store=store, conversation_id=payload.id_conversa,
                   chat_input=buf.chat_input, ai_output=result.text)
-    results = await asyncio.gather(
-        run_lead(db, llm, ctx),
-        run_gap(db, llm, ctx),
-        run_mentions(db, ctx),
-        return_exceptions=True,
-    )
+    # Gating dos branches de fundo: lead e gap rodavam em TODA mensagem (2-3
+    # chamadas LLM por resposta). Aqui só agendamos quando há sinal — pula a
+    # chamada (e o prompt) em saudação/elogio/sem dado de contato.
+    tasks = []
+    if should_extract_lead(buf.chat_input, history_msgs):
+        tasks.append(run_lead(db, llm, ctx))
+    if looks_like_question(buf.chat_input):
+        tasks.append(run_gap(db, llm, ctx))
+    tasks.append(run_mentions(db, ctx))
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     for r in results:
         if isinstance(r, Exception):
             log.error("branch failed: %r", r)
@@ -79,8 +83,9 @@ async def process_message(db, llm, payload) -> None:
              usage.total, usage.calls)
     if usage.calls > 0:
         try:
-            await db.record_daily_usage(
-                store.id, usage.prompt, usage.completion,
-                usage.total, usage.calls)
+            for model, m in usage.by_model.items():
+                await db.record_daily_usage(
+                    store.id, model, m["prompt"], m["completion"],
+                    m["total"], m["cached"], m["calls"])
         except Exception:
             log.exception("falha ao gravar ai_usage_daily (ignorada)")

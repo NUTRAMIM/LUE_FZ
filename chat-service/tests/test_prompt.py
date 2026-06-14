@@ -73,19 +73,16 @@ def test_prompt_marks_uncaptured_contact_fields(store):
     assert "(não capturado)" in p
 
 
-def test_prompt_shows_current_order_state(store):
+def test_order_state_lives_only_in_reminder_not_system_prompt(store):
+    # Após a raspagem, o estado do pedido NÃO é mais duplicado no system prompt
+    # (era o bloco "# Pedido atual"); a fonte única é o build_order_state_reminder.
     lead = {"name": "Ana",
             "pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],
             "forma_pagamento": "Pix", "forma_entrega": "Sedex"}
     p = build_system_prompt(store, shown_list="", lead=lead)
-    assert "2x Cropped" in p
-    assert "Pix" in p
-    assert "Sedex" in p
-
-
-def test_prompt_order_placeholder_when_empty(store):
-    p = build_system_prompt(store, shown_list="", lead=None)
-    assert "(nenhum item ainda)" in p
+    assert "2x Cropped" not in p          # não duplicado no prompt principal
+    r = build_order_state_reminder(lead)
+    assert "2x Cropped" in r and "Pix" in r and "Sedex" in r
 
 
 def test_prompt_includes_store_service_steps(store):
