@@ -83,8 +83,9 @@ async def process_message(db, llm, payload) -> None:
              usage.total, usage.calls)
     if usage.calls > 0:
         try:
-            await db.record_daily_usage(
-                store.id, usage.prompt, usage.completion,
-                usage.total, usage.calls)
+            for model, m in usage.by_model.items():
+                await db.record_daily_usage(
+                    store.id, model, m["prompt"], m["completion"],
+                    m["total"], m["cached"], m["calls"])
         except Exception:
             log.exception("falha ao gravar ai_usage_daily (ignorada)")

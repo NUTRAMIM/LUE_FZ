@@ -96,10 +96,12 @@ class FakeDB:
             {"store_id": store_id, "conversation_id": conversation_id,
              "product_id": product_id, "source": source})
 
-    async def record_daily_usage(self, store_id, prompt, completion, total, calls):
+    async def record_daily_usage(self, store_id, model, prompt, completion,
+                                 total, cached, calls):
         self.daily_usage.append(
-            {"store_id": store_id, "prompt": prompt, "completion": completion,
-             "total": total, "calls": calls})
+            {"store_id": store_id, "model": model, "prompt": prompt,
+             "completion": completion, "total": total, "cached": cached,
+             "calls": calls})
 
 
 class FakeLLM:
@@ -114,12 +116,12 @@ class FakeLLM:
                    reasoning_effort=None):
         self.chat_calls.append({"model": model, "messages": messages, "tools": tools,
                                 "reasoning_effort": reasoning_effort})
-        record_usage("chat", 10, 4, 14)
+        record_usage("chat", model, 10, 4, 14)
         return self.chat_responses.pop(0)
 
     async def embed(self, model, text):
         self.embed_calls.append(text)
-        record_usage("embed", 5, 0, 5)
+        record_usage("embed", model, 5, 0, 5)
         return [0.0] * 1536
 
 
