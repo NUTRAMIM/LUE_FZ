@@ -137,21 +137,23 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
         })
         for call in tool_calls:
             args = json.loads(call["arguments"])
-            log.info("tool call %s args=%s", call["name"], args)
+            # args carrega o texto/consulta do cliente (PII potencial) — DEBUG,
+            # não INFO, pra não vazar conteúdo do cliente nos logs da plataforma.
+            log.debug("tool call %s args=%s", call["name"], args)
             if call["name"] == LISTAR_TOOL_NAME:
                 segmento, ids, resumo = await listar_categoria(
                     db, store.id, args.get("categoria", ""))
                 if segmento:
                     product_segments.append(segmento)
                     shown_product_ids.extend(ids)
-                log.info("LISTAR_CATEGORIA(%r) -> %d peças", args.get("categoria", ""), len(ids))
+                log.debug("LISTAR_CATEGORIA(%r) -> %d peças", args.get("categoria", ""), len(ids))
                 content = resumo
             elif call["name"] == REGISTRAR_TOOL_NAME:
                 content = await registrar_pedido(
                     db, store.id, conversation_id,
                     args.get("itens", []), args.get("forma_pagamento"),
                     args.get("forma_entrega"))
-                log.info("REGISTRAR_PEDIDO -> %s", content)
+                log.debug("REGISTRAR_PEDIDO -> %s", content)
             elif call["name"] == TOOL_NAME:
                 segmento, ids, resumo = await buscar_produtos(
                     db, llm, store.id, args.get("consulta", ""), args.get("category", ""))
