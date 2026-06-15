@@ -51,7 +51,8 @@ _QUESTION_RE = re.compile(
     r"\?|\b(qual|quais|quanto|quantos|quanta|quantas|quando|onde|cad[eê]|como|"
     r"por que|porque|por quê|tem|t[eê]m|teria|h[aá] |posso|consigo|consegue|"
     r"d[aá] pra|aceita|aceitam|fazem|faz |entrega|entregam|envia|enviam|demora|"
-    r"prazo|troca|garantia|funciona|precisa|vale a pena)\b", re.I)
+    r"prazo|troca|garantia|funciona|precisa|vale a pena|"
+    r"revend\w*|atacado|sacoleir\w*|lojist\w*|pra minha loja|pra revender)\b", re.I)
 
 
 def looks_like_question(chat_input: str) -> bool:
