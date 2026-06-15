@@ -39,7 +39,7 @@ async def process_message(db, llm, payload) -> None:
 
     shown_list, history, lead = await asyncio.gather(
         db.get_shown_products(payload.id_conversa),
-        db.get_recent_messages(payload.id_conversa, limit=10),
+        db.get_recent_messages(payload.id_conversa, limit=settings.history_limit),
         db.get_lead(payload.id_conversa, store.id),
     )
     history_msgs = [{"role": m["role"], "content": m["content"]} for m in history]

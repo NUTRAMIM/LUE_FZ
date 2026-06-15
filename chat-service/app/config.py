@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # Rounds máximos de tool no loop do agente. 3 cobre buscar/listar→registrar→
     # responder; cada round reenvia o prompt, então não inflar. Env: MAX_TOOL_ROUNDS.
     max_tool_rounds: int = 3
+    # Nº de mensagens recentes do history reenviadas ao agente a cada turno.
+    # O ESTADO ATUAL DO PEDIDO já é fonte da verdade; 8 mantém contexto de
+    # descoberta sem inflar tokens. Validar com e2e antes de baixar. Env: HISTORY_LIMIT.
+    history_limit: int = 8
 
 
 settings = Settings()

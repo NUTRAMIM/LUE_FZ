@@ -219,6 +219,17 @@ async def test_category_dump_skips_text_insert_when_empty(db, llm, store):
     assert "[produto]" in assistant_msgs[0]["content"]
 
 
+async def test_pipeline_uses_history_limit_setting(db, llm, store, monkeypatch):
+    monkeypatch.setattr(pipeline_mod.settings, "history_limit", 8)
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "oi tudo bem"}]
+    db.catalog = []
+    db.recent_messages = []
+    llm.chat_responses = [{"content": "oi! como posso ajudar?"}]
+    await process_message(db, llm, _payload(msg="oi tudo bem", mid="msg-1"))
+    assert db.recent_limit == 8
+
+
 async def test_lead_state_reaches_agent_prompt(db, llm, store):
     db.store = store
     db.window_messages = [{"id": "msg-1", "content": "oi"}]

@@ -12,6 +12,7 @@ class FakeDB:
         self.store = None                  # StoreSettings | None
         self.shown_list = ""
         self.recent_messages = []          # list[dict(role, content)]
+        self.recent_limit = None
         self.match_results = []            # list[dict(content, metadata, similarity)]
         self.catalog = []                  # list[dict(id, name)]
         self.category_products = []        # list[dict(id,name,price,brand,tamanhos,cores,image_urls,category,is_available)]
@@ -36,6 +37,7 @@ class FakeDB:
         return self.shown_list
 
     async def get_recent_messages(self, conversation_id, limit=10):
+        self.recent_limit = limit
         return list(self.recent_messages)
 
     async def match_documents(self, embedding, match_count, user_id, category):
