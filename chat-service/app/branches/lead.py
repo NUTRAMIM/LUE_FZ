@@ -160,11 +160,14 @@ async def run_lead(db, llm, ctx) -> None:
 async def _summarize_interest(db, llm, ctx) -> None:
     recent = await db.get_recent_messages(ctx.conversation_id, limit=10)
     text = "\n".join(f"{m['role']}: {m['content']}" for m in recent)
+    # Síntese do comportamento/interesse do lead pro vendedor humano. Rodava em
+    # background_model (nano) + reasoning="minimal" e passou a ALUCINAR mudanças
+    # de comportamento do cliente. É leitura de comportamento, não classificação
+    # trivial: volta pro lead_model (mini), sem reasoning minimal.
     resp = await llm.chat(
-        model=settings.background_model,
+        model=settings.lead_model,
         messages=[{"role": "system", "content": INTEREST_SYSTEM},
-                  {"role": "user", "content": f"Mensagens recentes (mais recente primeiro):\n{text}"}],
-        reasoning_effort="minimal")
+                  {"role": "user", "content": f"Mensagens recentes (mais recente primeiro):\n{text}"}])
     cleaned = _strip_fences(resp.get("content", ""))
     if not cleaned or cleaned.lower() == "null":
         return
