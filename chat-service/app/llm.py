@@ -25,7 +25,7 @@ class LLMClient:
         self._client = AsyncOpenAI(api_key=api_key, max_retries=5)
 
     async def chat(self, model, messages, tools=None, max_tokens=None,
-                   reasoning_effort=None) -> dict:
+                   reasoning_effort=None, response_format=None) -> dict:
         kwargs = {"model": model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
@@ -35,6 +35,10 @@ class LLMClient:
         # (classificação/extração) "minimal" corta esse custo.
         if reasoning_effort:
             kwargs["reasoning_effort"] = reasoning_effort
+        # Structured Outputs: garante JSON válido conforme schema (sem markdown),
+        # tornando o parsing das branches robusto e permitindo encolher os prompts.
+        if response_format:
+            kwargs["response_format"] = response_format
         resp = await self._client.chat.completions.create(**kwargs)
         _record("chat", getattr(resp, "usage", None), model)
         msg = resp.choices[0].message

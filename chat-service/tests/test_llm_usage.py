@@ -90,6 +90,34 @@ async def test_chat_passes_reasoning_effort_through():
     assert "reasoning_effort" not in captured
 
 
+async def test_chat_passes_response_format_through():
+    captured = {}
+
+    class _Stub:
+        class chat:
+            class completions:
+                @staticmethod
+                async def create(**kwargs):
+                    captured.update(kwargs)
+                    class _M: content = "{}"; tool_calls = None
+                    class _C: message = _M()
+                    class _R: choices = [_C()]; usage = None
+                    return _R()
+
+    from app.llm import LLMClient
+    client = LLMClient("k")
+    client._client = _Stub()
+    rf = {"type": "json_schema", "json_schema": {"name": "x", "strict": True,
+          "schema": {"type": "object", "additionalProperties": False,
+                     "properties": {}, "required": []}}}
+    await client.chat(model="m", messages=[], response_format=rf)
+    assert captured["response_format"] == rf
+
+    captured.clear()
+    await client.chat(model="m", messages=[])
+    assert "response_format" not in captured
+
+
 async def test_embed_records_usage_into_current():
     acc = start_usage()
     # embeddings Usage tem só prompt_tokens e total_tokens (sem completion_tokens)
