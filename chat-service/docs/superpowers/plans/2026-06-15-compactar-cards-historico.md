@@ -16,10 +16,10 @@
 
 - `app/agent/tools.py`: `buscar_produtos`/`listar_categoria` retornam `(segmento, ids, resumo)`. `segmento` = markup completo dos cards (`[produto]...[/produto]`); `resumo` = frase curta (é o que vai pro modelo como tool result — já é barato).
 - `app/pipeline.py:57-58`: cada `segmento` é inserido como mensagem `assistant` no banco → vira registro da conversa e é mostrado ao cliente.
-- `app/pipeline.py:40-45`: o histórico do foreground vem de `db.get_recent_messages(limit=settings.history_limit)` (**ORDER BY created_at DESC → recente-primeiro**) e é mapeado em `history_msgs`, passado a `run_agent`. **É aqui que os cards completos voltam ao modelo todo turno.**
+- `app/pipeline.py:40-47`: o histórico do foreground vem de `db.get_recent_messages(limit=settings.history_limit)` (ORDER BY created_at DESC), e o pipeline **já reverte pra ordem cronológica** (`reversed(history)`, corrigido no commit `f02ca3c`) antes de montar `history_msgs` e passar a `run_agent`. **É aqui que os cards completos voltam ao modelo todo turno** — e, após a reversão, a lista está **antiga→recente** (o despejo mais recente é o ÚLTIMO).
 - `app/db.py` `get_shown_products`: o bloco "Já mostrado" já contém os **nomes** de todos os produtos exibidos (`product_mentions` source='ai_shown'). Logo, compactar os cards do histórico NÃO tira do modelo o conhecimento do que foi mostrado.
 
-**Decisão de design:** manter o despejo de cards **mais recente** intacto (o primeiro `assistant` com `[produto]` na lista recente-primeiro), compactar todos os mais antigos. Trade-off aceito: se o cliente perguntar preço/tamanho de um produto de um despejo já compactado, o agente faz um `BUSCAR_PRODUTOS` (chamada barata) em vez de ter o card na memória.
+**Decisão de design:** manter o despejo de cards **mais recente** intacto (o ÚLTIMO `assistant` com `[produto]` na lista cronológica), compactar todos os mais antigos. Trade-off aceito: se o cliente perguntar preço/tamanho de um produto de um despejo já compactado, o agente faz um `BUSCAR_PRODUTOS` (chamada barata) em vez de ter o card na memória.
 
 **Escopo:** 2 tarefas. NÃO inclui o achado de ordem-invertida do histórico (ver "Fora de escopo").
 
@@ -37,21 +37,22 @@ Em `tests/test_pipeline.py`, adicionar (o arquivo já importa `app.pipeline as p
 
 ```python
 def test_compact_keeps_most_recent_dump_and_compacts_older():
-    # recente-primeiro: o 1º card é o mais recente (mantém); o 2º é antigo (compacta)
+    # cronológico (antiga→recente): o ÚLTIMO card é o mais recente (mantém);
+    # o 1º card é o antigo (compacta)
     history = [
-        {"role": "user", "content": "me mostra os shorts"},
-        {"role": "assistant", "content": "[produto]\nShort A\nR$ 50\n[/produto]\n[produto]\nShort B\nR$ 60\n[/produto]"},
+        {"role": "user", "content": "me mostra os conjuntos"},
+        {"role": "assistant", "content": "[produto]\nConj A\nR$ 99\n[/produto]\n[produto]\nConj B\nR$ 89\n[/produto]"},
         {"role": "user", "content": "e os tops?"},
         {"role": "assistant", "content": "[produto]\nTop X\nR$ 40\n[/produto]"},
     ]
     out = pipeline_mod._compact_shown_cards(history)
-    # despejo mais recente (Short A/B, 1º card da lista) mantido inteiro
-    assert "[produto]" in out[1]["content"] and "Short A" in out[1]["content"]
-    # despejo antigo (Top X) compactado: sem markup, com a contagem
-    assert "[produto]" not in out[3]["content"]
-    assert "1" in out[3]["content"]
+    # despejo antigo (Conj A/B, 1º card) compactado: sem markup, com a contagem
+    assert "[produto]" not in out[1]["content"]
+    assert "2" in out[1]["content"]
+    # despejo mais recente (Top X, último card) mantido inteiro
+    assert "[produto]" in out[3]["content"] and "Top X" in out[3]["content"]
     # mensagens não-card intactas
-    assert out[0]["content"] == "me mostra os shorts"
+    assert out[0]["content"] == "me mostra os conjuntos"
     assert out[2]["content"] == "e os tops?"
 
 
@@ -85,19 +86,19 @@ def _compact_shown_cards(history_msgs: list[dict]) -> list[dict]:
     pra não reenviar o markup completo a cada turno (atacado despeja ~metade do
     estoque = muitos cards). Mantém o despejo MAIS RECENTE intacto (follow-up
     imediato precisa do detalhe). Os nomes de tudo que foi mostrado já vão no
-    bloco 'Já mostrado'. `history_msgs` vem recente-primeiro
-    (get_recent_messages ORDER BY created_at DESC), então o 1º card encontrado
-    é o mais recente."""
-    kept_recent = False
+    bloco 'Já mostrado'. `history_msgs` chega CRONOLÓGICO (antiga→recente, o
+    pipeline já reverteu o DESC do get_recent_messages), então o ÚLTIMO card é
+    o mais recente."""
+    card_idxs = [i for i, m in enumerate(history_msgs)
+                 if m["role"] == "assistant" and "[produto]" in m["content"]]
+    keep = card_idxs[-1] if card_idxs else None   # último despejo = mais recente
     out = []
-    for m in history_msgs:
-        n = m["content"].count("[produto]") if m["role"] == "assistant" else 0
-        if n > 0 and kept_recent:
+    for i, m in enumerate(history_msgs):
+        if i in card_idxs and i != keep:
+            n = m["content"].count("[produto]")
             out.append({"role": m["role"],
                         "content": f'[{n} peça(s) mostrada(s) ao cliente — nomes no bloco "Já mostrado"]'})
         else:
-            if n > 0:
-                kept_recent = True   # 1º card = mais recente: mantém inteiro
             out.append(m)
     return out
 ```
@@ -158,13 +159,13 @@ Expected: FAIL — "Conj A" ainda aparece no prompt (compactação não aplicada
 
 - [ ] **Step 3: Aplicar a compactação no `app/pipeline.py`**
 
-Onde monta `history_msgs` (hoje:
-`history_msgs = [{"role": m["role"], "content": m["content"]} for m in history]`),
+Onde monta `history_msgs` (hoje, já com a reversão cronológica do fix de ordem:
+`history_msgs = [{"role": m["role"], "content": m["content"]} for m in reversed(history)]`),
 embrulhar com a função:
 
 ```python
     history_msgs = _compact_shown_cards(
-        [{"role": m["role"], "content": m["content"]} for m in history])
+        [{"role": m["role"], "content": m["content"]} for m in reversed(history)])
 ```
 
 - [ ] **Step 4: Rodar a suíte de pipeline + suíte completa**
@@ -197,7 +198,7 @@ git commit -m "perf(chat-service): aplica compactacao de cards ao historico do a
 
 ---
 
-## Fora de escopo (mas IMPORTANTE — investigar separado)
+## Já resolvido (era "fora de escopo")
 
-**Ordem do histórico possivelmente invertida.** `db.get_recent_messages` retorna `ORDER BY created_at DESC` (recente-primeiro) e o `pipeline.py` passa isso direto pro `run_agent`, que faz `messages.extend(history)` — ou seja, o modelo pode estar recebendo a conversa **de trás pra frente**. Isso é pré-existente e pode estar degradando a qualidade do atendimento (contexto bagunçado, "recomeça do zero"). **Recomendação:** abrir uma investigação separada — confirmar com um teste se a ordem chega invertida ao modelo e, se sim, reverter o histórico para ordem cronológica antes do `extend`. NÃO fazer junto com este plano (escopos diferentes; mexer em ordenação de histórico merece seu próprio teste/PR). A função `_compact_shown_cards` deste plano é agnóstica de direção desde que "mais recente = primeiro card", premissa que vale enquanto a fonte for `get_recent_messages` DESC; se a ordem for corrigida, ajustar a heurística de "qual manter" junto.
+**Ordem do histórico invertida — CORRIGIDO** (commit `f02ca3c`, antes deste plano). `db.get_recent_messages` retorna `ORDER BY created_at DESC` e o `pipeline.py` passava direto pro `run_agent` (`messages.extend(history)`), fazendo a conversa chegar **de trás pra frente** ao modelo. Provado por teste de regressão (`tests/test_history_order.py`) e corrigido revertendo pra ordem cronológica no pipeline. **Por isso** este plano assume `history_msgs` **cronológico** (antiga→recente) e a heurística de `_compact_shown_cards` mantém o **último** card (o mais recente). Se algum dia a fonte do histórico mudar de ordem, revisar essa premissa.
 ```
