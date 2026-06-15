@@ -230,6 +230,38 @@ async def test_pipeline_uses_history_limit_setting(db, llm, store, monkeypatch):
     assert db.recent_limit == 8
 
 
+def test_compact_keeps_most_recent_dump_and_compacts_older():
+    # cronológico (antiga→recente): o ÚLTIMO card é o mais recente (mantém);
+    # o 1º card é o antigo (compacta)
+    history = [
+        {"role": "user", "content": "me mostra os conjuntos"},
+        {"role": "assistant", "content": "[produto]\nConj A\nR$ 99\n[/produto]\n[produto]\nConj B\nR$ 89\n[/produto]"},
+        {"role": "user", "content": "e os tops?"},
+        {"role": "assistant", "content": "[produto]\nTop X\nR$ 40\n[/produto]"},
+    ]
+    out = pipeline_mod._compact_shown_cards(history)
+    assert "[produto]" not in out[1]["content"]   # despejo antigo compactado
+    assert "2" in out[1]["content"]               # com a contagem
+    assert "[produto]" in out[3]["content"] and "Top X" in out[3]["content"]  # recente intacto
+    assert out[0]["content"] == "me mostra os conjuntos"
+    assert out[2]["content"] == "e os tops?"
+
+
+def test_compact_single_dump_is_left_intact():
+    history = [
+        {"role": "user", "content": "oi"},
+        {"role": "assistant", "content": "[produto]\nTop X\nR$ 40\n[/produto]"},
+    ]
+    out = pipeline_mod._compact_shown_cards(history)
+    assert out[1]["content"].count("[produto]") == 1
+
+
+def test_compact_no_cards_is_noop():
+    history = [{"role": "user", "content": "oi"},
+               {"role": "assistant", "content": "oi! tudo bem?"}]
+    assert pipeline_mod._compact_shown_cards(history) == history
+
+
 async def test_lead_state_reaches_agent_prompt(db, llm, store):
     db.store = store
     db.window_messages = [{"id": "msg-1", "content": "oi"}]

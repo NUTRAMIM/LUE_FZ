@@ -1,6 +1,7 @@
 # app/pipeline.py
 import asyncio
 import logging
+import re
 from app.buffer import resolve_window
 from app.agent.runner import run_agent
 from app.branches.lead import run_lead, should_extract_lead
@@ -13,6 +14,27 @@ from app.usage import start_usage
 log = logging.getLogger("chat-service")
 
 INSTABILITY_MSG = "Estamos com instabilidade. Sua mensagem foi recebida."
+
+
+def _compact_shown_cards(history_msgs: list[dict]) -> list[dict]:
+    """Troca os cards de produto ANTIGOS do histórico por uma referência curta,
+    pra não reenviar o markup completo a cada turno (atacado despeja ~metade do
+    estoque). Mantém o despejo MAIS RECENTE intacto (follow-up imediato precisa
+    do detalhe). Os nomes de tudo mostrado já vão no bloco 'Já mostrado'.
+    `history_msgs` chega CRONOLÓGICO (antiga→recente), então o ÚLTIMO card é o
+    mais recente."""
+    card_idxs = [i for i, m in enumerate(history_msgs)
+                 if m["role"] == "assistant" and "[produto]" in m["content"]]
+    keep = card_idxs[-1] if card_idxs else None   # último despejo = mais recente
+    out = []
+    for i, m in enumerate(history_msgs):
+        if i in card_idxs and i != keep:
+            n = m["content"].count("[produto]")
+            out.append({"role": m["role"],
+                        "content": f'[{n} peça(s) mostrada(s) ao cliente — nomes no bloco "Já mostrado"]'})
+        else:
+            out.append(m)
+    return out
 
 
 def with_reply_context(chat_input, respondendo_a):
