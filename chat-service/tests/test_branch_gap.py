@@ -44,3 +44,14 @@ async def test_gap_true_but_empty_question_inserts_nothing(db, llm, store):
         {"is_gap": True, "question": "", "tag": "OUTROS"})}]
     await run_gap(db, llm, _ctx(store, "?"))
     assert db.inserted_gaps == []
+
+
+async def test_gap_uses_structured_outputs(db, llm, store):
+    llm.chat_responses = [{"content": json.dumps(
+        {"is_gap": True, "question": "vocês entregam em sp?", "tag": "PRAZO"})}]
+    await run_gap(db, llm, _ctx(store, "vocês entregam em SP?"))
+    rf = llm.chat_calls[0]["response_format"]
+    assert rf["type"] == "json_schema"
+    props = rf["json_schema"]["schema"]["properties"]
+    assert props["is_gap"]["type"] == "boolean"
+    assert "ATACADO" in props["tag"]["enum"]
