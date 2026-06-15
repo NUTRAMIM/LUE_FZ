@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RespondendoA(BaseModel):
@@ -12,7 +12,9 @@ class RespondendoA(BaseModel):
 
 
 class WebhookPayload(BaseModel):
-    mensagem: str
+    # Teto generoso: mensagens normais de chat ficam muito abaixo. Rejeita
+    # payloads absurdos (abuso de custo de tokens / inflar prompt) com 422.
+    mensagem: str = Field(max_length=8000)
     id_mensagem: str
     id_conversa: str
     nome_loja: str

@@ -70,10 +70,11 @@ async def chat(
 
 @app.get("/health")
 async def health():
+    # Endpoint sem auth: devolve só status booleano. Os detalhes de erro
+    # (_db_error/_llm_error, que podem conter trechos de DSN/mensagens da OpenAI)
+    # ficam só nos logs do servidor (log.exception no lifespan), não na resposta.
     return {
         "ok": _db is not None and _llm is not None,
         "db": "connected" if _db is not None else "error",
-        "db_error": _db_error,
         "llm": "ready" if _llm is not None else "error",
-        "llm_error": _llm_error,
     }

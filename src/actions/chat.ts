@@ -192,6 +192,10 @@ export async function sendMessage(
       .from('messages')
       .select('id, role, content')
       .eq('id', input.replyToMessageId)
+      // Restringe a citação à conversa do próprio visitante: sem isto, um
+      // visitante podia passar o UUID de uma mensagem de OUTRA loja/conversa
+      // (admin client bypassa RLS) e receber o conteúdo dela de volta.
+      .eq('conversation_id', conv.id)
       .maybeSingle()
     if (quoted) {
       // Mensagens da IA são divididas em segmentos só na exibição (um balão por
