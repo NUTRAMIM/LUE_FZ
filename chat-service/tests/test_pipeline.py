@@ -262,6 +262,27 @@ def test_compact_no_cards_is_noop():
     assert pipeline_mod._compact_shown_cards(history) == history
 
 
+async def test_pipeline_compacts_old_cards_before_sending_to_agent(db, llm, store):
+    # "quero esse" não dispara gap nem lead (gating) → 1 chamada foreground só.
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "quero esse"}]
+    db.catalog = []
+    # recente-primeiro (como get_recent_messages devolve, DESC): recente=Short, antigo=Conj
+    db.recent_messages = [
+        {"role": "assistant", "content": "[produto]\nShort A\nR$ 50\n[/produto]"},
+        {"role": "user", "content": "me mostra os shorts"},
+        {"role": "assistant", "content": "[produto]\nConj A\nR$ 99\n[/produto]\n[produto]\nConj B\nR$ 89\n[/produto]"},
+        {"role": "user", "content": "me mostra os conjuntos"},
+    ]
+    llm.chat_responses = [{"content": "fechou!"}]
+    await process_message(db, llm, _payload(msg="quero esse", mid="msg-1"))
+
+    sent = llm.chat_calls[0]["messages"]
+    blob = "\n".join(m["content"] for m in sent)
+    assert "Conj A" not in blob and "Conj B" not in blob   # despejo antigo compactado
+    assert "Short A" in blob                                 # despejo recente intacto
+
+
 async def test_lead_state_reaches_agent_prompt(db, llm, store):
     db.store = store
     db.window_messages = [{"id": "msg-1", "content": "oi"}]

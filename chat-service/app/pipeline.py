@@ -67,8 +67,8 @@ async def process_message(db, llm, payload) -> None:
     # get_recent_messages vem recente-primeiro (ORDER BY created_at DESC, pra
     # aplicar o LIMIT). O agente/OpenAI precisam do histórico em ordem
     # CRONOLÓGICA (antiga→recente), senão a conversa chega invertida ao modelo.
-    history_msgs = [{"role": m["role"], "content": m["content"]}
-                    for m in reversed(history)]
+    history_msgs = _compact_shown_cards(
+        [{"role": m["role"], "content": m["content"]} for m in reversed(history)])
 
     agent_input = with_reply_context(buf.chat_input, payload.respondendo_a)
     try:
