@@ -1,5 +1,6 @@
 # tests/test_runner.py
 import json
+from app.agent import runner
 from app.agent.runner import run_agent, TOOL_NAME, LISTAR_TOOL_NAME, REGISTRAR_TOOL_NAME
 
 
@@ -162,3 +163,14 @@ async def test_order_state_reminder_injected_right_before_user(db, llm, store):
     assert "Pix" in reminder["content"]
     # o lembrete vem DEPOIS do histórico (vence a ancoragem na conversa)
     assert msgs.index(reminder) > 1
+
+
+async def test_tool_rounds_capped_by_settings(db, llm, store, monkeypatch):
+    monkeypatch.setattr(runner.settings, "max_tool_rounds", 3)
+    # responde sempre com uma tool call -> nunca encerra pelo conteúdo
+    tool_resp = {"tool_calls": [{"id": "1", "name": "LISTAR_CATEGORIA",
+                                 "arguments": json.dumps({"categoria": "Tops"})}]}
+    llm.chat_responses = [dict(tool_resp) for _ in range(3)] + [{"content": "fim"}]
+    await runner.run_agent(llm, db, store, "(nenhum)", "oi", [])
+    # 3 rounds no loop + 1 chamada final fora do loop = 4
+    assert len(llm.chat_calls) == 4

@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     embed_model: str = "text-embedding-3-small"
     buffer_wait_seconds: float = 7.0
     match_count: int = 6
+    # Rounds máximos de tool no loop do agente. 3 cobre buscar/listar→registrar→
+    # responder; cada round reenvia o prompt, então não inflar. Env: MAX_TOOL_ROUNDS.
+    max_tool_rounds: int = 3
 
 
 settings = Settings()

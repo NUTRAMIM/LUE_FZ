@@ -13,7 +13,6 @@ from app.agent.tools import buscar_produtos, listar_categoria, registrar_pedido
 TOOL_NAME = "BUSCAR_PRODUTOS"
 LISTAR_TOOL_NAME = "LISTAR_CATEGORIA"
 REGISTRAR_TOOL_NAME = "REGISTRAR_PEDIDO"
-MAX_TOOL_ROUNDS = 5
 
 TOOL_SCHEMA = {
     "type": "function",
@@ -113,7 +112,7 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
     product_segments: list[str] = []
     shown_product_ids: list[str] = []
 
-    for _ in range(MAX_TOOL_ROUNDS):
+    for _ in range(settings.max_tool_rounds):
         resp = await llm.chat(
             model=settings.chat_model, messages=messages,
             tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_REGISTRAR], max_tokens=4096,
