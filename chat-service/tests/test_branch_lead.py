@@ -184,3 +184,19 @@ async def test_atacado_update_preserves_existing_carro_chefe(db, llm, store):
     assert db.updated_leads[0]["carro_chefe"] == "moda fitness"
     assert db.updated_leads[0]["tipo_cliente"] == "revendedor"
     assert db.updated_leads[0]["cep"] == "01310-100"
+
+
+async def test_lead_extraction_uses_structured_outputs(db, llm, store):
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "oi"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": "Ana", "telefone": "5511999998888",
+                                "email": None, "cep": None})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(store, "sou a Ana, 11999998888"))
+    rf = llm.chat_calls[0]["response_format"]   # 1ª chamada = extração
+    assert rf["type"] == "json_schema"
+    assert rf["json_schema"]["schema"]["properties"].keys() >= {
+        "nome", "telefone", "email", "cep"}
+    assert "carro_chefe" not in rf["json_schema"]["schema"]["properties"]

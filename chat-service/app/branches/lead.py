@@ -11,6 +11,30 @@ _DISAMBIGUA_NUMEROS = """REGRA CRÍTICA — telefone vs. cep (ambos são só nú
 - Na dúvida, decida pela contagem de dígitos: 8 = cep; 10+ = telefone.
 - Um mesmo número nunca vai nos dois campos ao mesmo tempo."""
 
+def _lead_schema(atacado: bool) -> dict:
+    props = {
+        "nome": {"type": ["string", "null"]},
+        "telefone": {"type": ["string", "null"]},
+        "email": {"type": ["string", "null"]},
+        "cep": {"type": ["string", "null"]},
+    }
+    if atacado:
+        props["carro_chefe"] = {"type": ["string", "null"]}
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "lead_extraction",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": props,
+                "required": list(props.keys()),
+            },
+        },
+    }
+
+
 LEAD_SYSTEM = """Você é um extrator de informações pessoais. Analise a mensagem do cliente e identifique se ele compartilhou algum destes dados:
 
 - nome (próprio do cliente, ex: "meu nome é João", "sou a Maria")
@@ -20,15 +44,7 @@ LEAD_SYSTEM = """Você é um extrator de informações pessoais. Analise a mensa
 
 """ + _DISAMBIGUA_NUMEROS + """
 
-Retorne APENAS um JSON puro, sem markdown e sem texto adicional, no formato:
-{"nome": "João" ou null, "telefone": "5511999999999" ou null, "email": "x@y.com" ou null, "cep": "01310-100" ou null}
-
-Se nada foi compartilhado, retorne:
-{"nome": null, "telefone": null, "email": null, "cep": null}
-
-Exemplos:
-- "meu zap é (11) 99999-8888" => {"nome": null, "telefone": "5511999998888", "email": null, "cep": null}
-- "meu cep é 01310100" => {"nome": null, "telefone": null, "email": null, "cep": "01310-100"}
+Para cada campo não informado, use null.
 
 Normalize:
 - telefone: somente dígitos, com código do país (Brasil = 55).
@@ -45,11 +61,7 @@ LEAD_SYSTEM_ATACADO = """Você é um extrator de informações de um cliente REV
 
 """ + _DISAMBIGUA_NUMEROS + """
 
-Retorne APENAS um JSON puro, sem markdown e sem texto adicional, no formato:
-{"nome": "João" ou null, "telefone": "5511999999999" ou null, "email": "x@y.com" ou null, "cep": "01310-100" ou null, "carro_chefe": "vestidos de festa" ou null}
-
-Se nada foi compartilhado, retorne:
-{"nome": null, "telefone": null, "email": null, "cep": null, "carro_chefe": null}
+Para cada campo não informado, use null.
 
 Normalize:
 - telefone: somente dígitos, com código do país (Brasil = 55).
@@ -131,7 +143,8 @@ async def run_lead(db, llm, ctx) -> None:
     # de algum raciocínio, e falso-negativo de telefone = lead perdido.
     resp = await llm.chat(model=settings.lead_model,
                           messages=[{"role": "system", "content": system},
-                                    {"role": "user", "content": ctx.chat_input}])
+                                    {"role": "user", "content": ctx.chat_input}],
+                          response_format=_lead_schema(atacado))
     parsed = _parse_lead(resp.get("content", ""))
     if not any(parsed.values()):
         return
