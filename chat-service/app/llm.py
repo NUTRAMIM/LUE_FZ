@@ -22,10 +22,13 @@ class LLMClient:
         # max_retries acima do default (2): a SDK retenta erros transitórios de
         # conexão (DNS/getaddrinfo, timeouts) com backoff, dando resiliência a
         # blips de rede em produção.
-        self._client = AsyncOpenAI(api_key=api_key, max_retries=5)
+        # timeout explícito por request: sem ele, uma chamada pendurada (blip de
+        # rede / TLS) segura a task e a conexão indefinidamente. 60s cobre folgado
+        # uma completion normal; a SDK ainda retenta (max_retries) em cima disso.
+        self._client = AsyncOpenAI(api_key=api_key, max_retries=5, timeout=60.0)
 
     async def chat(self, model, messages, tools=None, max_tokens=None,
-                   reasoning_effort=None) -> dict:
+                   reasoning_effort=None, response_format=None) -> dict:
         kwargs = {"model": model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
@@ -35,6 +38,10 @@ class LLMClient:
         # (classificação/extração) "minimal" corta esse custo.
         if reasoning_effort:
             kwargs["reasoning_effort"] = reasoning_effort
+        # Structured Outputs: garante JSON válido conforme schema (sem markdown),
+        # tornando o parsing das branches robusto e permitindo encolher os prompts.
+        if response_format:
+            kwargs["response_format"] = response_format
         resp = await self._client.chat.completions.create(**kwargs)
         _record("chat", getattr(resp, "usage", None), model)
         msg = resp.choices[0].message

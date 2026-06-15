@@ -1,6 +1,7 @@
 # tests/test_branch_lead.py
 import json
 from app.branches.lead import run_lead, should_extract_lead
+from app.config import settings
 from app.models import Context, Lead
 
 
@@ -63,6 +64,23 @@ async def test_creates_lead_when_absent_then_summarizes(db, llm, store):
     assert db.created_leads[0]["name"] == "Maria"
     assert db.created_leads[0]["whatsapp"] == "5511999998888"
     assert db.interest_updates[0]["interest_summary"] == "top, tamanho M, cor rosa"
+
+
+async def test_interest_summary_uses_lead_model_without_minimal_reasoning(db, llm, store):
+    # A síntese de interesse descreve o COMPORTAMENTO do lead pro vendedor.
+    # Rodando em nano + reasoning="minimal" ela passou a alucinar mudanças de
+    # comportamento — deve usar lead_model (mini), sem reasoning minimal.
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "quero um top rosa M"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": "Maria", "telefone": "5511999998888",
+                                "email": None, "cep": None})},
+        {"content": "top rosa tamanho M"},
+    ]
+    await run_lead(db, llm, _ctx(store))
+    interest_call = llm.chat_calls[1]   # 1ª é extração, 2ª é a síntese de interesse
+    assert interest_call["model"] == settings.lead_model
+    assert interest_call["reasoning_effort"] is None
 
 
 async def test_updates_existing_lead(db, llm, store):
@@ -166,3 +184,19 @@ async def test_atacado_update_preserves_existing_carro_chefe(db, llm, store):
     assert db.updated_leads[0]["carro_chefe"] == "moda fitness"
     assert db.updated_leads[0]["tipo_cliente"] == "revendedor"
     assert db.updated_leads[0]["cep"] == "01310-100"
+
+
+async def test_lead_extraction_uses_structured_outputs(db, llm, store):
+    db.lead = None
+    db.recent_messages = [{"role": "user", "content": "oi"}]
+    llm.chat_responses = [
+        {"content": json.dumps({"nome": "Ana", "telefone": "5511999998888",
+                                "email": None, "cep": None})},
+        {"content": "null"},
+    ]
+    await run_lead(db, llm, _ctx(store, "sou a Ana, 11999998888"))
+    rf = llm.chat_calls[0]["response_format"]   # 1ª chamada = extração
+    assert rf["type"] == "json_schema"
+    assert rf["json_schema"]["schema"]["properties"].keys() >= {
+        "nome", "telefone", "email", "cep"}
+    assert "carro_chefe" not in rf["json_schema"]["schema"]["properties"]

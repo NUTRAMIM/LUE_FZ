@@ -4,6 +4,26 @@ import re
 from app.config import settings
 from app.branches.lead import _strip_fences
 
+GAP_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "gap_detection",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "is_gap": {"type": "boolean"},
+                "question": {"type": "string"},
+                "tag": {"type": "string", "enum": [
+                    "POLÍTICA DE ENTREGA", "PRAZO", "ATACADO",
+                    "SKU INEXISTENTE", "PAGAMENTO", "OUTROS"]},
+            },
+            "required": ["is_gap", "question", "tag"],
+        },
+    },
+}
+
 
 def _gap_system(store) -> str:
     categorias = ", ".join(store.categories)
@@ -16,9 +36,6 @@ Instruções da loja:
 - Pagamento: {pagamento}
 - Entrega: {entrega}
 - Outras: {store.service_instructions}
-
-Retorne APENAS JSON puro, sem markdown, no formato:
-{{"is_gap": true|false, "question": "pergunta normalizada em minúsculas", "tag": "POLÍTICA DE ENTREGA"|"PRAZO"|"ATACADO"|"SKU INEXISTENTE"|"PAGAMENTO"|"OUTROS"}}
 
 Marque is_gap=true APENAS se:
 - A mensagem contém pergunta concreta (com '?' ou claramente interrogativa).
@@ -34,7 +51,8 @@ _QUESTION_RE = re.compile(
     r"\?|\b(qual|quais|quanto|quantos|quanta|quantas|quando|onde|cad[eê]|como|"
     r"por que|porque|por quê|tem|t[eê]m|teria|h[aá] |posso|consigo|consegue|"
     r"d[aá] pra|aceita|aceitam|fazem|faz |entrega|entregam|envia|enviam|demora|"
-    r"prazo|troca|garantia|funciona|precisa|vale a pena)\b", re.I)
+    r"prazo|troca|garantia|funciona|precisa|vale a pena|"
+    r"revend\w*|atacado|sacoleir\w*|lojist\w*|pra minha loja|pra revender)\b", re.I)
 
 
 def looks_like_question(chat_input: str) -> bool:
@@ -49,7 +67,8 @@ async def run_gap(db, llm, ctx) -> None:
         model=settings.background_model,
         messages=[{"role": "system", "content": _gap_system(ctx.store)},
                   {"role": "user", "content": f"Mensagem do cliente: {ctx.chat_input}"}],
-        reasoning_effort="minimal")
+        reasoning_effort="minimal",
+        response_format=GAP_SCHEMA)
     try:
         obj = json.loads(_strip_fences(resp.get("content", "")))
         is_gap = bool(obj.get("is_gap"))
