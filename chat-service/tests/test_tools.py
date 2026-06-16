@@ -191,6 +191,13 @@ async def test_listar_categoria_is_case_insensitive(db):
     assert ids == ["p1"]
 
 
+async def test_listar_categoria_ignores_surrounding_whitespace(db):
+    # cadastro vem com espaço sobrando na categoria; deve casar mesmo assim
+    db.category_products = [_prod("p1", "Body Doll", " BABY DOLL")]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "BABY DOLL")
+    assert ids == ["p1"]
+
+
 async def test_listar_categoria_skips_out_of_stock(db):
     db.category_products = [
         _prod("p1", "Em estoque", "Tops"),

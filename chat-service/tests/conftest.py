@@ -62,8 +62,10 @@ class FakeDB:
         return dict(self.product_ids_by_name)
 
     async def get_products_by_category(self, store_id, category):
+        # espelha o btrim do SQL real (cadastro vem com espaço sobrando)
+        alvo = (category or "").strip().lower()
         return [p for p in self.category_products
-                if (p.get("category") or "").lower() == category.lower()
+                if (p.get("category") or "").strip().lower() == alvo
                 and p.get("is_available", True)]
 
     async def insert_message(self, conversation_id, role, content, store_id=None):

@@ -116,11 +116,14 @@ class Database:
         return {r["name"].strip().lower(): r["pid"] for r in rows if r["name"]}
 
     async def get_products_by_category(self, store_id, category):
+        # btrim: o cadastro de produtos vem com espaço sobrando no começo/fim da
+        # categoria (ex.: " PIJAMA CICLISTA"), que não casava com o nome limpo que
+        # o agente passa. Ignora esses espaços nos dois lados.
         rows = await self._pool.fetch(
             """SELECT id::text, name, price, brand, tamanhos, cores, image_urls,
                       video_url
                FROM products
-               WHERE user_id = $1 AND lower(category) = lower($2)
+               WHERE user_id = $1 AND lower(btrim(category)) = lower(btrim($2))
                  AND is_available = true
                ORDER BY name""", store_id, category)
         return [dict(r) for r in rows]
