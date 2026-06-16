@@ -31,10 +31,22 @@ def _compact_shown_cards(history_msgs: list[dict]) -> list[dict]:
         if i in card_idxs and i != keep:
             n = m["content"].count("[produto]")
             out.append({"role": m["role"],
-                        "content": f'[{n} peça(s) mostrada(s) ao cliente — nomes no bloco "Já mostrado"]'})
+                        "content": f'[{n} peça(s) mostrada(s) ao cliente, nomes no bloco "Já mostrado"]'})
         else:
             out.append(m)
     return out
+
+
+_DASH_SEP_RE = re.compile(r"\s*[‐-―−]\s*|\s+-\s+")
+
+
+def _strip_dashes(text: str) -> str:
+    """Tira travessão/hífen usado como SEPARADOR da fala enviada ao cliente
+    (a loja não quer '-' nem '—' ligando frases). Troca por vírgula. Preserva
+    hífen colado dentro de número/palavra (telefone, CEP, carro-chefe)."""
+    if not text:
+        return text
+    return _DASH_SEP_RE.sub(", ", text)
 
 
 def with_reply_context(chat_input, respondendo_a):
@@ -85,11 +97,12 @@ async def process_message(db, llm, payload) -> None:
     for product_id in result.shown_product_ids:
         await db.insert_product_mention(
             store.id, payload.id_conversa, product_id, "ai_shown")
-    if result.text:
-        await db.insert_message(payload.id_conversa, "assistant", result.text)
+    reply_text = _strip_dashes(result.text)   # cliente nunca recebe travessão/hífen-separador
+    if reply_text:
+        await db.insert_message(payload.id_conversa, "assistant", reply_text)
 
     ctx = Context(store=store, conversation_id=payload.id_conversa,
-                  chat_input=buf.chat_input, ai_output=result.text)
+                  chat_input=buf.chat_input, ai_output=reply_text)
     # Gating dos branches de fundo: lead e gap rodavam em TODA mensagem (2-3
     # chamadas LLM por resposta). Aqui só agendamos quando há sinal — pula a
     # chamada (e o prompt) em saudação/elogio/sem dado de contato.

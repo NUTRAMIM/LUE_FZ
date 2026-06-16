@@ -1,5 +1,16 @@
 # tests/test_prompt.py
-from app.agent.prompt import build_system_prompt, build_order_state_reminder
+import dataclasses
+from app.agent.prompt import (build_system_prompt, build_order_state_reminder,
+                              build_store_prompt)
+
+
+def test_atacado_asks_reseller_or_personal_before_carro_chefe(store):
+    atacado = dataclasses.replace(store, min_order_enabled=True)
+    p = build_store_prompt(atacado)
+    # pergunta revenda vs uso próprio ANTES do carro-chefe, atendendo igual
+    assert "revender" in p
+    assert "uso próprio" in p
+    assert p.index("uso próprio") < p.index("carro-chefe")
 
 
 def test_prompt_includes_store_fields(store):

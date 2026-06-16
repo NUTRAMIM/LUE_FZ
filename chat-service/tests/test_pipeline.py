@@ -25,6 +25,31 @@ def _payload(msg="quero um top", mid="msg-1", conv="conv-1", respondendo_a=None)
                           respondendo_a=respondendo_a)
 
 
+def test_strip_dashes_replaces_separators_keeps_numbers():
+    f = pipeline_mod._strip_dashes
+    assert f("esses dois — olha:") == "esses dois, olha:"
+    assert f("esses dois - olha") == "esses dois, olha"
+    assert f("texto‑aqui") == "texto, aqui"          # hífen não-quebrável (U+2011)
+    # preserva hífen dentro de número/palavra (telefone, CEP, palavra composta)
+    assert f("seu zap (11) 98888-7777") == "seu zap (11) 98888-7777"
+    assert f("CEP 01310-100") == "CEP 01310-100"
+    assert f("o carro-chefe dela") == "o carro-chefe dela"
+    assert f("") == ""
+
+
+async def test_pipeline_strips_dashes_from_reply(db, llm, store):
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "quero esse"}]
+    db.catalog = []
+    db.recent_messages = []
+    llm.chat_responses = [{"content": "Anotei, Ana — seu zap (11) 98888-7777 está certo"}]
+    await process_message(db, llm, _payload(msg="quero esse", mid="msg-1"))
+    assistant = [m for m in db.inserted_messages if m["role"] == "assistant"]
+    assert assistant
+    assert "—" not in assistant[0]["content"]
+    assert "Anotei, Ana, seu zap (11) 98888-7777 está certo" == assistant[0]["content"]
+
+
 def test_with_reply_context_none_returns_unchanged():
     assert with_reply_context("oi", None) == "oi"
 
