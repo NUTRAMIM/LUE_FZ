@@ -99,7 +99,7 @@ TOOL_SCHEMA_REGISTRAR = {
 
 
 async def run_agent(llm, db, store, shown_list, chat_input, history,
-                    conversation_id=None, lead=None) -> AgentResult:
+                    conversation_id=None, lead=None, shown_ids=None) -> AgentResult:
     # Ordem pensada pra maximizar prompt caching da OpenAI (casa por prefixo
     # exato): primeiro o bloco GLOBAL-estático (idêntico p/ toda loja), depois o
     # POR-LOJA-estático (estável na conversa), só então o histórico e o estado
@@ -116,6 +116,9 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
 
     product_segments: list[str] = []
     shown_product_ids: list[str] = []
+    # IDs já mostrados (turnos anteriores + os mostrados neste turno), pra nenhuma
+    # tool reenviar peça repetida.
+    excluido: set[str] = {str(x) for x in (shown_ids or [])}
 
     for _ in range(settings.max_tool_rounds):
         resp = await llm.chat(
@@ -146,10 +149,11 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
             log.debug("tool call %s args=%s", call["name"], args)
             if call["name"] == LISTAR_TOOL_NAME:
                 segmento, ids, resumo = await listar_categoria(
-                    db, store.id, args.get("categoria", ""))
+                    db, store.id, args.get("categoria", ""), exclude_ids=excluido)
                 if segmento:
                     product_segments.append(segmento)
                     shown_product_ids.extend(ids)
+                    excluido.update(ids)
                 log.debug("LISTAR_CATEGORIA(%r) -> %d peças", args.get("categoria", ""), len(ids))
                 content = resumo
             elif call["name"] == REGISTRAR_TOOL_NAME:
@@ -166,18 +170,20 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
                 # (mostra tudo), sem depender da escolha do modelo.
                 alvo = bare_category_target(store.categories, consulta, category)
                 if alvo:
-                    segmento, ids, resumo = await listar_categoria(db, store.id, alvo)
+                    segmento, ids, resumo = await listar_categoria(
+                        db, store.id, alvo, exclude_ids=excluido)
                     log.info("BUSCAR_PRODUTOS->LISTAR_CATEGORIA(%r) -> %d peças",
                              alvo, len(ids))
                 else:
                     segmento, ids, resumo = await buscar_produtos(
-                        db, llm, store.id, consulta, category)
+                        db, llm, store.id, consulta, category, exclude_ids=excluido)
                     log.info("BUSCAR_PRODUTOS(consulta=%r, category=%r) -> %d cards",
                              consulta, category,
                              segmento.count("[produto]") if segmento else 0)
                 if segmento:
                     product_segments.append(segmento)
                     shown_product_ids.extend(ids)
+                    excluido.update(ids)
                 content = resumo
             else:
                 content = ""

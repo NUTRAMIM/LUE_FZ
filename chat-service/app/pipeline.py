@@ -71,8 +71,9 @@ async def process_message(db, llm, payload) -> None:
         log.error("store not found: %s", payload.id_loja)
         return
 
-    shown_list, history, lead = await asyncio.gather(
+    shown_list, shown_ids, history, lead = await asyncio.gather(
         db.get_shown_products(payload.id_conversa),
+        db.get_shown_product_ids(payload.id_conversa),
         db.get_recent_messages(payload.id_conversa, limit=settings.history_limit),
         db.get_lead(payload.id_conversa, store.id),
     )
@@ -86,7 +87,7 @@ async def process_message(db, llm, payload) -> None:
     try:
         result = await run_agent(
             llm, db, store, shown_list, agent_input, history_msgs,
-            conversation_id=payload.id_conversa, lead=lead)
+            conversation_id=payload.id_conversa, lead=lead, shown_ids=shown_ids)
     except Exception:
         log.exception("agent failed; inserting instability fallback")
         await db.insert_message(payload.id_conversa, "system", INSTABILITY_MSG)

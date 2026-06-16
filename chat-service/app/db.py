@@ -65,6 +65,13 @@ class Database:
             conversation_id)
         return r["shown_list"] if r else ""
 
+    async def get_shown_product_ids(self, conversation_id):
+        rows = await self._pool.fetch(
+            """SELECT DISTINCT product_id::text AS pid FROM product_mentions
+               WHERE conversation_id = $1 AND source = 'ai_shown'""",
+            conversation_id)
+        return [r["pid"] for r in rows]
+
     async def get_recent_messages(self, conversation_id, limit=10):
         rows = await self._pool.fetch(
             """SELECT role, content FROM messages

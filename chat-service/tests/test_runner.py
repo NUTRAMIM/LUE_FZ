@@ -113,6 +113,49 @@ async def test_buscar_with_filter_does_not_redirect(db, llm, store):
     assert llm.embed_calls == ["body preto"]   # passou pela busca semântica
 
 
+async def test_listar_again_when_all_shown_does_not_resend(db, llm, store):
+    # categoria inteira já mostrada antes: não reenvia, orienta a sugerir outra
+    s = dataclasses.replace(store, categories=["bodies"])
+    db.category_products = [
+        {"id": "p1", "name": "Body 1", "category": "bodies", "price": 44.0,
+         "brand": None, "tamanhos": ["U"], "cores": ["bege"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": LISTAR_TOOL_NAME,
+                         "arguments": json.dumps({"categoria": "bodies"})}]},
+        {"content": "por ora é só isso em bodies, quer ver conjuntos?"},
+    ]
+    out = await run_agent(llm, db, s, shown_list="Body 1",
+                          chat_input="me mostra mais bodies", history=[],
+                          shown_ids=["p1"])
+    assert out.product_segments == []         # NÃO reenviou os cards
+    assert out.shown_product_ids == []
+    tool_msg = next(m for m in llm.chat_calls[1]["messages"] if m.get("role") == "tool")
+    assert "já mostrou" in tool_msg["content"].lower()
+
+
+async def test_more_options_when_all_shown_does_not_resend(db, llm, store):
+    # "mais opções" (redirect p/ listar) com tudo já mostrado também não reenvia
+    s = dataclasses.replace(store, categories=["bodies"])
+    db.category_products = [
+        {"id": "p1", "name": "Body 1", "category": "bodies", "price": 44.0,
+         "brand": None, "tamanhos": ["U"], "cores": ["bege"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": TOOL_NAME,
+                         "arguments": json.dumps({"consulta": "quero ver mais opções",
+                                                  "category": "bodies"})}]},
+        {"content": "é só isso por enquanto, quer ver outra?"},
+    ]
+    out = await run_agent(llm, db, s, shown_list="Body 1",
+                          chat_input="quero ver mais opções", history=[],
+                          shown_ids=["p1"])
+    assert out.product_segments == []
+    assert llm.embed_calls == []
+
+
 async def test_listar_categoria_collects_segments_and_ids(db, llm, store):
     db.category_products = [
         {"id": "p1", "name": "Conjunto A", "category": "Conjuntos", "price": 99.9,

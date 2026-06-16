@@ -57,7 +57,8 @@ def bare_category_target(categories, consulta: str, category: str):
     return target if (target and not leftover) else None
 
 
-async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str):
+async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str,
+                          exclude_ids=None):
     embedding = await llm.embed(settings.embed_model, consulta)
     cat = (category or "").strip()
 
@@ -65,13 +66,21 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str):
     # store_settings). Sem fallback para o catálogo inteiro: misturar categorias
     # fazia "pedi calcinha, veio sutiã". Se a categoria esgotar, o agente é
     # instruído (no prompt) a tentar a próxima categoria da loja.
-    rows = await db.match_documents(
+    raw = await db.match_documents(
         embedding=embedding, match_count=settings.match_count,
         user_id=store_id, category=cat or None)
 
-    if not rows:
+    if not raw:
         return ("", [], "Não encontrei peças para esse pedido. Peça ao cliente "
                 "mais detalhes (cor, tamanho ou ocasião) numa frase curta.")
+
+    # Não reenvia o que já foi mostrado nesta conversa.
+    exclude = {str(x) for x in (exclude_ids or [])}
+    rows = [r for r in raw if str(r.get("id")) not in exclude]
+    if not rows:
+        return ("", [], "Essas peças você já mostrou nesta conversa. NÃO repita "
+                "nenhuma. Diga ao cliente, numa frase leve, que por enquanto é só "
+                "isso e ofereça ver outra categoria parecida da loja.")
 
     cards = []
     for r in rows:
@@ -119,16 +128,24 @@ def _build_card(p: dict) -> str:
     return f"[produto]\n{body}\n[/produto]"
 
 
-async def listar_categoria(db, store_id: str, categoria: str):
+async def listar_categoria(db, store_id: str, categoria: str, exclude_ids=None):
     cat = (categoria or "").strip()
     if not cat:
         return ("", [], "Categoria não informada.")
     rows = await db.get_products_by_category(store_id, cat)
     if not rows:
         return ("", [], f"Nenhuma peça disponível em {cat}.")
-    cards = [_build_card(p) for p in rows]
-    ids = [p["id"] for p in rows]
-    resumo = (f"Mostrei {len(rows)} peças de {cat} ao cliente. "
+    # Tira o que já foi mostrado nesta conversa pra não reenviar a categoria toda.
+    exclude = {str(x) for x in (exclude_ids or [])}
+    novos = [p for p in rows if str(p["id"]) not in exclude]
+    if not novos:
+        return ("", [], (f"Você já mostrou TODAS as peças de {cat} nesta conversa. "
+                "NÃO repita nenhuma. Diga ao cliente, numa frase leve, que por "
+                "enquanto é só isso em {cat} e ofereça ver outra categoria parecida "
+                "da loja.").format(cat=cat))
+    cards = [_build_card(p) for p in novos]
+    ids = [str(p["id"]) for p in novos]
+    resumo = (f"Mostrei {len(novos)} peças de {cat} ao cliente. "
               "Escreva só uma frase curta de fecho perguntando se quer ver "
               "tamanho ou cor de alguma.")
     return ("\n".join(cards), ids, resumo)

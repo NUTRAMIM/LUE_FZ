@@ -270,6 +270,76 @@ async def test_buscar_produtos_results_recorded_as_ai_shown(db, llm, store):
     assert {m["product_id"] for m in shown} == {"p1"}
 
 
+async def test_two_turns_category_then_more_does_not_resend(db, llm, store):
+    # cenário real: 1º turno lista a categoria inteira (grava ai_shown); 2º turno
+    # "quero ver mais" não reenvia, orienta a sugerir outra categoria
+    db.store = store
+    db.recent_messages = []
+    db.category_products = [
+        {"id": "p1", "name": "Top A", "category": "top", "price": 50.0,
+         "brand": None, "tamanhos": ["P"], "cores": ["rosa"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+        {"id": "p2", "name": "Top B", "category": "top", "price": 60.0,
+         "brand": None, "tamanhos": ["M"], "cores": ["azul"],
+         "image_urls": ["http://img/p2.jpg"], "is_available": True},
+    ]
+    # turno 1: "tops" (nome pelado) -> listar tudo
+    db.window_messages = [{"id": "msg-1", "content": "tops"}]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": "LISTAR_CATEGORIA",
+                         "arguments": json.dumps({"categoria": "top"})}]},
+        {"content": "olha os tops!"},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(msg="tops", mid="msg-1"))
+    assert {m["product_id"] for m in db.inserted_mentions
+            if m["source"] == "ai_shown"} == {"p1", "p2"}
+
+    # turno 2: "quero ver mais" -> nada novo, não reenvia cards
+    db.inserted_messages.clear()
+    db.window_messages = [{"id": "msg-2", "content": "quero ver mais tops"}]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c2", "name": "LISTAR_CATEGORIA",
+                         "arguments": json.dumps({"categoria": "top"})}]},
+        {"content": "por ora é só isso em tops, quer ver vestidos?"},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(msg="quero ver mais tops", mid="msg-2"))
+    assistant_msgs = [m for m in db.inserted_messages if m["role"] == "assistant"]
+    assert assistant_msgs, "esperava ao menos a resposta de texto"
+    assert all("[produto]" not in m["content"] for m in assistant_msgs)
+
+
+async def test_pipeline_does_not_resend_already_shown_category(db, llm, store):
+    # regressão: pediu a categoria de novo e tudo já foi mostrado antes →
+    # não reenvia os cards (o pipeline busca os ids já mostrados e exclui)
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "me mostra mais tops"}]
+    db.recent_messages = []
+    db.shown_ids = ["p1"]
+    db.category_products = [
+        {"id": "p1", "name": "Top A", "category": "top", "price": 50.0,
+         "brand": None, "tamanhos": ["P"], "cores": ["rosa"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": "LISTAR_CATEGORIA",
+                         "arguments": json.dumps({"categoria": "top"})}]},
+        {"content": "por ora é só isso em tops, quer ver vestidos?"},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(msg="me mostra mais tops", mid="msg-1"))
+    assistant_msgs = [m for m in db.inserted_messages if m["role"] == "assistant"]
+    assert all("[produto]" not in m["content"] for m in assistant_msgs)
+    assert [m for m in db.inserted_mentions if m["source"] == "ai_shown"] == []
+
+
 async def test_pipeline_uses_history_limit_setting(db, llm, store, monkeypatch):
     monkeypatch.setattr(pipeline_mod.settings, "history_limit", 8)
     db.store = store

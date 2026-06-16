@@ -69,6 +69,24 @@ async def test_buscar_produtos_returns_shown_ids(db, llm):
     assert ids == ["p1", "p2"]
 
 
+async def test_buscar_produtos_excludes_already_shown(db, llm):
+    db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1"),
+                        _doc("Top B", "top", ["azul"], pid="p2")]
+    segmento, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top",
+                                             exclude_ids=["p1"])
+    assert ids == ["p2"]
+    assert "Top A" not in segmento
+
+
+async def test_buscar_produtos_all_shown_returns_suggestion(db, llm):
+    db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1")]
+    segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "top", "top",
+                                                  exclude_ids=["p1"])
+    assert segmento == ""
+    assert ids == []
+    assert "outra categoria" in resumo.lower()
+
+
 from app.agent.tools import bare_category_target
 
 
@@ -221,6 +239,33 @@ async def test_listar_categoria_card_appends_video_after_images(db):
         "Cores: preto, branco\n"
         "[/produto]"
     )
+
+
+async def test_listar_categoria_excludes_already_shown(db):
+    db.category_products = [_prod("p1", "A", "Tops"), _prod("p2", "B", "Tops")]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "Tops", exclude_ids=["p1"])
+    assert ids == ["p2"]
+    assert "A\n" not in segmento and "B" in segmento
+
+
+async def test_listar_categoria_all_shown_suggests_other_category(db):
+    db.category_products = [_prod("p1", "A", "Tops")]
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops",
+                                                   exclude_ids=["p1"])
+    assert segmento == ""
+    assert ids == []
+    low = resumo.lower()
+    assert "já mostrou" in low
+    assert "outra categoria" in low
+
+
+async def test_listar_categoria_empty_category_keeps_distinct_message(db):
+    # categoria SEM nenhuma peça (não é "tudo já mostrado") mantém msg própria
+    db.category_products = []
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops",
+                                                   exclude_ids=["p1"])
+    assert segmento == ""
+    assert "Nenhuma peça disponível" in resumo
 
 
 def test_format_pedido_empty():

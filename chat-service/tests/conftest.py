@@ -11,6 +11,7 @@ class FakeDB:
         self.window_messages = []          # list[dict(id, content)]
         self.store = None                  # StoreSettings | None
         self.shown_list = ""
+        self.shown_ids = []                # list[str]: product_ids já mostrados
         self.recent_messages = []          # list[dict(role, content)]
         self.recent_limit = None
         self.match_results = []            # list[dict(content, metadata, similarity)]
@@ -35,6 +36,9 @@ class FakeDB:
 
     async def get_shown_products(self, conversation_id):
         return self.shown_list
+
+    async def get_shown_product_ids(self, conversation_id):
+        return list(self.shown_ids)
 
     async def get_recent_messages(self, conversation_id, limit=10):
         self.recent_limit = limit
@@ -97,6 +101,9 @@ class FakeDB:
         self.inserted_mentions.append(
             {"store_id": store_id, "conversation_id": conversation_id,
              "product_id": product_id, "source": source})
+        # reflete o estado real: o que foi mostrado fica visível p/ get_shown_product_ids
+        if source == "ai_shown" and product_id not in self.shown_ids:
+            self.shown_ids.append(product_id)
 
     async def record_daily_usage(self, store_id, model, prompt, completion,
                                  total, cached, calls):
