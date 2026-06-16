@@ -96,8 +96,13 @@ async def process_message(db, llm, payload) -> None:
     for segmento in result.product_segments:
         await db.insert_message(payload.id_conversa, "assistant", segmento)
     for product_id in result.shown_product_ids:
-        await db.insert_product_mention(
-            store.id, payload.id_conversa, product_id, "ai_shown")
+        # registrar a menção nunca pode derrubar a resposta ao cliente: um id
+        # inesperado (ex.: não-UUID) é logado e ignorado, não propaga.
+        try:
+            await db.insert_product_mention(
+                store.id, payload.id_conversa, product_id, "ai_shown")
+        except Exception:
+            log.warning("falha ao gravar product_mention %r (ignorada)", product_id)
     reply_text = _strip_dashes(result.text)   # cliente nunca recebe travessão/hífen-separador
     if reply_text:
         await db.insert_message(payload.id_conversa, "assistant", reply_text)

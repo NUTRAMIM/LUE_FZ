@@ -27,6 +27,7 @@ class FakeDB:
         self.order_upserts = []
         self.daily_usage = []
         self.product_prices = {}           # dict(lower(name) -> price)
+        self.product_ids_by_name = {}      # dict(lower(name) -> product_id uuid)
 
     async def get_user_messages_in_window(self, conversation_id):
         return list(self.window_messages)
@@ -56,6 +57,9 @@ class FakeDB:
 
     async def get_product_prices(self, store_id):
         return dict(self.product_prices)
+
+    async def get_product_ids_by_name(self, store_id):
+        return dict(self.product_ids_by_name)
 
     async def get_products_by_category(self, store_id, category):
         return [p for p in self.category_products

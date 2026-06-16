@@ -10,10 +10,11 @@ from app.config import settings
 _FILLER = {
     "quero", "ver", "mais", "opcoes", "opcao", "opções", "opção", "me", "mostra",
     "mostrar", "mostre", "todos", "todas", "todo", "toda", "o", "os", "a", "as",
-    "de", "do", "da", "e", "quais", "tem", "teem", "vcs", "voces", "queria",
+    "de", "do", "da", "dos", "das", "e", "quais", "tem", "teem", "vcs", "voces", "queria",
     "gostaria", "uns", "umas", "alguns", "algumas", "pra", "para", "por", "favor",
     "oi", "ola", "ai", "hoje", "tambem", "outras", "outros", "outra", "outro",
-    "alguma", "algum", "ainda", "que",
+    "alguma", "algum", "ainda", "que", "pecas", "peca", "resto", "novidade",
+    "novidades", "modelos", "modelo",
 }
 
 
@@ -74,18 +75,18 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str,
         return ("", [], "Não encontrei peças para esse pedido. Peça ao cliente "
                 "mais detalhes (cor, tamanho ou ocasião) numa frase curta.")
 
-    # Não reenvia o que já foi mostrado nesta conversa.
+    # match_documents devolve o id do DOCUMENTO (bigint), não o id do produto.
+    # Resolvemos o UUID do produto pelo NOME (estável) — é esse id que vai pra
+    # product_mentions e pra exclusão de já-mostrados.
+    name_to_id = await db.get_product_ids_by_name(store_id)
     exclude = {str(x) for x in (exclude_ids or [])}
-    rows = [r for r in raw if str(r.get("id")) not in exclude]
-    if not rows:
-        return ("", [], "Essas peças você já mostrou nesta conversa. NÃO repita "
-                "nenhuma. Diga, numa frase leve, que por enquanto é só isso, e "
-                "sugira UMA outra categoria parecida: escreva a frase e chame "
-                "SUGERIR_CATEGORIA com ela (o sistema manda 1-2 fotos depois).")
 
-    cards = []
-    for r in rows:
+    cards, ids, mostrou = [], [], 0
+    for r in raw:
         m = r.get("metadata", {}) or {}
+        pid = name_to_id.get((m.get("name") or "").strip().lower())
+        if pid and pid in exclude:
+            continue   # já mostrado nesta conversa
         imgs = m.get("image_urls")
         if not imgs:
             single = m.get("image_url")
@@ -98,9 +99,17 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str,
             "image_urls": imgs,
             "video_url": m.get("video_url"),
         }))
+        mostrou += 1
+        if pid:
+            ids.append(pid)
 
-    ids = [str(r["id"]) for r in rows if r.get("id")]
-    resumo = (f"Mostrei {len(rows)} peças ao cliente. Escreva só uma frase curta "
+    if not cards:
+        return ("", [], "Essas peças você já mostrou nesta conversa. NÃO repita "
+                "nenhuma. Diga, numa frase leve, que por enquanto é só isso, e "
+                "sugira UMA outra categoria parecida: escreva a frase e chame "
+                "SUGERIR_CATEGORIA com ela (o sistema manda 1-2 fotos depois).")
+
+    resumo = (f"Mostrei {mostrou} peças ao cliente. Escreva só uma frase curta "
               "de fecho perguntando se quer ver tamanho ou cor de alguma.")
     return ("\n".join(cards), ids, resumo)
 

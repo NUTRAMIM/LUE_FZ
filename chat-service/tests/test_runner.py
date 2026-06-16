@@ -99,10 +99,11 @@ async def test_buscar_more_options_redirects_to_listar(db, llm, store):
 async def test_buscar_with_filter_does_not_redirect(db, llm, store):
     # com filtro real (cor), continua na busca semântica (não vira listar)
     s = dataclasses.replace(store, categories=["bodies"])
-    db.match_results = [{"id": "p9", "content": "Body Preto", "similarity": 0.5,
+    db.match_results = [{"id": "999", "content": "Body Preto", "similarity": 0.5,
                          "metadata": {"name": "Body Preto", "category": "bodies",
                                       "price": 44.0, "tamanhos": ["U"], "cores": ["preto"],
                                       "brand": None, "image_urls": ["http://img/p9.jpg"]}}]
+    db.product_ids_by_name = {"body preto": "p9"}
     llm.chat_responses = [
         {"tool_calls": [{"id": "c1", "name": TOOL_NAME,
                          "arguments": json.dumps({"consulta": "body preto",

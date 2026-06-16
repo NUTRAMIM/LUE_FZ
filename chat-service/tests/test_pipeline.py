@@ -251,11 +251,12 @@ async def test_buscar_produtos_results_recorded_as_ai_shown(db, llm, store):
     db.window_messages = [{"id": "msg-1", "content": "tem top azul?"}]
     db.recent_messages = []
     db.match_results = [
-        {"id": "p1", "content": "Top Azul",
+        {"id": "777", "content": "Top Azul",
          "metadata": {"name": "Top Azul", "category": "top", "price": 50,
                       "tamanhos": ["P"], "cores": ["azul"], "brand": None,
                       "image_urls": ["http://img/p1.jpg"]}},
     ]
+    db.product_ids_by_name = {"top azul": "p1"}
     llm.chat_responses = [
         {"tool_calls": [{"id": "c1", "name": "BUSCAR_PRODUTOS",
                          "arguments": json.dumps({"consulta": "top azul",

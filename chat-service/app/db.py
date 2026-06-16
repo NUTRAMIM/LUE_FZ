@@ -108,6 +108,13 @@ class Database:
         return {r["name"].strip().lower(): float(r["price"])
                 for r in rows if r["name"]}
 
+    async def get_product_ids_by_name(self, store_id):
+        # match_documents devolve o id do DOCUMENTO (bigint), não o do produto.
+        # product_mentions.product_id é UUID -> resolvemos pelo nome (estável).
+        rows = await self._pool.fetch(
+            "SELECT id::text AS pid, name FROM products WHERE user_id = $1", store_id)
+        return {r["name"].strip().lower(): r["pid"] for r in rows if r["name"]}
+
     async def get_products_by_category(self, store_id, category):
         rows = await self._pool.fetch(
             """SELECT id::text, name, price, brand, tamanhos, cores, image_urls,

@@ -14,10 +14,20 @@ def _doc(name, category, cores, image_urls=None, video_url=None, pid="d1"):
     return {"id": pid, "content": name, "similarity": 0.5, "metadata": md}
 
 
+async def test_buscar_produtos_resolves_product_uuid_by_name(db, llm):
+    # match_documents devolve o id do DOCUMENTO (bigint); o id retornado tem que
+    # ser o do PRODUTO (uuid), resolvido pelo nome — senão product_mentions quebra
+    db.match_results = [_doc("Top Alça", "top", ["rosa"], pid="234396")]  # doc id
+    db.product_ids_by_name = {"top alça": "uuid-top-alca"}
+    _, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top")
+    assert ids == ["uuid-top-alca"]
+
+
 async def test_buscar_produtos_builds_cards_with_video_last(db, llm):
     db.match_results = [_doc("Top Alça", "top", ["rosa", "azul"],
                              image_urls=["http://img/a.jpg", "http://img/b.jpg"],
                              video_url="http://vid/a.mp4")]
+    db.product_ids_by_name = {"top alça": "d1"}
     segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "top floral", "top")
     assert ids == ["d1"]
     assert segmento == (
@@ -65,6 +75,7 @@ async def test_buscar_produtos_returns_shown_ids(db, llm):
     # e não reaparecerem nas próximas mensagens
     db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1"),
                         _doc("Top B", "top", ["azul"], pid="p2")]
+    db.product_ids_by_name = {"top a": "p1", "top b": "p2"}
     _, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top")
     assert ids == ["p1", "p2"]
 
@@ -72,6 +83,7 @@ async def test_buscar_produtos_returns_shown_ids(db, llm):
 async def test_buscar_produtos_excludes_already_shown(db, llm):
     db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1"),
                         _doc("Top B", "top", ["azul"], pid="p2")]
+    db.product_ids_by_name = {"top a": "p1", "top b": "p2"}
     segmento, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top",
                                              exclude_ids=["p1"])
     assert ids == ["p2"]
@@ -80,6 +92,7 @@ async def test_buscar_produtos_excludes_already_shown(db, llm):
 
 async def test_buscar_produtos_all_shown_returns_suggestion(db, llm):
     db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1")]
+    db.product_ids_by_name = {"top a": "p1"}
     segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "top", "top",
                                                   exclude_ids=["p1"])
     assert segmento == ""
@@ -105,6 +118,12 @@ def test_bare_category_target_more_options_uses_category_arg():
     cats = ["Bodies"]
     assert bare_category_target(cats, "quero ver mais opções", "Bodies") == "Bodies"
     assert bare_category_target(cats, "me mostra mais", "Bodies") == "Bodies"
+
+
+def test_bare_category_target_more_pieces_of_category():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "tem mais peças de bodies?", "") == "Bodies"
+    assert bare_category_target(cats, "me mostra o resto dos bodies", "Bodies") == "Bodies"
 
 
 def test_bare_category_target_none_when_filter_present():
