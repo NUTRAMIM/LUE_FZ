@@ -51,6 +51,20 @@ function toggleValue(arr: string[], value: string): string[] {
     : [...arr, value]
 }
 
+// Tira espaço sobrando e remove repetidas (sem diferenciar maiúsculas). Usado ao
+// carregar as categorias salvas, pra não exibir chip/checkbox duplicado quando o
+// valor salvo veio com lixo de espaço ou em duas grafias.
+function dedupTrim(arr: string[] | null | undefined): string[] {
+  const seen = new Map<string, string>()
+  for (const raw of arr ?? []) {
+    const c = (raw ?? '').trim()
+    if (!c) continue
+    const key = c.toLowerCase()
+    if (!seen.has(key)) seen.set(key, c)
+  }
+  return [...seen.values()]
+}
+
 function addCustomValue(
   arr: string[],
   predefined: string[],
@@ -218,7 +232,7 @@ export function LojaForm({
     settings?.delivery_methods ?? [],
   )
   const [categories, setCategories] = useState<string[]>(
-    settings?.categories ?? [],
+    dedupTrim(settings?.categories),
   )
   const [minOrderEnabled, setMinOrderEnabled] = useState(
     settings?.min_order_enabled ?? false,

@@ -33,13 +33,20 @@ export default async function LojaPage() {
       .eq('user_id', user.id),
   ])
 
-  const availableCategories = [
-    ...new Set(
-      (productCategoryRows ?? [])
-        .map((p) => p.category)
-        .filter((c): c is string => !!c),
-    ),
-  ].sort()
+  // Normaliza as categorias vindas dos produtos: tira espaço sobrando e deduplica
+  // sem diferenciar maiúsculas. O cadastro tem lixo (ex.: " PIJAMA CICLISTA",
+  // "MACACÃO" repetido por encoding) que, sem isso, vira opção duplicada no
+  // formulário e bagunça os chips/checkbox de categoria.
+  const availableCategories = (() => {
+    const seen = new Map<string, string>()
+    for (const row of productCategoryRows ?? []) {
+      const c = (row.category ?? '').trim()
+      if (!c) continue
+      const key = c.toLowerCase()
+      if (!seen.has(key)) seen.set(key, c)
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  })()
 
   const slug = settings?.chat_slug ?? null
 
