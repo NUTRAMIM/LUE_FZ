@@ -71,6 +71,24 @@ export function ConversasView({
     }
   }, [selectedId])
 
+  // Fallback de tempo real: em produção o Realtime nem sempre entrega o INSERT
+  // de mensagem na thread ABERTA (a lista atualiza por outro caminho). Pra não
+  // depender de recarregar a página, revalidamos a conversa selecionada a cada
+  // poucos segundos. A lista só CRESCE (nunca encolhe por uma leitura parcial) e
+  // o poll pausa com a aba em segundo plano. Quando o Realtime funciona, o
+  // tamanho já bate e o poll vira no-op.
+  useEffect(() => {
+    if (!selectedId) return
+    const id = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      getMessages(selectedId).then((rows) => {
+        if (selectedIdRef.current !== selectedId) return
+        setMessages((prev) => (rows.length > prev.length ? rows : prev))
+      })
+    }, 5000)
+    return () => clearInterval(id)
+  }, [selectedId])
+
   // Lazy-load closed list on first expand.
   useEffect(() => {
     if (!closedExpanded || closedLoaded) return
