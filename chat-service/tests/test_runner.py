@@ -1,7 +1,8 @@
 # tests/test_runner.py
 import json
 from app.agent import runner
-from app.agent.runner import run_agent, TOOL_NAME, LISTAR_TOOL_NAME, REGISTRAR_TOOL_NAME
+from app.agent.runner import (run_agent, TOOL_NAME, LISTAR_TOOL_NAME,
+                              REGISTRAR_TOOL_NAME, SUGERIR_TOOL_NAME)
 
 
 async def test_returns_text_without_tool_call(db, llm, store):
@@ -195,7 +196,31 @@ async def test_all_tools_offered_to_llm(db, llm, store):
     llm.chat_responses = [{"content": "oi"}]
     await run_agent(llm, db, store, shown_list="", chat_input="oi", history=[])
     tool_names = {t["function"]["name"] for t in llm.chat_calls[0]["tools"]}
-    assert tool_names == {TOOL_NAME, LISTAR_TOOL_NAME, REGISTRAR_TOOL_NAME}
+    assert tool_names == {TOOL_NAME, LISTAR_TOOL_NAME, REGISTRAR_TOOL_NAME,
+                          SUGERIR_TOOL_NAME}
+
+
+async def test_sugerir_categoria_goes_to_suggestion_channel(db, llm, store):
+    # SUGERIR_CATEGORIA não vai pro canal normal de produtos; vai pro de sugestão
+    # (que o pipeline insere DEPOIS do texto) e respeita o limite de 2
+    s = dataclasses.replace(store, categories=["bodies", "leggings"])
+    db.category_products = [
+        {"id": f"l{i}", "name": f"Legging {i}", "category": "leggings", "price": 70.0,
+         "brand": None, "tamanhos": ["P"], "cores": ["preto"],
+         "image_urls": [f"http://img/l{i}.jpg"], "is_available": True}
+        for i in range(1, 4)
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": SUGERIR_TOOL_NAME,
+                         "arguments": json.dumps({"categoria": "leggings"})}]},
+        {"content": "e que tal umas leggings? combinam demais"},
+    ]
+    out = await run_agent(llm, db, s, shown_list="", chat_input="me mostra mais",
+                          history=[])
+    assert out.product_segments == []
+    assert len(out.suggestion_segments) == 1
+    assert out.suggestion_segments[0].count("[produto]") == 2
+    assert out.shown_product_ids == ["l1", "l2"]
 
 
 async def test_registrar_pedido_tool_is_routed(db, llm, store):

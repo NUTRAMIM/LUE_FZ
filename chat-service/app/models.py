@@ -91,3 +91,5 @@ class AgentResult:
     text: str
     product_segments: list[str] = field(default_factory=list)
     shown_product_ids: list[str] = field(default_factory=list)
+    # cards de sugestão proativa: o pipeline insere DEPOIS do texto da IA
+    suggestion_segments: list[str] = field(default_factory=list)

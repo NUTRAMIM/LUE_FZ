@@ -101,6 +101,10 @@ async def process_message(db, llm, payload) -> None:
     reply_text = _strip_dashes(result.text)   # cliente nunca recebe travessão/hífen-separador
     if reply_text:
         await db.insert_message(payload.id_conversa, "assistant", reply_text)
+    # cards de sugestão proativa vão DEPOIS do texto (a mensagem de sugestão vem
+    # primeiro, as fotos da categoria sugerida em seguida)
+    for segmento in result.suggestion_segments:
+        await db.insert_message(payload.id_conversa, "assistant", segmento)
 
     ctx = Context(store=store, conversation_id=payload.id_conversa,
                   chat_input=buf.chat_input, ai_output=reply_text)

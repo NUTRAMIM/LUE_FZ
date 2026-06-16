@@ -270,6 +270,40 @@ async def test_buscar_produtos_results_recorded_as_ai_shown(db, llm, store):
     assert {m["product_id"] for m in shown} == {"p1"}
 
 
+async def test_suggestion_cards_come_after_text(db, llm, store):
+    # ordem exigida: cards da categoria pedida -> mensagem de sugestão -> fotos
+    # da categoria sugerida (as fotos da sugestão vêm DEPOIS do texto)
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "tops"}]
+    db.recent_messages = []
+    db.category_products = [
+        {"id": "p1", "name": "Top A", "category": "top", "price": 50.0,
+         "brand": None, "tamanhos": ["P"], "cores": ["rosa"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+        {"id": "v1", "name": "Vestido X", "category": "vestido", "price": 90.0,
+         "brand": None, "tamanhos": ["M"], "cores": ["preto"],
+         "image_urls": ["http://img/v1.jpg"], "is_available": True},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": "LISTAR_CATEGORIA",
+                         "arguments": json.dumps({"categoria": "top"})}]},
+        {"tool_calls": [{"id": "c2", "name": "SUGERIR_CATEGORIA",
+                         "arguments": json.dumps({"categoria": "vestido"})}]},
+        {"content": "olha os tops! e que tal uns vestidos?"},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(msg="tops", mid="msg-1"))
+    assistant = [m["content"] for m in db.inserted_messages if m["role"] == "assistant"]
+    assert len(assistant) == 3
+    assert "[produto]" in assistant[0] and "Top A" in assistant[0]   # categoria pedida
+    assert assistant[1] == "olha os tops! e que tal uns vestidos?"   # texto/sugestão
+    assert "[produto]" in assistant[2] and "Vestido X" in assistant[2]  # fotos da sugestão
+    assert {m["product_id"] for m in db.inserted_mentions
+            if m["source"] == "ai_shown"} == {"p1", "v1"}
+
+
 async def test_two_turns_category_then_more_does_not_resend(db, llm, store):
     # cenário real: 1º turno lista a categoria inteira (grava ai_shown); 2º turno
     # "quero ver mais" não reenvia, orienta a sugerir outra categoria
