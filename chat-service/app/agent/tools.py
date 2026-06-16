@@ -1,18 +1,73 @@
 # app/agent/tools.py
+import re
+import unicodedata
+
 from app.config import settings
+
+# Palavras de "encheção" que aparecem num pedido de categoria inteira e NÃO são
+# filtro (cor/tamanho/preço). Se, tirando a categoria e essas palavras, não
+# sobra nada, o pedido é a categoria inteira → LISTAR_CATEGORIA.
+_FILLER = {
+    "quero", "ver", "mais", "opcoes", "opcao", "opções", "opção", "me", "mostra",
+    "mostrar", "mostre", "todos", "todas", "todo", "toda", "o", "os", "a", "as",
+    "de", "do", "da", "e", "quais", "tem", "teem", "vcs", "voces", "queria",
+    "gostaria", "uns", "umas", "alguns", "algumas", "pra", "para", "por", "favor",
+    "oi", "ola", "ai", "hoje", "tambem", "outras", "outros", "outra", "outro",
+    "alguma", "algum", "ainda", "que",
+}
+
+
+def _norm(s: str) -> str:
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9 ]", " ", s.lower())
+
+
+def _category_forms(label: str) -> set:
+    # casa a categoria no singular e no plural simples (conjunto/conjuntos)
+    n = _norm(label).strip()
+    forms = {n}
+    if n.endswith("s"):
+        forms.add(n[:-1])
+    else:
+        forms.add(n + "s")
+    return forms
+
+
+def bare_category_target(categories, consulta: str, category: str):
+    """Se a chamada de BUSCAR_PRODUTOS for, na verdade, um pedido de categoria
+    INTEIRA sem filtro (ex.: "bodies", "quero ver mais opções" com a categoria no
+    arg), devolve o rótulo EXATO da categoria da loja a ser listada. Senão, None.
+    Rede de segurança determinística: não depende do modelo escolher LISTAR."""
+    form_to_label = {}
+    for label in categories or []:
+        for f in _category_forms(label):
+            form_to_label[f] = label
+
+    target = form_to_label.get(_norm(category).strip())
+    tokens = [t for t in _norm(consulta).split() if t and t not in _FILLER]
+
+    leftover = []
+    for t in tokens:
+        label = form_to_label.get(t)
+        if label and (target is None or label == target):
+            target = target or label
+            continue
+        leftover.append(t)
+
+    return target if (target and not leftover) else None
 
 
 async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str):
     embedding = await llm.embed(settings.embed_model, consulta)
     cat = (category or "").strip()
 
+    # Busca SEMPRE restrita à categoria pedida (vinda das categorias do
+    # store_settings). Sem fallback para o catálogo inteiro: misturar categorias
+    # fazia "pedi calcinha, veio sutiã". Se a categoria esgotar, o agente é
+    # instruído (no prompt) a tentar a próxima categoria da loja.
     rows = await db.match_documents(
         embedding=embedding, match_count=settings.match_count,
         user_id=store_id, category=cat or None)
-    if not rows and cat:
-        rows = await db.match_documents(
-            embedding=embedding, match_count=settings.match_count,
-            user_id=store_id, category=None)
 
     if not rows:
         return ("", [], "Não encontrei peças para esse pedido. Peça ao cliente "
@@ -34,9 +89,10 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str):
             "video_url": m.get("video_url"),
         }))
 
+    ids = [str(r["id"]) for r in rows if r.get("id")]
     resumo = (f"Mostrei {len(rows)} peças ao cliente. Escreva só uma frase curta "
               "de fecho perguntando se quer ver tamanho ou cor de alguma.")
-    return ("\n".join(cards), [], resumo)
+    return ("\n".join(cards), ids, resumo)
 
 
 def _format_price(price) -> str:

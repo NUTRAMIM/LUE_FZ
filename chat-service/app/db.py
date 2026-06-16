@@ -28,7 +28,9 @@ class Database:
         r = await self._pool.fetchrow(
             """SELECT id::text, store_name, categories, payment_methods,
                       delivery_methods, service_instructions, seller_phone,
-                      instagram_handle, service_steps, faq, min_order_enabled
+                      instagram_handle, service_steps, faq, min_order_enabled,
+                      min_order_quantity, min_order_value, min_order_logic,
+                      discount_type, discount_value, discount_custom
                FROM store_settings WHERE id = $1""", store_id)
         if r is None:
             return None
@@ -45,7 +47,15 @@ class Database:
             instagram_handle=r["instagram_handle"] or "",
             service_steps=list(r["service_steps"] or []),
             faq=list(faq or []),
-            min_order_enabled=bool(r["min_order_enabled"]))
+            min_order_enabled=bool(r["min_order_enabled"]),
+            min_order_quantity=r["min_order_quantity"],
+            min_order_value=(float(r["min_order_value"])
+                             if r["min_order_value"] is not None else None),
+            min_order_logic=r["min_order_logic"] or "all",
+            discount_type=r["discount_type"],
+            discount_value=(float(r["discount_value"])
+                            if r["discount_value"] is not None else None),
+            discount_custom=r["discount_custom"] or "")
 
     async def get_shown_products(self, conversation_id):
         r = await self._pool.fetchrow(
@@ -73,7 +83,8 @@ class Database:
         out = []
         for r in rows:
             md = r["metadata"]
-            out.append({"content": r["content"],
+            out.append({"id": str(r["id"]),
+                        "content": r["content"],
                         "metadata": json.loads(md) if isinstance(md, str) else md,
                         "similarity": r["similarity"]})
         return out

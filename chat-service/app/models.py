@@ -44,6 +44,12 @@ class StoreSettings:
     service_steps: list[str] = field(default_factory=list)
     faq: list[dict] = field(default_factory=list)
     min_order_enabled: bool = False
+    min_order_quantity: int | None = None
+    min_order_value: float | None = None
+    min_order_logic: str = "all"
+    discount_type: str | None = None
+    discount_value: float | None = None
+    discount_custom: str = ""
 
 
 @dataclass

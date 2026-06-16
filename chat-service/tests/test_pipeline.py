@@ -244,6 +244,32 @@ async def test_category_dump_skips_text_insert_when_empty(db, llm, store):
     assert "[produto]" in assistant_msgs[0]["content"]
 
 
+async def test_buscar_produtos_results_recorded_as_ai_shown(db, llm, store):
+    # regressão: produtos vindos do BUSCAR_PRODUTOS precisam ser gravados como
+    # 'ai_shown' (igual ao LISTAR), senão reaparecem nas próximas mensagens
+    db.store = store
+    db.window_messages = [{"id": "msg-1", "content": "tem top azul?"}]
+    db.recent_messages = []
+    db.match_results = [
+        {"id": "p1", "content": "Top Azul",
+         "metadata": {"name": "Top Azul", "category": "top", "price": 50,
+                      "tamanhos": ["P"], "cores": ["azul"], "brand": None,
+                      "image_urls": ["http://img/p1.jpg"]}},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": "BUSCAR_PRODUTOS",
+                         "arguments": json.dumps({"consulta": "top azul",
+                                                  "category": "top"})}]},
+        {"content": "achei esse top azul, gostou?"},
+        {"content": json.dumps({"nome": None, "telefone": None,
+                                "email": None, "cep": None})},
+        {"content": json.dumps({"is_gap": False, "question": "", "tag": "OUTROS"})},
+    ]
+    await process_message(db, llm, _payload(msg="tem top azul?", mid="msg-1"))
+    shown = [m for m in db.inserted_mentions if m["source"] == "ai_shown"]
+    assert {m["product_id"] for m in shown} == {"p1"}
+
+
 async def test_pipeline_uses_history_limit_setting(db, llm, store, monkeypatch):
     monkeypatch.setattr(pipeline_mod.settings, "history_limit", 8)
     db.store = store

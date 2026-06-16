@@ -19,10 +19,10 @@ async def test_executes_tool_then_returns_text(db, llm, store):
                                       "brand": None, "image_url": "http://x"}}]
     llm.chat_responses = [
         {"tool_calls": [{"id": "call_1", "name": TOOL_NAME,
-                         "arguments": json.dumps({"consulta": "top", "category": "top"})}]},
+                         "arguments": json.dumps({"consulta": "top azul", "category": "top"})}]},
         {"content": "achei isso: Top Alça"},
     ]
-    out = await run_agent(llm, db, store, shown_list="", chat_input="quero top", history=[])
+    out = await run_agent(llm, db, store, shown_list="", chat_input="quero top azul", history=[])
     assert out.text == "achei isso: Top Alça"
     second_call_msgs = llm.chat_calls[1]["messages"]
     assert any(m.get("role") == "tool" for m in second_call_msgs)
@@ -35,17 +35,82 @@ async def test_replayed_tool_calls_use_openai_shape(db, llm, store):
                                       "brand": None, "image_url": "http://x"}}]
     llm.chat_responses = [
         {"tool_calls": [{"id": "call_1", "name": TOOL_NAME,
-                         "arguments": json.dumps({"consulta": "top", "category": "top"})}]},
+                         "arguments": json.dumps({"consulta": "top azul", "category": "top"})}]},
         {"content": "achei isso: Top Alça"},
     ]
-    await run_agent(llm, db, store, shown_list="", chat_input="quero top", history=[])
+    await run_agent(llm, db, store, shown_list="", chat_input="quero top azul", history=[])
     second_call_msgs = llm.chat_calls[1]["messages"]
     assistant_msg = next(m for m in second_call_msgs if m.get("role") == "assistant")
     tc = assistant_msg["tool_calls"][0]
     assert tc["type"] == "function"
     assert tc["function"]["name"] == TOOL_NAME
-    assert tc["function"]["arguments"] == json.dumps({"consulta": "top", "category": "top"})
+    assert tc["function"]["arguments"] == json.dumps({"consulta": "top azul", "category": "top"})
     assert "name" not in tc
+
+
+import dataclasses
+
+
+async def test_buscar_with_bare_category_redirects_to_listar(db, llm, store):
+    # "bodies" pelado: mostra a categoria INTEIRA (listar), não 3 via buscar
+    s = dataclasses.replace(store, categories=["bodies", "conjuntos"])
+    db.category_products = [
+        {"id": f"p{i}", "name": f"Body {i}", "category": "bodies", "price": 44.0,
+         "brand": None, "tamanhos": ["U"], "cores": ["bege"],
+         "image_urls": [f"http://img/p{i}.jpg"], "is_available": True}
+        for i in range(1, 6)
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": TOOL_NAME,
+                         "arguments": json.dumps({"consulta": "bodies", "category": "bodies"})}]},
+        {"content": "esses são os bodies!"},
+    ]
+    out = await run_agent(llm, db, s, shown_list="", chat_input="bodies", history=[])
+    assert out.shown_product_ids == ["p1", "p2", "p3", "p4", "p5"]
+    assert out.product_segments[0].count("[produto]") == 5
+    # não passou por busca semântica
+    assert llm.embed_calls == []
+
+
+async def test_buscar_more_options_redirects_to_listar(db, llm, store):
+    # "quero ver mais opções" com a categoria no arg vira categoria inteira
+    s = dataclasses.replace(store, categories=["bodies"])
+    db.category_products = [
+        {"id": "p1", "name": "Body 1", "category": "bodies", "price": 44.0,
+         "brand": None, "tamanhos": ["U"], "cores": ["bege"],
+         "image_urls": ["http://img/p1.jpg"], "is_available": True},
+        {"id": "p2", "name": "Body 2", "category": "bodies", "price": 44.0,
+         "brand": None, "tamanhos": ["U"], "cores": ["preto"],
+         "image_urls": ["http://img/p2.jpg"], "is_available": True},
+    ]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": TOOL_NAME,
+                         "arguments": json.dumps({"consulta": "quero ver mais opções",
+                                                  "category": "bodies"})}]},
+        {"content": "tem esses também!"},
+    ]
+    out = await run_agent(llm, db, s, shown_list="", chat_input="quero ver mais opções",
+                          history=[])
+    assert out.shown_product_ids == ["p1", "p2"]
+    assert llm.embed_calls == []
+
+
+async def test_buscar_with_filter_does_not_redirect(db, llm, store):
+    # com filtro real (cor), continua na busca semântica (não vira listar)
+    s = dataclasses.replace(store, categories=["bodies"])
+    db.match_results = [{"id": "p9", "content": "Body Preto", "similarity": 0.5,
+                         "metadata": {"name": "Body Preto", "category": "bodies",
+                                      "price": 44.0, "tamanhos": ["U"], "cores": ["preto"],
+                                      "brand": None, "image_urls": ["http://img/p9.jpg"]}}]
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": TOOL_NAME,
+                         "arguments": json.dumps({"consulta": "body preto",
+                                                  "category": "bodies"})}]},
+        {"content": "achei esse preto!"},
+    ]
+    out = await run_agent(llm, db, s, shown_list="", chat_input="body preto", history=[])
+    assert out.shown_product_ids == ["p9"]
+    assert llm.embed_calls == ["body preto"]   # passou pela busca semântica
 
 
 async def test_listar_categoria_collects_segments_and_ids(db, llm, store):

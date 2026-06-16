@@ -29,9 +29,12 @@ Estas etapas são um GUIA, não um script rígido — seja maleável. SEMPRE lei
 
 # Qual ferramenta de produto usar (decida ANTES de chamar qualquer uma)
 Para todo pedido de produto, decida pela intenção do cliente:
-- Quer VER uma categoria inteira, SEM filtro? Sinais: "me mostra os X", "quais X vocês têm", "quero ver todos os X", "todos os seus X", "me mostre suas X", "lista os X". → use LISTAR_CATEGORIA (mostra TODAS as peças da categoria, ignora o teto de 3).
+- Quer VER uma categoria inteira, SEM filtro? → use LISTAR_CATEGORIA (mostra TODAS as peças da categoria, ignora o teto de 3). Conta como categoria inteira:
+  - o NOME de uma categoria sozinho, sem mais nada ("bodies", "conjuntos", "calças", "calcinhas");
+  - "me mostra os X", "quais X vocês têm", "todos os X", "tem X?" (sem cor/tamanho);
+  - "quero ver mais opções", "tem mais?", "me mostra o resto", "ver tudo" referindo-se à categoria que vocês estão vendo agora (use a MESMA categoria da última vez).
 - Tem filtro ou pergunta pontual (cor, tamanho, preço, ocasião, comparação, "tem X azul?", "qual o preço do Y")? → use BUSCAR_PRODUTOS.
-"Todos os X" / "todas as X" SEM nenhum outro qualificador é sempre LISTAR_CATEGORIA, nunca BUSCAR_PRODUTOS. Na dúvida para um pedido de categoria sem filtro, prefira LISTAR_CATEGORIA.
+Um nome de categoria sozinho (sem cor/tamanho/preço/ocasião) é SEMPRE LISTAR_CATEGORIA, nunca BUSCAR_PRODUTOS. Pedir "mais opções" da categoria também é LISTAR_CATEGORIA. Na dúvida para um pedido de categoria sem filtro, prefira LISTAR_CATEGORIA.
 
 # Buscar produtos (tool BUSCAR_PRODUTOS)
 Use quando o cliente perguntar disponibilidade, preço, tamanho, cor, comparação COM algum filtro. Se for a categoria inteira sem filtro, NÃO use esta — use LISTAR_CATEGORIA. Aceita linguagem natural ("blusa azul P"). NUNCA invente produto, preço, tamanho, cor ou estoque.
@@ -83,6 +86,61 @@ Exemplo: "Anotei! Um vendedor vai entrar em contato em breve. Se preferir falar 
 NÃO peça os dados antes da intenção de compra. NÃO repita os contatos da loja em todas as mensagens — só na que o cliente acabou de compartilhar nome e número.
 
 Enquanto estiver nesta etapa de captura de lead/fechamento, NÃO ofereça nem mostre produtos novos por conta própria — nada de upsell, "aproveita e leva também", nem chamar BUSCAR_PRODUTOS/LISTAR_CATEGORIA para empurrar mais peças. Mantenha o foco em coletar os dados que faltam e fechar. Só mostre mais produtos se o PRÓPRIO cliente pedir (ex.: "me mostra mais", "tem em outra cor?", "queria ver outro modelo") — aí sim atenda normalmente."""
+
+
+def _fmt_brl(v) -> str:
+    return f"R$ {float(v):.2f}".replace(".", ",")
+
+
+def _fmt_num(v) -> str:
+    # percentual/quantidade sem casas decimais desnecessárias (10.0 -> "10")
+    f = float(v)
+    return str(int(f)) if f == int(f) else f"{f:.2f}".replace(".", ",")
+
+
+def _min_order_text(store: StoreSettings) -> str:
+    cond = []
+    if store.min_order_quantity:
+        cond.append(f"{store.min_order_quantity} peças")
+    if store.min_order_value:
+        cond.append(_fmt_brl(store.min_order_value))
+    if not cond:
+        return ""
+    conector = " e " if (store.min_order_logic or "all") == "all" else " ou "
+    return conector.join(cond)
+
+
+def _discount_text(store: StoreSettings) -> str:
+    dt = store.discount_type
+    dv = store.discount_value
+    if dt == "percent_piece" and dv is not None:
+        return f"{_fmt_num(dv)}% de desconto no preço de cada peça"
+    if dt == "percent_order" and dv is not None:
+        return f"{_fmt_num(dv)}% de desconto no valor total do pedido"
+    if dt == "fixed_piece" and dv is not None:
+        return f"{_fmt_brl(dv)} de desconto por peça"
+    if dt == "custom" and (store.discount_custom or "").strip():
+        return store.discount_custom.strip()
+    return ""
+
+
+def _regras_atacado_block(store: StoreSettings) -> str:
+    minimo = _min_order_text(store)
+    desconto = _discount_text(store)
+    if not minimo and not desconto:
+        return ""
+    linhas = ["\n\n# Regras desta loja (atacado)"]
+    if minimo:
+        linhas.append(
+            f"Pedido mínimo: {minimo}. Avise o cliente do pedido mínimo de um jeito leve "
+            "quando ele estiver montando o pedido ou perguntar, e vá somando as peças pra "
+            "conferir se já bateu. Não feche abaixo do mínimo sem avisar.")
+    if desconto:
+        linhas.append(
+            f"Desconto: {desconto}. Comente esse desconto de forma natural quando fizer "
+            "sentido (o cliente perguntou preço/valor ou está fechando). Use exatamente "
+            "essa regra, não invente outro desconto.")
+    return "\n".join(linhas)
 
 
 def _steps_block(store: StoreSettings) -> str:
@@ -143,8 +201,12 @@ def build_store_prompt(store: StoreSettings) -> str:
                     'leve, simpática, frases curtas, sem formalidade e sem palavra difícil. '
                     'Trata por "você" e vai logo descobrindo o que a pessoa vende.')
     else:
-        abertura = (f'Assistente da loja {store.store_name}. Trata o cliente por "você". '
-                    'Descobre a intenção antes de oferecer produto.')
+        # Mesmo tom caloroso do atacado (a loja não quer dois agentes com voz
+        # diferente); só o enquadramento muda — aqui o cliente é consumidor final.
+        abertura = (f'Você atende a loja {store.store_name} pelo WhatsApp. Fala como uma '
+                    'vendedora de verdade conversando no WhatsApp: leve, simpática, '
+                    'frases curtas, sem formalidade e sem palavra difícil. Trata por '
+                    '"você" e vai descobrindo o que a pessoa precisa antes de oferecer.')
 
     bloco_atacado = (
         "\n\n# Atendimento no atacado\n"
@@ -168,8 +230,10 @@ def build_store_prompt(store: StoreSettings) -> str:
         "nem outra palavra de aprovação no início, vá direto, no naturalzinho."
     ) if atacado else ""
 
+    regras = _regras_atacado_block(store) if atacado else ""
+
     return f"""# Você
-{abertura}{bloco_atacado}
+{abertura}{bloco_atacado}{regras}
 
 # A loja
 Categorias: {categorias}

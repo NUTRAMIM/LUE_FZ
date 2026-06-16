@@ -3,7 +3,7 @@ from app.agent.tools import (buscar_produtos, registrar_pedido, format_pedido,
                              calcular_valor_total)
 
 
-def _doc(name, category, cores, image_urls=None, video_url=None):
+def _doc(name, category, cores, image_urls=None, video_url=None, pid="d1"):
     md = {"name": name, "category": category, "price": 99.9,
           "tamanhos": ["P", "M"], "cores": cores, "brand": None,
           "image_url": f"http://x/{name}"}
@@ -11,7 +11,7 @@ def _doc(name, category, cores, image_urls=None, video_url=None):
         md["image_urls"] = image_urls
     if video_url is not None:
         md["video_url"] = video_url
-    return {"content": name, "similarity": 0.5, "metadata": md}
+    return {"id": pid, "content": name, "similarity": 0.5, "metadata": md}
 
 
 async def test_buscar_produtos_builds_cards_with_video_last(db, llm):
@@ -19,7 +19,7 @@ async def test_buscar_produtos_builds_cards_with_video_last(db, llm):
                              image_urls=["http://img/a.jpg", "http://img/b.jpg"],
                              video_url="http://vid/a.mp4")]
     segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "top floral", "top")
-    assert ids == []
+    assert ids == ["d1"]
     assert segmento == (
         "[produto]\n"
         "Top Alça\n"
@@ -42,10 +42,14 @@ async def test_buscar_produtos_falls_back_to_single_image_url(db, llm):
     assert "http://x/Vestido" in segmento
 
 
-async def test_buscar_produtos_category_fallback_when_filtered_empty(db, llm):
+async def test_buscar_produtos_no_cross_category_when_filtered_empty(db, llm):
+    # categoria foi informada (top) mas só há vestido: NÃO pode vazar pra outra
+    # categoria (evita "pedi calcinha, veio sutiã"). Retorna vazio.
     db.match_results = [_doc("Vestido Longo", "vestido", ["azul"])]
-    segmento, _, _ = await buscar_produtos(db, llm, "store-1", "algo", "top")
-    assert "Vestido Longo" in segmento
+    segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "algo", "top")
+    assert segmento == ""
+    assert ids == []
+    assert "Vestido Longo" not in segmento
 
 
 async def test_buscar_produtos_empty_returns_empty_segment(db, llm):
@@ -54,6 +58,47 @@ async def test_buscar_produtos_empty_returns_empty_segment(db, llm):
     assert segmento == ""
     assert ids == []
     assert resumo
+
+
+async def test_buscar_produtos_returns_shown_ids(db, llm):
+    # os IDs dos produtos mostrados são devolvidos pra registrar como "ai_shown"
+    # e não reaparecerem nas próximas mensagens
+    db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1"),
+                        _doc("Top B", "top", ["azul"], pid="p2")]
+    _, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top")
+    assert ids == ["p1", "p2"]
+
+
+from app.agent.tools import bare_category_target
+
+
+def test_bare_category_target_plain_name():
+    cats = ["Bodies", "Conjuntos"]
+    assert bare_category_target(cats, "bodies", "Bodies") == "Bodies"
+    assert bare_category_target(cats, "bodies", "") == "Bodies"
+
+
+def test_bare_category_target_matches_singular_or_plural():
+    cats = ["Conjuntos"]
+    assert bare_category_target(cats, "conjunto", "") == "Conjuntos"
+
+
+def test_bare_category_target_more_options_uses_category_arg():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "quero ver mais opções", "Bodies") == "Bodies"
+    assert bare_category_target(cats, "me mostra mais", "Bodies") == "Bodies"
+
+
+def test_bare_category_target_none_when_filter_present():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "body preto", "Bodies") is None
+    assert bare_category_target(cats, "bodies tamanho P", "Bodies") is None
+
+
+def test_bare_category_target_none_for_unknown_category():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "calcinha", "") is None
+    assert bare_category_target(cats, "algo qualquer", "") is None
 
 
 from app.agent.tools import listar_categoria

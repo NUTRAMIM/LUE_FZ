@@ -15,7 +15,7 @@ def test_atacado_asks_reseller_or_personal_before_carro_chefe(store):
 
 def test_prompt_includes_store_fields(store):
     p = build_system_prompt(store, shown_list="Top Alça")
-    assert "Assistente da loja LUE" in p
+    assert "loja LUE" in p
     assert "Categorias: top, vestido, calça" in p
     assert "Pagamento: pix, cartão" in p
     assert "Entrega: correios" in p
@@ -199,6 +199,74 @@ def test_prompt_asks_cep_in_both_modes(store):
 def test_prompt_shows_captured_cep(store):
     p = build_system_prompt(store, shown_list="", lead={"name": "Ana", "cep": "01310-100"})
     assert "01310-100" in p
+
+
+def test_varejo_shares_warm_persona_with_atacado(store):
+    # o tom de abertura é o mesmo nos dois modos; só o enquadramento muda
+    persona = "vendedora de verdade conversando no WhatsApp"
+    varejo = build_store_prompt(store)
+    atacado = build_store_prompt(_atacado(store))
+    assert persona in varejo
+    assert persona in atacado
+
+
+def test_atacado_prompt_shows_min_order_rule(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_logic="all")
+    p = build_store_prompt(s)
+    assert "Pedido mínimo" in p
+    assert "10 peças" in p
+    assert "R$ 200,00" in p
+
+
+def test_atacado_min_order_logic_any_uses_ou(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_logic="any")
+    p = build_store_prompt(s)
+    assert "10 peças ou R$ 200,00" in p
+
+
+def test_atacado_min_order_logic_all_uses_e(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_logic="all")
+    p = build_store_prompt(s)
+    assert "10 peças e R$ 200,00" in p
+
+
+def test_atacado_prompt_shows_percent_piece_discount(store):
+    s = dataclasses.replace(store, min_order_enabled=True,
+                            discount_type="percent_piece", discount_value=10.0)
+    p = build_store_prompt(s)
+    assert "10% de desconto" in p
+
+
+def test_atacado_prompt_shows_fixed_piece_discount(store):
+    s = dataclasses.replace(store, min_order_enabled=True,
+                            discount_type="fixed_piece", discount_value=5.0)
+    p = build_store_prompt(s)
+    assert "R$ 5,00 de desconto por peça" in p
+
+
+def test_atacado_custom_discount_uses_text(store):
+    s = dataclasses.replace(store, min_order_enabled=True,
+                            discount_type="custom", discount_custom="Leve 3 pague 2")
+    p = build_store_prompt(s)
+    assert "Leve 3 pague 2" in p
+
+
+def test_varejo_prompt_omits_min_order_and_discount(store):
+    # mesmo com dados preenchidos, loja varejo (min_order_enabled=False) não usa
+    s = dataclasses.replace(store, min_order_quantity=10,
+                            discount_type="percent_piece", discount_value=10.0)
+    p = build_store_prompt(s)
+    assert "Pedido mínimo" not in p
+    assert "desconto" not in p.lower()
+
+
+def test_atacado_without_rules_omits_block(store):
+    p = build_store_prompt(_atacado(store))
+    assert "Pedido mínimo" not in p
+    assert "desconto" not in p.lower()
 
 
 def test_order_state_reminder_renders_current_state():
