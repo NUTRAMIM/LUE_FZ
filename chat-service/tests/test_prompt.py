@@ -48,7 +48,11 @@ def test_prompt_scopes_three_product_cap_to_buscar(store):
 
 def test_prompt_instructs_category_synonym_mapping(store):
     p = build_system_prompt(store, shown_list="")
-    assert "categoria existente mais próxima" in p
+    assert "melhor agrupa" in p
+    # não pode buscar com categoria vazia quando o cliente nomeou um tipo
+    assert "NUNCA chame BUSCAR_PRODUTOS com `category` vazio" in p
+    # não pode mais conter os exemplos fixos de loja fitness
+    assert "Croppeds" not in p and "Leggings" not in p
 
 
 def test_prompt_has_tool_routing_decision(store):
