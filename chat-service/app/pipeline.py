@@ -49,6 +49,22 @@ def _strip_dashes(text: str) -> str:
     return _DASH_SEP_RE.sub(", ", text)
 
 
+# Rede de segurança: às vezes o modelo escreve uma chamada de ferramenta como
+# TEXTO (ex.: ao esgotar os rounds, a chamada final é sem tools). O cliente nunca
+# pode ver isso. Remove linhas que são claramente JSON de tool-call.
+_TOOL_LEAK_RE = re.compile(
+    r'^\s*\{.*"(?:categoria|consulta|category|itens|forma_pagamento|forma_entrega)".*\}\s*$',
+    re.MULTILINE)
+
+
+def _strip_tool_leak(text: str) -> str:
+    if not text:
+        return text
+    cleaned = _TOOL_LEAK_RE.sub("", text)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
 def with_reply_context(chat_input, respondendo_a):
     if respondendo_a is None:
         return chat_input
@@ -70,6 +86,10 @@ async def process_message(db, llm, payload) -> None:
     if store is None:
         log.error("store not found: %s", payload.id_loja)
         return
+    # diagnóstico: confirma se as categorias da loja chegam ao agente (sem elas o
+    # modelo "chuta" categorias e toda busca volta vazia)
+    log.info("store=%s categorias(%d)=%s", store.id, len(store.categories),
+             store.categories)
 
     shown_list, shown_ids, history, lead = await asyncio.gather(
         db.get_shown_products(payload.id_conversa),
@@ -103,7 +123,7 @@ async def process_message(db, llm, payload) -> None:
                 store.id, payload.id_conversa, product_id, "ai_shown")
         except Exception:
             log.warning("falha ao gravar product_mention %r (ignorada)", product_id)
-    reply_text = _strip_dashes(result.text)   # cliente nunca recebe travessão/hífen-separador
+    reply_text = _strip_dashes(_strip_tool_leak(result.text))   # sem JSON de tool nem hífen-separador
     if reply_text:
         await db.insert_message(payload.id_conversa, "assistant", reply_text)
     # cards de sugestão proativa vão DEPOIS do texto (a mensagem de sugestão vem

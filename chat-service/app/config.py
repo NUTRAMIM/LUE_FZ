@@ -24,9 +24,12 @@ class Settings(BaseSettings):
     embed_model: str = "text-embedding-3-small"
     buffer_wait_seconds: float = 7.0
     match_count: int = 6
-    # Rounds máximos de tool no loop do agente. 3 cobre buscar/listar→registrar→
-    # responder; cada round reenvia o prompt, então não inflar. Env: MAX_TOOL_ROUNDS.
-    max_tool_rounds: int = 3
+    # Rounds máximos de tool no loop do agente. Precisa cobrir uma descoberta com
+    # sugestão: listar/buscar + SUGERIR_CATEGORIA (e eventual retry quando a 1ª
+    # sugestão esgota) + responder. Com pouco, o modelo é forçado à resposta final
+    # SEM tools e acaba escrevendo a chamada como texto (vaza JSON pro cliente).
+    # Cada round reenvia o prompt, então não inflar demais. Env: MAX_TOOL_ROUNDS.
+    max_tool_rounds: int = 5
     # Nº de mensagens recentes do history reenviadas ao agente a cada turno.
     # O ESTADO ATUAL DO PEDIDO já é fonte da verdade; 8 mantém contexto de
     # descoberta sem inflar tokens. Validar com e2e antes de baixar. Env: HISTORY_LIMIT.

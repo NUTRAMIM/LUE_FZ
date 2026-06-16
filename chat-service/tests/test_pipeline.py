@@ -3,7 +3,7 @@ import json
 import asyncio
 import pytest
 import app.pipeline as pipeline_mod
-from app.pipeline import process_message, with_reply_context
+from app.pipeline import process_message, with_reply_context, _strip_tool_leak
 from app.models import WebhookPayload, RespondendoA
 from app.config import settings
 
@@ -48,6 +48,27 @@ async def test_pipeline_strips_dashes_from_reply(db, llm, store):
     assert assistant
     assert "—" not in assistant[0]["content"]
     assert "Anotei, Ana, seu zap (11) 98888-7777 está certo" == assistant[0]["content"]
+
+
+def test_strip_tool_leak_removes_categoria_json():
+    txt = '{"categoria":"Conjuntos"}\nPoxa, tô sem baby dolls. Quer ver conjuntos?'
+    out = _strip_tool_leak(txt)
+    assert '{"categoria"' not in out
+    assert out == 'Poxa, tô sem baby dolls. Quer ver conjuntos?'
+
+
+def test_strip_tool_leak_removes_buscar_json():
+    out = _strip_tool_leak('{"consulta":"top azul","category":"Tops"}\nachei esses')
+    assert out == 'achei esses'
+
+
+def test_strip_tool_leak_keeps_normal_text():
+    txt = 'Olha esses tops, gostou de algum?'
+    assert _strip_tool_leak(txt) == txt
+
+
+def test_strip_tool_leak_handles_empty():
+    assert _strip_tool_leak('') == ''
 
 
 def test_with_reply_context_none_returns_unchanged():
