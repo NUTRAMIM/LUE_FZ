@@ -60,6 +60,12 @@ def test_prompt_has_tool_routing_decision(store):
     assert "decida pela intenção do cliente" in p
 
 
+def test_prompt_instructs_not_to_interrogate(store):
+    p = build_system_prompt(store, shown_list="")
+    assert "NÃO interrogue" in p or "Não interrogue" in p
+    assert "MÁXIMO UMA pergunta" in p
+
+
 import dataclasses
 
 
