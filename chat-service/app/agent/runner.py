@@ -9,12 +9,11 @@ from app.agent.prompt import (
     STATIC_PROMPT, build_store_prompt, build_dynamic_state,
     build_order_state_reminder)
 from app.agent.tools import (buscar_produtos, listar_categoria, registrar_pedido,
-                             bare_category_target, sugerir_categoria)
+                             bare_category_target)
 
 TOOL_NAME = "BUSCAR_PRODUTOS"
 LISTAR_TOOL_NAME = "LISTAR_CATEGORIA"
 REGISTRAR_TOOL_NAME = "REGISTRAR_PEDIDO"
-SUGERIR_TOOL_NAME = "SUGERIR_CATEGORIA"
 
 TOOL_SCHEMA = {
     "type": "function",
@@ -51,29 +50,6 @@ TOOL_SCHEMA_LISTAR = {
             "'mais opções'/'ver tudo'/'tem mais?' da categoria atual. Se houver "
             "qualquer filtro (cor, tamanho, ocasião, preço), aí sim use "
             "BUSCAR_PRODUTOS. `categoria` deve ser a categoria EXATA da loja."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "categoria": {"type": "string"},
-            },
-            "required": ["categoria"],
-        },
-    },
-}
-
-TOOL_SCHEMA_SUGERIR = {
-    "type": "function",
-    "function": {
-        "name": SUGERIR_TOOL_NAME,
-        "description": (
-            "Sugere proativamente UMA categoria ao cliente, enviando 1-2 fotos "
-            "DEPOIS da sua mensagem de texto. Use SEMPRE que for sugerir, por conta "
-            "própria, uma categoria que o cliente NÃO pediu: ao terminar de mostrar "
-            "uma categoria, quando uma categoria esgotar, ou em qualquer upsell. "
-            "Escreva a frase de sugestão no seu texto; o sistema envia as fotos em "
-            "seguida (não descreva os produtos). NUNCA use durante o "
-            "fechamento/captura de lead. `categoria` deve ser a categoria EXATA da loja."
         ),
         "parameters": {
             "type": "object",
@@ -139,7 +115,6 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
     messages.append({"role": "user", "content": chat_input})
 
     product_segments: list[str] = []
-    suggestion_segments: list[str] = []
     shown_product_ids: list[str] = []
     # IDs já mostrados (turnos anteriores + os mostrados neste turno), pra nenhuma
     # tool reenviar peça repetida.
@@ -148,8 +123,8 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
     for _ in range(settings.max_tool_rounds):
         resp = await llm.chat(
             model=settings.chat_model, messages=messages,
-            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_SUGERIR,
-                   TOOL_SCHEMA_REGISTRAR], max_tokens=4096,
+            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_REGISTRAR],
+            max_tokens=4096,
             reasoning_effort=settings.foreground_reasoning_effort)
 
         tool_calls = resp.get("tool_calls")
@@ -157,8 +132,7 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
             return AgentResult(
                 text=resp.get("content") or "",
                 product_segments=product_segments,
-                shown_product_ids=shown_product_ids,
-                suggestion_segments=suggestion_segments)
+                shown_product_ids=shown_product_ids)
 
         messages.append({
             "role": "assistant",
@@ -212,16 +186,6 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
                     shown_product_ids.extend(ids)
                     excluido.update(ids)
                 content = resumo
-            elif call["name"] == SUGERIR_TOOL_NAME:
-                segmento, ids, resumo = await sugerir_categoria(
-                    db, store.id, args.get("categoria", ""), exclude_ids=excluido)
-                if segmento:
-                    # canal separado: o pipeline insere DEPOIS do texto da IA
-                    suggestion_segments.append(segmento)
-                    shown_product_ids.extend(ids)
-                    excluido.update(ids)
-                log.info("SUGERIR_CATEGORIA(%r) -> %d fotos", args.get("categoria", ""), len(ids))
-                content = resumo
             else:
                 content = ""
             messages.append({"role": "tool", "tool_call_id": call["id"],
@@ -232,5 +196,4 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
     return AgentResult(
         text=resp.get("content") or "",
         product_segments=product_segments,
-        shown_product_ids=shown_product_ids,
-        suggestion_segments=suggestion_segments)
+        shown_product_ids=shown_product_ids)

@@ -269,8 +269,9 @@ def test_varejo_prompt_omits_min_order_and_discount(store):
 
 def test_atacado_without_rules_omits_block(store):
     p = build_store_prompt(_atacado(store))
-    assert "Pedido mínimo" not in p
-    assert "desconto" not in p.lower()
+    assert "# Regras desta loja (atacado)" not in p
+    assert "Pedido mínimo:" not in p
+    assert "Desconto:" not in p
 
 
 def test_order_state_reminder_renders_current_state():

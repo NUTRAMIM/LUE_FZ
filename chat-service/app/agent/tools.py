@@ -106,8 +106,8 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str,
     if not cards:
         return ("", [], "Essas peças você já mostrou nesta conversa. NÃO repita "
                 "nenhuma. Diga, numa frase leve, que por enquanto é só isso, e "
-                "sugira UMA outra categoria parecida: escreva a frase e chame "
-                "SUGERIR_CATEGORIA com ela (o sistema manda 1-2 fotos depois).")
+                "sugira pelo NOME uma outra categoria parecida da loja (sem mostrar "
+                "fotos por conta própria).")
 
     resumo = (f"Mostrei {mostrou} peças ao cliente. Escreva só uma frase curta "
               "de fecho perguntando se quer ver tamanho ou cor de alguma.")
@@ -151,39 +151,13 @@ async def listar_categoria(db, store_id: str, categoria: str, exclude_ids=None):
     if not novos:
         return ("", [], (f"Você já mostrou TODAS as peças de {cat} nesta conversa. "
                 f"NÃO repita nenhuma. Diga ao cliente, numa frase leve, que por "
-                f"enquanto é só isso em {cat}, e sugira UMA outra categoria parecida "
-                f"da loja: escreva a frase de sugestão e chame SUGERIR_CATEGORIA com "
-                f"ela (o sistema manda 1-2 fotos depois da sua mensagem)."))
+                f"enquanto é só isso em {cat}, e sugira pelo NOME uma outra categoria "
+                f"parecida da loja (sem mostrar fotos por conta própria)."))
     cards = [_build_card(p) for p in novos]
     ids = [str(p["id"]) for p in novos]
     resumo = (f"Mostrei {len(novos)} peças de {cat} ao cliente. Escreva uma frase "
-              "curta de fecho e, em seguida, sugira UMA outra categoria que combine: "
-              "escreva a frase de sugestão e chame SUGERIR_CATEGORIA com ela (o "
-              "sistema manda 1-2 fotos dela depois da sua mensagem).")
-    return ("\n".join(cards), ids, resumo)
-
-
-SUGGESTION_LIMIT = 2
-
-
-async def sugerir_categoria(db, store_id: str, categoria: str, exclude_ids=None):
-    """Sugestão proativa: 1-2 peças da categoria, excluindo já-mostradas. Os cards
-    vão para um canal separado que o pipeline insere DEPOIS do texto da IA."""
-    cat = (categoria or "").strip()
-    if not cat:
-        return ("", [], "Categoria não informada.")
-    rows = await db.get_products_by_category(store_id, cat)
-    exclude = {str(x) for x in (exclude_ids or [])}
-    novos = [p for p in rows if str(p["id"]) not in exclude][:SUGGESTION_LIMIT]
-    if not novos:
-        return ("", [], (f"Não tenho peça nova pra sugerir em {cat}. Sugira OUTRA "
-                "categoria parecida da loja (chame SUGERIR_CATEGORIA com ela) ou "
-                "siga a conversa sem empurrar produto."))
-    cards = [_build_card(p) for p in novos]
-    ids = [str(p["id"]) for p in novos]
-    resumo = (f"Vou enviar {len(novos)} foto(s) de {cat} DEPOIS da sua mensagem. Na "
-              f"sua resposta, escreva só a frase curta sugerindo {cat} — NÃO descreva "
-              "nem liste os produtos, o sistema manda as fotos em seguida.")
+              "curta de fecho e, se fizer sentido, sugira pelo NOME uma outra "
+              "categoria que combine (só o nome, sem mostrar fotos por conta própria).")
     return ("\n".join(cards), ids, resumo)
 
 

@@ -56,12 +56,6 @@ def test_agent_result_defaults_to_empty_lists():
     assert r.text == "oi"
     assert r.product_segments == []
     assert r.shown_product_ids == []
-    assert r.suggestion_segments == []
-
-
-def test_agent_result_holds_suggestion_segments():
-    r = AgentResult(text="x", suggestion_segments=["[produto]Y[/produto]"])
-    assert r.suggestion_segments == ["[produto]Y[/produto]"]
 
 
 def test_agent_result_holds_segments_and_ids():

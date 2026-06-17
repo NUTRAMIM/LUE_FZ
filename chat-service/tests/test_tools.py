@@ -294,35 +294,6 @@ async def test_listar_categoria_empty_category_keeps_distinct_message(db):
     assert "Nenhuma peça disponível" in resumo
 
 
-from app.agent.tools import sugerir_categoria
-
-
-async def test_sugerir_categoria_returns_at_most_two(db):
-    db.category_products = [_prod("p1", "A", "Leggings"), _prod("p2", "B", "Leggings"),
-                            _prod("p3", "C", "Leggings")]
-    segmento, ids, resumo = await sugerir_categoria(db, "store-1", "Leggings")
-    assert ids == ["p1", "p2"]
-    assert segmento.count("[produto]") == 2
-    assert "DEPOIS" in resumo
-
-
-async def test_sugerir_categoria_excludes_already_shown(db):
-    db.category_products = [_prod("p1", "A", "Leggings"), _prod("p2", "B", "Leggings")]
-    segmento, ids, _ = await sugerir_categoria(db, "store-1", "Leggings",
-                                               exclude_ids=["p1"])
-    assert ids == ["p2"]
-    assert segmento.count("[produto]") == 1
-
-
-async def test_sugerir_categoria_empty_asks_for_other(db):
-    db.category_products = [_prod("p1", "A", "Leggings")]
-    segmento, ids, resumo = await sugerir_categoria(db, "store-1", "Leggings",
-                                                    exclude_ids=["p1"])
-    assert segmento == ""
-    assert ids == []
-    assert "outra categoria" in resumo.lower()
-
-
 def test_format_pedido_empty():
     assert format_pedido([]) == "(nenhum item ainda)"
 
