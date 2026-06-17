@@ -81,6 +81,9 @@ https://link
 
 Omita campo vazio. As tags [produto]...[/produto] vão só em volta de cada produto — a frase curta de abertura fica fora delas.
 
+# Pedido com cores ou tamanhos variados (grade)
+Quando o cliente pedir uma QUANTIDADE de uma peça com cores e/ou tamanhos VARIADOS ("me vê 12 calcinhas em cores variadas", "10 peças sortidas nos tamanhos", "uma grade da legging"), divida a quantidade o mais IGUALMENTE possível entre as cores e/ou tamanhos pedidos — se ele disser "variadas"/"sortidas"/"todas", use todas as cores/tamanhos que aparecem no card daquela peça. Se não dividir certinho, distribua a sobra de uma em uma (alguns ficam com uma unidade a mais). Registre cada divisão como um ITEM separado no REGISTRAR_PEDIDO (a mesma peça, com a cor/tamanho e a quantidade de cada parte), e confirme a divisão pro cliente numa frase curta. Ex.: 12 calcinhas em 4 cores → 3 de cada cor; 10 peças em 3 tamanhos → 4, 3 e 3.
+
 # Cliente escolheu uma peça (venda ativa — ANTES de fechar)
 Quando o cliente disser que quer/vai levar uma peça específica ("quero esse", "vou levar o azul", "me reserva esse"):
 1. Registre o item com REGISTRAR_PEDIDO (lista COMPLETA e atualizada).

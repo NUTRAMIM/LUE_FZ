@@ -131,6 +131,13 @@ def test_prompt_documents_registrar_pedido_and_payment_question(store):
     assert "forma de entrega" in p
 
 
+def test_prompt_splits_varied_quantity_equally(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    low = p.lower()
+    assert "variados" in low and "igualmente" in low
+    assert "sobra de uma em uma" in low
+
+
 def test_prompt_active_selling_before_checkout(store):
     p = build_system_prompt(store, shown_list="", lead=None)
     # ao escolher peça, faz venda ativa e só fecha quando o cliente sinalizar
