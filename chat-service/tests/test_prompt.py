@@ -131,6 +131,14 @@ def test_prompt_documents_registrar_pedido_and_payment_question(store):
     assert "forma de entrega" in p
 
 
+def test_prompt_active_selling_before_checkout(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    # ao escolher peça, faz venda ativa e só fecha quando o cliente sinalizar
+    assert "venda ativa" in p.lower()
+    assert "NÃO corra pro fechamento" in p
+    assert "é só isso" in p
+
+
 def _atacado(store):
     return dataclasses.replace(store, min_order_enabled=True)
 

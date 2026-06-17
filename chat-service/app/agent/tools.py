@@ -118,13 +118,20 @@ def _format_price(price) -> str:
     return f"R$ {price:.2f}".replace(".", ",")
 
 
+def _is_http_url(u) -> bool:
+    # cadastro às vezes traz URL de imagem incompleta (ex.: ".webp"), que o chat
+    # não consegue renderizar. Só manda link http(s) de verdade.
+    return isinstance(u, str) and u.strip().lower().startswith(("http://", "https://"))
+
+
 def _build_card(p: dict) -> str:
     lines = [p["name"]]
-    urls = p.get("image_urls") or []
+    # só URLs válidas; lixo/parcial é descartado pra não virar imagem quebrada
+    urls = [u for u in (p.get("image_urls") or []) if _is_http_url(u)]
     # todas as URLs em linhas consecutivas -> o front agrupa num carrossel
     lines.extend(urls)
     video = p.get("video_url")
-    if video:
+    if _is_http_url(video):
         lines.append(video)
     if p.get("price") is not None:
         lines.append(_format_price(p["price"]))
@@ -161,8 +168,10 @@ async def listar_categoria(db, store_id: str, categoria: str, exclude_ids=None):
     ids = [str(p["id"]) for p in mostrados]
     if tem_mais:
         resumo = (f"Mostrei {len(mostrados)} peças de {cat} (ainda tem MAIS nessa "
-                  "categoria). Escreva uma frase curta de fecho avisando que tem mais, "
-                  "se ele quiser ver é só pedir.")
+                  "categoria). Escreva uma frase curta de fecho avisando que tem mais "
+                  "nessa categoria E perguntando se ela quer ver mais de {cat} ou de "
+                  "OUTRA categoria (cite pelo nome 1-2 outras categorias da loja que "
+                  "combinem).").replace("{cat}", cat)
     else:
         resumo = (f"Mostrei {len(mostrados)} peças de {cat} ao cliente. Escreva uma "
                   "frase curta de fecho e, se fizer sentido, sugira pelo NOME uma outra "

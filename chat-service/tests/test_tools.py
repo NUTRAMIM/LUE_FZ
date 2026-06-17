@@ -191,6 +191,24 @@ async def test_listar_categoria_is_case_insensitive(db):
     assert ids == ["p1"]
 
 
+async def test_card_drops_incomplete_image_urls(db):
+    # URL de imagem incompleta (ex.: ".webp") é descartada, não vira imagem quebrada
+    db.category_products = [_prod("p1", "Conjunto", "Tops",
+                                  image_urls=["https://img/ok.jpg", ".webp", "",
+                                              "http://img/ok2.png"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "https://img/ok.jpg" in segmento
+    assert "http://img/ok2.png" in segmento
+    assert ".webp" not in segmento
+
+
+async def test_card_drops_incomplete_video_url(db):
+    db.category_products = [_prod("p1", "Conjunto", "Tops",
+                                  image_urls=["https://img/ok.jpg"], video_url=".mp4")]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert ".mp4" not in segmento
+
+
 async def test_listar_categoria_caps_at_limit(db, monkeypatch):
     import app.agent.tools as tools_mod
     monkeypatch.setattr(tools_mod.settings, "listar_limit", 15)
