@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     embed_model: str = "text-embedding-3-small"
     buffer_wait_seconds: float = 7.0
     match_count: int = 6
+    # Teto de produtos enviados por vez no LISTAR_CATEGORIA. Como o agente exclui
+    # o que já mostrou, pedir "ver mais" traz a próxima leva. Env: LISTAR_LIMIT.
+    listar_limit: int = 15
     # Rounds máximos de tool no loop do agente. Precisa cobrir uma descoberta com
     # mais de uma busca (listar/buscar numa categoria, tentar outra, registrar) +
     # responder. Com pouco, o modelo é forçado à resposta final SEM tools e acaba

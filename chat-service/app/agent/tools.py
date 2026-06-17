@@ -153,11 +153,20 @@ async def listar_categoria(db, store_id: str, categoria: str, exclude_ids=None):
                 f"NÃO repita nenhuma. Diga ao cliente, numa frase leve, que por "
                 f"enquanto é só isso em {cat}, e sugira pelo NOME uma outra categoria "
                 f"parecida da loja (sem mostrar fotos por conta própria)."))
-    cards = [_build_card(p) for p in novos]
-    ids = [str(p["id"]) for p in novos]
-    resumo = (f"Mostrei {len(novos)} peças de {cat} ao cliente. Escreva uma frase "
-              "curta de fecho e, se fizer sentido, sugira pelo NOME uma outra "
-              "categoria que combine (só o nome, sem mostrar fotos por conta própria).")
+    # Teto por envio: manda no máximo `listar_limit`. O resto fica pra um próximo
+    # "ver mais" (a exclusão de já-mostrados pagina sozinha).
+    tem_mais = len(novos) > settings.listar_limit
+    mostrados = novos[:settings.listar_limit]
+    cards = [_build_card(p) for p in mostrados]
+    ids = [str(p["id"]) for p in mostrados]
+    if tem_mais:
+        resumo = (f"Mostrei {len(mostrados)} peças de {cat} (ainda tem MAIS nessa "
+                  "categoria). Escreva uma frase curta de fecho avisando que tem mais, "
+                  "se ele quiser ver é só pedir.")
+    else:
+        resumo = (f"Mostrei {len(mostrados)} peças de {cat} ao cliente. Escreva uma "
+                  "frase curta de fecho e, se fizer sentido, sugira pelo NOME uma outra "
+                  "categoria que combine (só o nome, sem mostrar fotos por conta própria).")
     return ("\n".join(cards), ids, resumo)
 
 

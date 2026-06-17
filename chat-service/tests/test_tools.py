@@ -191,6 +191,34 @@ async def test_listar_categoria_is_case_insensitive(db):
     assert ids == ["p1"]
 
 
+async def test_listar_categoria_caps_at_limit(db, monkeypatch):
+    import app.agent.tools as tools_mod
+    monkeypatch.setattr(tools_mod.settings, "listar_limit", 15)
+    db.category_products = [_prod(f"p{i}", f"Peça {i}", "Tops") for i in range(20)]
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops")
+    assert len(ids) == 15                       # no máximo 15 por envio
+    assert segmento.count("[produto]") == 15
+    assert "mais" in resumo.lower()             # avisa que tem mais
+
+
+async def test_listar_categoria_below_limit_has_no_more(db, monkeypatch):
+    import app.agent.tools as tools_mod
+    monkeypatch.setattr(tools_mod.settings, "listar_limit", 15)
+    db.category_products = [_prod(f"p{i}", f"Peça {i}", "Tops") for i in range(3)]
+    _, ids, _ = await listar_categoria(db, "store-1", "Tops")
+    assert len(ids) == 3
+
+
+async def test_listar_categoria_second_page_after_exclusion(db, monkeypatch):
+    # com os 15 primeiros já mostrados, o próximo envio traz o restante
+    import app.agent.tools as tools_mod
+    monkeypatch.setattr(tools_mod.settings, "listar_limit", 15)
+    db.category_products = [_prod(f"p{i}", f"Peça {i}", "Tops") for i in range(20)]
+    ja_mostrados = [f"p{i}" for i in range(15)]
+    _, ids, _ = await listar_categoria(db, "store-1", "Tops", exclude_ids=ja_mostrados)
+    assert ids == [f"p{i}" for i in range(15, 20)]   # os 5 restantes
+
+
 async def test_listar_categoria_ignores_surrounding_whitespace(db):
     # cadastro vem com espaço sobrando na categoria; deve casar mesmo assim
     db.category_products = [_prod("p1", "Body Doll", " BABY DOLL")]
