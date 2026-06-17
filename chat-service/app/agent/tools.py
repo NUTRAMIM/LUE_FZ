@@ -124,6 +124,32 @@ def _is_http_url(u) -> bool:
     return isinstance(u, str) and u.strip().lower().startswith(("http://", "https://"))
 
 
+# Ordem canônica de tamanho de roupa (P antes de M antes de G...). Tamanho
+# numérico ordena por número; desconhecido vai pro fim.
+_SIZE_ORDER = ["PP", "P", "M", "G", "GG", "XG", "XGG", "G1", "G2", "G3", "G4",
+               "UNICO", "U", "UN", "UNI"]
+_SIZE_RANK = {s: i for i, s in enumerate(_SIZE_ORDER)}
+
+
+def _norm_token(s) -> str:
+    t = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
+    return t.strip().strip(":").strip().upper().replace(" ", "")
+
+
+def _size_key(t):
+    n = _norm_token(t)
+    if n in _SIZE_RANK:
+        return (0, _SIZE_RANK[n], "")
+    if n.isdigit():
+        return (1, int(n), "")
+    return (2, 0, n)
+
+
+def _is_tamanho_garbage(c) -> bool:
+    # cor cujo valor é literalmente "tamanho" (lixo do cadastro) -> cor única
+    return _norm_token(c) == "TAMANHO"
+
+
 def _build_card(p: dict) -> str:
     lines = [p["name"]]
     # só URLs válidas; lixo/parcial é descartado pra não virar imagem quebrada
@@ -137,10 +163,14 @@ def _build_card(p: dict) -> str:
         lines.append(_format_price(p["price"]))
     tamanhos = p.get("tamanhos") or []
     if tamanhos:
-        lines.append("Tamanhos: " + ", ".join(tamanhos))
-    cores = ", ".join(p.get("cores") or [])
-    if cores:
-        lines.append("Cores: " + cores)
+        lines.append("Tamanhos: " + ", ".join(sorted(tamanhos, key=_size_key)))
+    cores_raw = [c for c in (p.get("cores") or []) if c]
+    cores_limpas = [c for c in cores_raw if not _is_tamanho_garbage(c)]
+    if cores_limpas:
+        lines.append("Cores: " + ", ".join(cores_limpas))
+    elif cores_raw:
+        # tinha cor, mas o valor era "Tamanho" (lixo) -> cor única
+        lines.append("Cor única")
     body = "\n".join(lines)
     return f"[produto]\n{body}\n[/produto]"
 

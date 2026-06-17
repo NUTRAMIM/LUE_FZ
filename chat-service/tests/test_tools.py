@@ -191,6 +191,32 @@ async def test_listar_categoria_is_case_insensitive(db):
     assert ids == ["p1"]
 
 
+async def test_card_sorts_sizes_in_canonical_order(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", tamanhos=["G", "GG", "M", "P"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Tamanhos: P, M, G, GG" in segmento
+
+
+async def test_card_sorts_numeric_sizes(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", tamanhos=["42", "38", "40", "36"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Tamanhos: 36, 38, 40, 42" in segmento
+
+
+async def test_card_color_equal_to_tamanho_shows_single_color(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", cores=["Tamanho"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Cor única" in segmento
+    assert "Cores: Tamanho" not in segmento
+
+
+async def test_card_keeps_real_colors_drops_only_tamanho(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", cores=["Bege", "Tamanho"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Cores: Bege" in segmento
+    assert "Cor única" not in segmento
+
+
 async def test_card_drops_incomplete_image_urls(db):
     # URL de imagem incompleta (ex.: ".webp") é descartada, não vira imagem quebrada
     db.category_products = [_prod("p1", "Conjunto", "Tops",
