@@ -146,6 +146,14 @@ def test_prompt_active_selling_before_checkout(store):
     assert "é só isso" in p
 
 
+def test_prompt_asks_size_color_when_missing(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    low = p.lower()
+    # pede tamanho/cor antes de registrar quando o cliente não informou
+    assert "antes de registrar" in low
+    assert "tamanho" in low and "cor" in low
+
+
 def _atacado(store):
     return dataclasses.replace(store, min_order_enabled=True)
 
