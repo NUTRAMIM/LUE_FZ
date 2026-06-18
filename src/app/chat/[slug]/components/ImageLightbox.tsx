@@ -85,6 +85,7 @@ export function ImageLightbox({ srcs, startIndex, onClose }: ImageLightboxProps)
                 <img
                   src={src}
                   alt=""
+                  referrerPolicy="no-referrer"
                   className="max-h-[90vh] max-w-[95vw] object-contain"
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -96,6 +97,7 @@ export function ImageLightbox({ srcs, startIndex, onClose }: ImageLightboxProps)
         <img
           src={srcs[0]}
           alt=""
+          referrerPolicy="no-referrer"
           className="max-h-[90vh] max-w-[95vw] object-contain"
           onClick={(e) => e.stopPropagation()}
         />

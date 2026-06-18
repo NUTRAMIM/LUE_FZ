@@ -82,7 +82,7 @@ export function MediaCarousel({ items, onImageClick }: MediaCarouselProps) {
                   <img
                     src={item.src}
                     alt=""
-                    loading="lazy"
+                    referrerPolicy="no-referrer"
                     className="max-h-80 w-full object-cover"
                   />
                 </button>

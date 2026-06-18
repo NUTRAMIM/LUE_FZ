@@ -202,7 +202,7 @@ export function MessageBubble({
                     src={item.src}
                     alt=""
                     className="max-h-80 w-full rounded object-cover"
-                    loading="lazy"
+                    referrerPolicy="no-referrer"
                   />
                 </button>
               )

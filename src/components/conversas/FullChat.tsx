@@ -77,7 +77,7 @@ function MessageContent({
                 src={item.src}
                 alt=""
                 className="rounded-md max-w-[260px] block"
-                loading="lazy"
+                referrerPolicy="no-referrer"
               />
             </button>
           )
