@@ -460,6 +460,31 @@ async def test_registrar_pedido_completa_preco_pelo_catalogo(db):
     assert "R$ 100,00" in out
 
 
+async def test_preco_match_ignora_acento_e_espaco(db):
+    db.product_prices = {"calça  jeans": 120.0}     # acento + espaço duplo
+    itens = [{"produto": "Calca Jeans", "qtd": 1}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["valor_total"] == 120.0
+
+
+async def test_preco_match_nome_encurtado_unico(db):
+    # agente registrou nome encurtado; casa pelo único produto que contém as palavras
+    db.product_prices = {"body elegance liso bege nude": 44.33}
+    itens = [{"produto": "Body Elegance Bege", "qtd": 2}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] == 44.33
+    assert db.order_upserts[0]["valor_total"] == 88.66
+
+
+async def test_preco_nao_chuta_quando_ambiguo(db):
+    # "body" sozinho casa com dois produtos -> não inventa preço
+    db.product_prices = {"body bege": 40.0, "body preto": 50.0}
+    itens = [{"produto": "Body", "qtd": 1}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] is None
+    assert db.order_upserts[0]["valor_total"] is None
+
+
 async def test_registrar_pedido_preco_do_agente_tem_prioridade(db):
     # se o agente já mandou preço, não sobrescreve pelo catálogo
     db.product_prices = {"cropped": 999.0}

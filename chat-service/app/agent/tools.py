@@ -233,14 +233,33 @@ def _normalize_itens(itens) -> list:
     return norm
 
 
+def _norm_name(s) -> str:
+    t = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
+    return re.sub(r"\s+", " ", t).strip().lower()
+
+
 async def _fill_missing_prices(db, store_id, norm) -> None:
-    # quando o agente não informa o preço, completa pelo nome exato do catálogo
+    # quando o agente não informa o preço, completa pelo catálogo. Casa o nome
+    # de forma robusta (sem acento, espaços normalizados); se não casar exato,
+    # tenta o produto cujo nome contém TODAS as palavras do item — só usa quando
+    # é único (não chuta preço se houver ambiguidade). Assim o total fecha por
+    # código mesmo quando a LLM encurta/varia o nome da peça.
     if all(it.get("preco") is not None for it in norm):
         return
     precos = await db.get_product_prices(store_id)
+    norm_map = {_norm_name(name): price for name, price in precos.items()}
     for it in norm:
-        if it.get("preco") is None:
-            it["preco"] = precos.get(it["produto"].strip().lower())
+        if it.get("preco") is not None:
+            continue
+        key = _norm_name(it["produto"])
+        price = norm_map.get(key)
+        if price is None and key:
+            tokens = set(key.split())
+            cands = {p for n, p in norm_map.items()
+                     if tokens and tokens.issubset(set(n.split()))}
+            if len(cands) == 1:
+                price = next(iter(cands))
+        it["preco"] = price
 
 
 def calcular_valor_total(itens) -> float | None:
