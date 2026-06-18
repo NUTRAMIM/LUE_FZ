@@ -105,9 +105,9 @@ async def buscar_produtos(db, llm, store_id: str, consulta: str, category: str,
 
     if not cards:
         return ("", [], "Essas peças você já mostrou nesta conversa. NÃO repita "
-                "nenhuma. Diga, numa frase leve, que por enquanto é só isso, e "
-                "sugira pelo NOME uma outra categoria parecida da loja (sem mostrar "
-                "fotos por conta própria).")
+                "nenhuma. Diga, numa frase leve, que NÃO TEM MAIS peças dessa "
+                "categoria, e sugira pelo NOME uma outra categoria QUE TENHA ESTOQUE "
+                "(veja a lista de categorias com estoque; sem mostrar fotos).")
 
     resumo = (f"Mostrei {mostrou} peças ao cliente. Escreva só uma frase curta "
               "de fecho perguntando se quer ver tamanho ou cor de alguma.")
@@ -181,15 +181,17 @@ async def listar_categoria(db, store_id: str, categoria: str, exclude_ids=None):
         return ("", [], "Categoria não informada.")
     rows = await db.get_products_by_category(store_id, cat)
     if not rows:
-        return ("", [], f"Nenhuma peça disponível em {cat}.")
+        return ("", [], (f"Não tem peça de {cat} em estoque agora. Diga, numa frase "
+                f"leve, que não tem {cat} disponível no momento, e sugira pelo NOME "
+                f"uma outra categoria QUE TENHA ESTOQUE (veja a lista; sem fotos)."))
     # Tira o que já foi mostrado nesta conversa pra não reenviar a categoria toda.
     exclude = {str(x) for x in (exclude_ids or [])}
     novos = [p for p in rows if str(p["id"]) not in exclude]
     if not novos:
         return ("", [], (f"Você já mostrou TODAS as peças de {cat} nesta conversa. "
-                f"NÃO repita nenhuma. Diga ao cliente, numa frase leve, que por "
-                f"enquanto é só isso em {cat}, e sugira pelo NOME uma outra categoria "
-                f"parecida da loja (sem mostrar fotos por conta própria)."))
+                f"NÃO repita nenhuma. Diga ao cliente, numa frase leve, que NÃO TEM "
+                f"MAIS peças de {cat}, e sugira pelo NOME uma outra categoria QUE "
+                f"TENHA ESTOQUE (veja a lista de categorias com estoque; sem fotos)."))
     # Teto por envio: manda no máximo `listar_limit`. O resto fica pra um próximo
     # "ver mais" (a exclusão de já-mostrados pagina sozinha).
     tem_mais = len(novos) > settings.listar_limit

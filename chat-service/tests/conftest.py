@@ -17,6 +17,7 @@ class FakeDB:
         self.match_results = []            # list[dict(content, metadata, similarity)]
         self.catalog = []                  # list[dict(id, name)]
         self.category_products = []        # list[dict(id,name,price,brand,tamanhos,cores,image_urls,category,is_available)]
+        self.categories_with_stock = []    # list[str]: categorias com peça disponível
         self.lead = None                   # dict | None
         self.inserted_messages = []
         self.created_leads = []
@@ -60,6 +61,9 @@ class FakeDB:
 
     async def get_product_ids_by_name(self, store_id):
         return dict(self.product_ids_by_name)
+
+    async def get_categories_with_stock(self, store_id):
+        return list(self.categories_with_stock)
 
     async def get_products_by_category(self, store_id, category):
         # espelha o btrim do SQL real (cadastro vem com espaço sobrando)

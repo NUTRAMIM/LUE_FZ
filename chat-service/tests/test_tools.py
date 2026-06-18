@@ -285,7 +285,7 @@ async def test_listar_categoria_empty_when_no_stock(db):
     segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops")
     assert segmento == ""
     assert ids == []
-    assert "Nenhuma" in resumo
+    assert "tem peça de Tops em estoque" in resumo
 
 
 async def test_listar_categoria_empty_when_no_category(db):
@@ -353,8 +353,9 @@ async def test_listar_categoria_all_shown_suggests_other_category(db):
     assert segmento == ""
     assert ids == []
     low = resumo.lower()
-    assert "já mostrou" in low
-    assert "outra categoria" in low
+    assert "não tem mais" in low          # avisa que não tem mais, não "é só isso"
+    assert "estoque" in low               # sugere categoria com estoque
+    assert "é só isso" not in low
 
 
 async def test_listar_categoria_empty_category_keeps_distinct_message(db):
@@ -363,7 +364,9 @@ async def test_listar_categoria_empty_category_keeps_distinct_message(db):
     segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops",
                                                    exclude_ids=["p1"])
     assert segmento == ""
-    assert "Nenhuma peça disponível" in resumo
+    low = resumo.lower()
+    assert "não tem peça de tops" in low
+    assert "estoque" in low
 
 
 def test_format_pedido_empty():

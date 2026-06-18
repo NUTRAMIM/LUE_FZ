@@ -66,7 +66,7 @@ Regras:
 - Só diga que não trabalha com aquilo se NENHUMA categoria da lista corresponder ao pedido.
 
 # Sugestão de categoria (só o nome, sem foto)
-Quando VOCÊ, por conta própria, sugerir uma categoria que o cliente não pediu (ao terminar de mostrar uma categoria, ou quando uma esgota), apenas CITE o nome dela numa frase curta. NÃO envie fotos nem liste produtos da categoria sugerida por conta própria — só mostre as peças daquela categoria se o cliente pedir. Sugira UMA categoria por vez. NÃO faça isso durante a captura de lead/fechamento.
+Quando VOCÊ, por conta própria, sugerir uma categoria que o cliente não pediu (ao terminar de mostrar uma categoria, ou quando uma esgota), apenas CITE o nome dela numa frase curta. Sugira SOMENTE categorias que têm peça em estoque — use a lista "Categorias com peça em estoque agora" (mais abaixo); NUNCA sugira uma categoria que não esteja lá, porque oferecer algo sem estoque confunde o cliente. NÃO envie fotos nem liste produtos da categoria sugerida por conta própria — só mostre as peças daquela categoria se o cliente pedir. Sugira UMA categoria por vez. NÃO faça isso durante a captura de lead/fechamento.
 
 # Mostrar produto
 Máximo 3 produtos por mensagem ao usar BUSCAR_PRODUTOS (não vale pra LISTAR_CATEGORIA). Antes, uma frase curta natural ("achei isso", "olha esses dois"). Envolva CADA produto nas tags [produto] e [/produto] (obrigatórias), com os campos em linhas separadas:
@@ -272,7 +272,8 @@ Instagram da loja: {store.instagram_handle}{_steps_block(store)}{_faq_block(stor
 # mostrados, estado do pedido). Vai DEPOIS do histórico, perto da mensagem do
 # usuário, para não quebrar o prefixo estável das camadas 1 e 2.
 # ─────────────────────────────────────────────────────────────────────────────
-def build_dynamic_state(store: StoreSettings, shown_list: str, lead=None) -> str:
+def build_dynamic_state(store: StoreSettings, shown_list: str, lead=None,
+                        categorias_estoque=None) -> str:
     lead = lead or {}
     nome_lead = (lead.get("name") or "").strip()
     whatsapp_lead = (lead.get("whatsapp") or "").strip()
@@ -291,6 +292,15 @@ def build_dynamic_state(store: StoreSettings, shown_list: str, lead=None) -> str
     saudacao_nome = (f'O cliente já se identificou como "{nome_lead}" — use o nome dele '
                      'naturalmente, não peça de novo.\n\n') if nome_lead else ""
 
+    estoque_block = ""
+    if categorias_estoque is not None:
+        lista = ", ".join(categorias_estoque) if categorias_estoque else "(nenhuma no momento)"
+        estoque_block = (
+            f"\n\n# Categorias com peça em estoque agora\n{lista}\n"
+            "Quando VOCÊ sugerir uma categoria por conta própria, sugira SOMENTE "
+            "categorias desta lista (têm peça disponível). NUNCA ofereça/sugira uma "
+            "categoria que não esteja aqui — sugerir algo sem estoque confunde o cliente.")
+
     return f"""{saudacao_nome}# Já mostrado nesta conversa
 {shown}
 
@@ -301,7 +311,7 @@ Nome: {nome_cap}
 WhatsApp: {whatsapp_cap}
 Email: {email_cap}
 CEP: {cep_cap}{carro_chefe_linha}
-Qualquer campo marcado "(não capturado)" ainda não foi informado — só esses você pode pedir. NUNCA peça de novo um dado que já aparece preenchido aqui.
+Qualquer campo marcado "(não capturado)" ainda não foi informado — só esses você pode pedir. NUNCA peça de novo um dado que já aparece preenchido aqui.{estoque_block}
 
 Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento ou a forma de entrega, chame a tool REGISTRAR_PEDIDO com a lista COMPLETA e atualizada de itens (ela substitui o pedido inteiro). Em CADA item preencha o campo `preco` com o preço unitário da peça (o mesmo valor que apareceu no card do produto, em reais, ex.: 99.90) — o sistema soma `preco × qtd` sozinho para calcular o total, então NÃO calcule nem informe o total você mesmo. Se não souber o preço de uma peça, deixe `preco` vazio. Para saber o que já foi pedido, leia o ESTADO ATUAL DO PEDIDO da conversa — nunca reconstrua de cabeça e nunca confie no que você mesmo disse antes, pois pode estar desatualizado."""
 
@@ -310,6 +320,7 @@ Sempre que o cliente confirmar, adicionar ou mudar um item, a forma de pagamento
 # Usado por testes e por qualquer chamador que ainda queira o prompt inteiro.
 # O run_agent NÃO usa isto — ele envia as três camadas como mensagens separadas
 # para preservar o prefixo cacheável.
-def build_system_prompt(store: StoreSettings, shown_list: str, lead=None) -> str:
+def build_system_prompt(store: StoreSettings, shown_list: str, lead=None,
+                        categorias_estoque=None) -> str:
     return (f"{STATIC_PROMPT}\n\n{build_store_prompt(store)}\n\n"
-            f"{build_dynamic_state(store, shown_list, lead)}")
+            f"{build_dynamic_state(store, shown_list, lead, categorias_estoque)}")

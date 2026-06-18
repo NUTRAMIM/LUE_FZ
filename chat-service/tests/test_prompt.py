@@ -30,6 +30,20 @@ def test_prompt_shown_list_placeholder_when_empty(store):
     assert "(nenhum)" in p
 
 
+def test_prompt_lists_in_stock_categories_for_suggestion(store):
+    p = build_system_prompt(store, shown_list="",
+                            categorias_estoque=["BODY", "NOVIDADES"])
+    assert "BODY, NOVIDADES" in p                       # lista renderizada (dinâmico)
+    assert "sugira somente categorias desta lista" in p.lower()
+
+
+def test_prompt_omits_stock_block_when_not_provided(store):
+    # sem a lista, o bloco dinâmico de estoque não é renderizado
+    p = build_system_prompt(store, shown_list="")
+    assert "sugira SOMENTE categorias desta lista" not in p
+    assert "(nenhuma no momento)" not in p
+
+
 def test_prompt_instructs_produto_tags(store):
     p = build_system_prompt(store, shown_list="")
     assert "[produto]" in p

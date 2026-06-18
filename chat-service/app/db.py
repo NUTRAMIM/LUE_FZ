@@ -115,6 +115,16 @@ class Database:
             "SELECT id::text AS pid, name FROM products WHERE user_id = $1", store_id)
         return {r["name"].strip().lower(): r["pid"] for r in rows if r["name"]}
 
+    async def get_categories_with_stock(self, store_id):
+        # categorias que têm AO MENOS uma peça disponível, pra IA só sugerir
+        # categorias com estoque. btrim: cadastro às vezes tem espaço sobrando.
+        rows = await self._pool.fetch(
+            """SELECT DISTINCT btrim(category) AS cat FROM products
+               WHERE user_id = $1 AND is_available = true
+                 AND category IS NOT NULL AND btrim(category) <> ''
+               ORDER BY 1""", store_id)
+        return [r["cat"] for r in rows]
+
     async def get_products_by_category(self, store_id, category):
         # btrim: o cadastro de produtos vem com espaço sobrando no começo/fim da
         # categoria (ex.: " PIJAMA CICLISTA"), que não casava com o nome limpo que

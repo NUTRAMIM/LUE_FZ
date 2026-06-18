@@ -99,7 +99,8 @@ TOOL_SCHEMA_REGISTRAR = {
 
 
 async def run_agent(llm, db, store, shown_list, chat_input, history,
-                    conversation_id=None, lead=None, shown_ids=None) -> AgentResult:
+                    conversation_id=None, lead=None, shown_ids=None,
+                    categorias_estoque=None) -> AgentResult:
     # Ordem pensada pra maximizar prompt caching da OpenAI (casa por prefixo
     # exato): primeiro o bloco GLOBAL-estático (idêntico p/ toda loja), depois o
     # POR-LOJA-estático (estável na conversa), só então o histórico e o estado
@@ -110,7 +111,8 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
         {"role": "system", "content": build_store_prompt(store)},
     ]
     messages.extend(history)
-    messages.append({"role": "system", "content": build_dynamic_state(store, shown_list, lead)})
+    messages.append({"role": "system", "content": build_dynamic_state(
+        store, shown_list, lead, categorias_estoque)})
     messages.append({"role": "system", "content": build_order_state_reminder(lead)})
     messages.append({"role": "user", "content": chat_input})
 
