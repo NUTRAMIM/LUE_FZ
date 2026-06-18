@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useState } from 'react'
 import { createPortal } from 'react-dom'
 import useEmblaCarousel from 'embla-carousel-react'
+import { proxiedImage } from '@/lib/proxy-image'
 
 interface ImageLightboxProps {
   srcs: string[]
@@ -83,7 +84,7 @@ export function ImageLightbox({ srcs, startIndex, onClose }: ImageLightboxProps)
                 className="flex h-full min-w-0 flex-[0_0_100%] items-center justify-center"
               >
                 <img
-                  src={src}
+                  src={proxiedImage(src)}
                   alt=""
                   referrerPolicy="no-referrer"
                   className="max-h-[90vh] max-w-[95vw] object-contain"
@@ -95,7 +96,7 @@ export function ImageLightbox({ srcs, startIndex, onClose }: ImageLightboxProps)
         </div>
       ) : (
         <img
-          src={srcs[0]}
+          src={proxiedImage(srcs[0])}
           alt=""
           referrerPolicy="no-referrer"
           className="max-h-[90vh] max-w-[95vw] object-contain"
