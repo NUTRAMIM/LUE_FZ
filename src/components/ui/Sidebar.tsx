@@ -28,49 +28,6 @@ const NAV_ACCOUNT: NavItem[] = [
   { href: '/painel/planos', label: 'Planos & assinatura', iconName: 'sparkle', ownerOnly: true },
 ]
 
-const OPERADORES = [
-  { n: 'Mariana A.', i: 'MA', c: '#A78BFA', s: 'em 3 chats' },
-  { n: 'Bruno T.', i: 'BT', c: '#FBBF24', s: 'em 2 chats' },
-  { n: 'Camila R.', i: 'CR', c: '#34D399', s: 'em 4 chats' },
-  { n: 'Diego P.', i: 'DP', c: '#60A5FA', s: 'ocioso' },
-]
-
-function OperadoresOnline() {
-  return (
-    <>
-      <div className="eyebrow text-ink-400 px-3 mt-7 mb-2">
-        OPERADORES · ONLINE
-      </div>
-      <ul className="space-y-1.5 px-1">
-        {OPERADORES.map((o) => (
-          <li
-            key={o.n}
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink-50"
-          >
-            <div className="relative">
-              <div
-                className="w-7 h-7 rounded-full font-display font-bold text-white text-[10.5px] flex items-center justify-center"
-                style={{ background: o.c }}
-              >
-                {o.i}
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-success-500 ring-2 ring-white" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[12.5px] font-semibold text-ink-900 truncate leading-tight">
-                {o.n}
-              </div>
-              <div className="text-[10.5px] text-ink-500 truncate leading-tight">
-                {o.s}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </>
-  )
-}
-
 const LOJA_SECTIONS = [
   { href: '#sec-identidade', label: 'Identidade' },
   { href: '#sec-contato', label: 'Contato' },
@@ -153,34 +110,6 @@ function SuaUrlPublica({
   )
 }
 
-function AgenteIA() {
-  return (
-    <div className="mt-6 mx-1 p-3.5 rounded-2xl bg-ink-900 text-white relative overflow-hidden">
-      <div
-        aria-hidden
-        className="absolute -top-10 -right-10 w-32 h-32 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(167,139,250,0.30), transparent 65%)',
-        }}
-      />
-      <div className="relative">
-        <div className="flex items-center gap-2">
-          <span className="live-dot" />
-          <span className="eyebrow text-brand-300">AGENTE IA</span>
-        </div>
-        <div className="text-[13px] mt-1.5 text-ink-200 leading-snug">
-          Auto-respondendo em{' '}
-          <span className="font-semibold text-white">2 conversas</span> agora.
-        </div>
-        <button className="mt-2.5 w-full bg-white/10 hover:bg-white/15 text-white text-[12px] font-semibold py-1.5 rounded-lg ring-1 ring-white/15">
-          Configurar IA
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function SidebarBody({
   role,
   slug,
@@ -202,7 +131,6 @@ function SidebarBody({
 }) {
   const isOwner = role !== 'agent'
   const userInitials = (email?.trim()?.[0] ?? '?').toUpperCase()
-  const isConversas = pathname?.startsWith('/conversas') ?? false
   const isLoja = pathname?.startsWith('/loja') ?? false
 
   return (
@@ -305,12 +233,7 @@ function SidebarBody({
         )}
 
         {/* Context-aware bottom widget */}
-        {isConversas ? (
-          <>
-            <OperadoresOnline />
-            <AgenteIA />
-          </>
-        ) : isLoja ? (
+        {isLoja ? (
           <>
             <NestaPaginaLoja />
             <SuaUrlPublica slug={slug} appUrl={appUrl} />
