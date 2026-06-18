@@ -24,7 +24,14 @@ export async function GET(request: NextRequest): Promise<Response> {
   let upstream: Response
   try {
     upstream = await fetch(u, {
-      headers: { 'User-Agent': 'LUE-FZ-image-proxy' },
+      // UA/Accept de navegador: alguns hosts (CDN de catálogo) rejeitam
+      // requisição "de robô" ou sem Accept de imagem.
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      },
       redirect: 'follow',
       signal: AbortSignal.timeout(10000),
     })
