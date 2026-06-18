@@ -17,7 +17,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { href: '/painel', label: 'Painel', iconName: 'trend', ownerOnly: true },
-  { href: '/conversas', label: 'Conversas', iconName: 'msgSq', badge: '12' },
+  { href: '/conversas', label: 'Conversas', iconName: 'msgSq' },
   { href: '/leads', label: 'Leads', iconName: 'inbox' },
   { href: '/estoque', label: 'Estoque', iconName: 'package', ownerOnly: true },
   { href: '/loja', label: 'Loja', iconName: 'store', ownerOnly: true },
@@ -189,6 +189,7 @@ function SidebarBody({
   onNavigate,
   isAdmin,
   storeName,
+  email,
 }: {
   role: StoreRole
   slug: string | null
@@ -197,8 +198,10 @@ function SidebarBody({
   onNavigate?: () => void
   isAdmin: boolean
   storeName: string | null
+  email: string | null
 }) {
   const isOwner = role !== 'agent'
+  const userInitials = (email?.trim()?.[0] ?? '?').toUpperCase()
   const isConversas = pathname?.startsWith('/conversas') ?? false
   const isLoja = pathname?.startsWith('/loja') ?? false
 
@@ -319,13 +322,15 @@ function SidebarBody({
       <div className="p-3 border-t border-ink-200 shrink-0">
         <div className="flex items-center gap-3 px-2 py-1.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-300 to-brand-500 font-display font-bold text-white flex items-center justify-center text-[11px]">
-            MA
+            {userInitials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[13px] font-semibold text-ink-900 truncate">
-              Mariana Alves
+              {email ?? 'Minha conta'}
             </div>
-            <div className="eyebrow text-ink-500 truncate">OPERADORA</div>
+            <div className="eyebrow text-ink-500 truncate">
+              {isOwner ? 'DONO DA LOJA' : 'OPERADOR'}
+            </div>
           </div>
           <form action={logout}>
             <button
@@ -354,12 +359,14 @@ export function Sidebar({
   appUrl,
   isAdmin,
   storeName,
+  email,
 }: {
   role: StoreRole
   slug: string | null
   appUrl: string
   isAdmin: boolean
   storeName: string | null
+  email: string | null
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -429,6 +436,7 @@ export function Sidebar({
           pathname={pathname}
           isAdmin={isAdmin}
           storeName={storeName}
+          email={email}
         />
       </aside>
 
@@ -474,6 +482,7 @@ export function Sidebar({
               onNavigate={() => setMobileOpen(false)}
               isAdmin={isAdmin}
               storeName={storeName}
+              email={email}
             />
           </aside>
         </>
