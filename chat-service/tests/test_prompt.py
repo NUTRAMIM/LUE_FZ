@@ -138,6 +138,14 @@ def test_prompt_omits_steps_and_faq_when_store_has_none(store):
     assert "Perguntas frequentes" not in p
 
 
+def test_prompt_instructs_to_inform_total(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    low = p.lower()
+    # informa o total calculado pelo sistema (não calcula de cabeça)
+    assert "informe" in low and "valor total" in low
+    assert "não calcule o total de cabeça" in low
+
+
 def test_prompt_documents_registrar_pedido_and_payment_question(store):
     p = build_system_prompt(store, shown_list="", lead=None)
     assert "REGISTRAR_PEDIDO" in p
