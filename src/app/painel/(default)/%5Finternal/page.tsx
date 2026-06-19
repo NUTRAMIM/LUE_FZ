@@ -14,6 +14,7 @@ import { StatCard } from '@/components/ui/StatCard'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Icon } from '@/components/painel/Icons'
+import { enterStore } from '@/actions/impersonation'
 import { PeriodSelector } from './PeriodSelector'
 
 export const dynamic = 'force-dynamic'
@@ -125,6 +126,7 @@ export default async function AdminInternalPage({
                       <th className="px-5 py-3 text-right">Completion</th>
                       <th className="px-5 py-3 text-right">Total</th>
                       <th className="px-5 py-3 text-right">Chamadas</th>
+                      <th className="px-5 py-3 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -145,12 +147,43 @@ export default async function AdminInternalPage({
                         <td className="px-5 py-3 text-right tabular-nums text-slate-600">
                           {fmt(s.calls)}
                         </td>
+                        <td className="px-5 py-3 text-right">
+                          <form action={enterStore.bind(null, s.storeId)}>
+                            <button
+                              type="submit"
+                              className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                              Entrar
+                            </button>
+                          </form>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+          </Card>
+
+          <Card className="mt-6 overflow-hidden p-0">
+            <div className="border-b border-slate-200/80 px-5 py-4">
+              <h2 className="font-display text-sm font-semibold text-slate-900">Todas as lojas</h2>
+            </div>
+            <ul className="divide-y divide-slate-100">
+              {(storesRes.data ?? []).map((loja) => (
+                <li key={loja.id} className="flex items-center justify-between px-5 py-3">
+                  <span className="text-sm font-medium text-slate-900">{loja.store_name}</span>
+                  <form action={enterStore.bind(null, loja.id)}>
+                    <button
+                      type="submit"
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Entrar
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
           </Card>
         </>
       )}
