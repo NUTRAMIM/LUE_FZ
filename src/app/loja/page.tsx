@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getActiveStoreId } from '@/lib/active-store'
 import { getAppUrl } from '@/lib/app-url'
 import { getStoreRole } from '@/lib/store-role'
 import { Icon } from '@/components/painel/Icons'
@@ -15,6 +16,9 @@ export default async function LojaPage() {
   if (!user) redirect('/login')
   if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) redirect('/login')
+
   // F1.4: consolida em 2 queries server-side os fetches que antes rolavam
   // separados (chat_slug aqui + store_settings/products no useEffect do
   // LojaForm). LojaForm passa a receber settings/categories via props.
@@ -25,12 +29,12 @@ export default async function LojaPage() {
     supabase
       .from('store_settings')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', storeId)
       .maybeSingle(),
     supabase
       .from('products')
       .select('category')
-      .eq('user_id', user.id),
+      .eq('user_id', storeId),
   ])
 
   const availableCategories = [
@@ -147,7 +151,7 @@ export default async function LojaPage() {
       )}
 
       <LojaForm
-        userId={user.id}
+        userId={storeId}
         settings={settings ?? null}
         availableCategories={availableCategories}
       />

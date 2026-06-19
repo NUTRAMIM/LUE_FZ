@@ -2,9 +2,9 @@
 
 import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthedUser } from '@/lib/auth'
+import { getStoreContext } from '@/lib/active-store'
 import { getMaxAgentsForStore } from '@/lib/plan-limits'
 import { isLivePendingInvite } from '@/lib/invite-status'
 import { getAppUrl } from '@/lib/app-url'
@@ -38,18 +38,9 @@ export interface EquipeData {
 }
 
 async function ownerStoreId(): Promise<string | null> {
-  const supabase = await createClient()
-  const user = await getAuthedUser()
-  if (!user) return null
-
-  const { data } = await supabase
-    .from('store_members')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (data?.role === 'agent') return null
-  return user.id
+  const ctx = await getStoreContext()
+  if (!ctx || ctx.role === 'agent') return null
+  return ctx.storeId
 }
 
 function inviteUrl(token: string): string {

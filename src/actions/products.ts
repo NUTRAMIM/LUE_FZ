@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getActiveStoreId } from '@/lib/active-store'
 import { getStoreRole } from '@/lib/store-role'
 import { generateSku } from '@/lib/sku'
 import type { Product } from '@/types/product'
@@ -98,6 +99,11 @@ export async function saveProduct(data: SaveProductInput): Promise<SaveProductRe
     return { success: false, error: 'Apenas o dono da loja pode editar produtos.' }
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+
   const id = sanitizeText(data.id, 80)
   const sku = sanitizeText(data.sku, MAX_TEXT)
   const name = sanitizeText(data.name, MAX_TEXT)
@@ -151,7 +157,7 @@ export async function saveProduct(data: SaveProductInput): Promise<SaveProductRe
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', storeId)
     .select('id')
     .maybeSingle()
 
@@ -185,6 +191,11 @@ export async function getProductDetails(id: string): Promise<Product | null> {
     throw new Error('Apenas o dono da loja pode visualizar detalhes do produto.')
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    throw new Error('Nao autorizado. Faca login novamente.')
+  }
+
   const cleanId = id.trim().slice(0, 80)
   if (!cleanId) return null
 
@@ -192,7 +203,7 @@ export async function getProductDetails(id: string): Promise<Product | null> {
     .from('products')
     .select('*')
     .eq('id', cleanId)
-    .eq('user_id', user.id)
+    .eq('user_id', storeId)
     .maybeSingle()
 
   if (error) {
@@ -237,6 +248,11 @@ export async function uploadProductImage(
     return { success: false, error: 'Apenas o dono da loja pode subir imagens.' }
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+
   const file = formData.get('file')
   if (!(file instanceof File)) {
     return { success: false, error: 'Arquivo invalido.' }
@@ -249,7 +265,7 @@ export async function uploadProductImage(
   }
 
   const ext = EXT_BY_MIME[file.type]
-  const path = `${user.id}/${crypto.randomUUID()}.${ext}`
+  const path = `${storeId}/${crypto.randomUUID()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from('product-images')
@@ -298,6 +314,11 @@ export async function uploadProductVideo(
     return { success: false, error: 'Apenas o dono da loja pode subir videos.' }
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+
   const file = formData.get('file')
   if (!(file instanceof File)) {
     return { success: false, error: 'Arquivo invalido.' }
@@ -310,7 +331,7 @@ export async function uploadProductVideo(
   }
 
   const ext = VIDEO_EXT_BY_MIME[file.type]
-  const path = `${user.id}/${crypto.randomUUID()}.${ext}`
+  const path = `${storeId}/${crypto.randomUUID()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from('product-videos')
@@ -373,6 +394,11 @@ export async function createProduct(
     return { success: false, error: 'Apenas o dono da loja pode criar produtos.' }
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+
   const name = sanitizeText(data.name, MAX_TEXT)
   const description = sanitizeText(data.description, MAX_DESCRIPTION)
   const price = parseNumber(data.price)
@@ -404,7 +430,7 @@ export async function createProduct(
     const { data: inserted, error } = await supabase
       .from('products')
       .insert({
-        user_id: user.id,
+        user_id: storeId,
         sku,
         name,
         description: description || null,
@@ -461,6 +487,11 @@ export async function adjustStock(
     return { success: false, error: 'Apenas o dono da loja pode ajustar o estoque.' }
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+
   const productId = sanitizeText(id, 80)
   if (!productId) return { success: false, error: 'Produto invalido.' }
   if (!Number.isInteger(delta) || delta === 0) {
@@ -471,7 +502,7 @@ export async function adjustStock(
     .from('products')
     .select('stock_quantity')
     .eq('id', productId)
-    .eq('user_id', user.id)
+    .eq('user_id', storeId)
     .maybeSingle()
 
   if (readErr) {
@@ -491,7 +522,7 @@ export async function adjustStock(
     .from('products')
     .update({ stock_quantity: next, updated_at: new Date().toISOString() })
     .eq('id', productId)
-    .eq('user_id', user.id)
+    .eq('user_id', storeId)
 
   if (updErr) {
     console.error('adjustStock update error:', updErr.message)
@@ -513,6 +544,11 @@ export async function deleteProduct(id: string): Promise<SaveProductResult> {
     return { success: false, error: 'Apenas o dono da loja pode excluir produtos.' }
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    return { success: false, error: 'Nao autorizado. Faca login novamente.' }
+  }
+
   const productId = sanitizeText(id, 80)
   if (!productId) return { success: false, error: 'Produto invalido.' }
 
@@ -520,7 +556,7 @@ export async function deleteProduct(id: string): Promise<SaveProductResult> {
     .from('products')
     .delete()
     .eq('id', productId)
-    .eq('user_id', user.id)
+    .eq('user_id', storeId)
     .select('id')
     .maybeSingle()
 

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getActiveStoreId } from '@/lib/active-store'
 import { rangeStart, shortRef } from '@/components/painel/formatters'
 import type { FunnelRange } from '@/components/painel/formatters'
 import { mergeFaqAnswer } from '@/lib/store-settings-sanitize'
@@ -31,7 +32,8 @@ export async function getPainelPulse(): Promise<PainelPulse> {
   const user = await getAuthedUser()
   if (!user) return EMPTY_PULSE
 
-  const store = user.id
+  const store = await getActiveStoreId()
+  if (!store) return EMPTY_PULSE
   const now = new Date()
   const dayStart = rangeStart(now, 'day').toISOString()
   const weekStart = rangeStart(now, 'week').toISOString()
@@ -128,7 +130,8 @@ export async function getFunnel(range: FunnelRange): Promise<FunnelData> {
   const user = await getAuthedUser()
   if (!user) return EMPTY_FUNNEL
 
-  const store = user.id
+  const store = await getActiveStoreId()
+  if (!store) return EMPTY_FUNNEL
   const start = rangeStart(new Date(), range).toISOString()
 
   // Stages 1 e 2 — conversas criadas no período.
@@ -237,7 +240,8 @@ export async function getActivityFeed(): Promise<ActivityEvent[]> {
   const user = await getAuthedUser()
   if (!user) return []
 
-  const store = user.id
+  const store = await getActiveStoreId()
+  if (!store) return []
   const oneHourAgo = new Date(Date.now() - 3_600_000).toISOString()
 
   const [convsRes, leadsRes] = await Promise.all([
@@ -313,10 +317,13 @@ export async function getKnowledgeGaps(): Promise<{
   const user = await getAuthedUser()
   if (!user) return { items: [], totalPending: 0 }
 
+  const store = await getActiveStoreId()
+  if (!store) return { items: [], totalPending: 0 }
+
   const { data, error } = await supabase
     .from('knowledge_gaps')
     .select('question, tag')
-    .eq('store_id', user.id)
+    .eq('store_id', store)
     .is('resolved_at', null)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -359,6 +366,9 @@ export async function answerKnowledgeGap(input: {
   const user = await getAuthedUser()
   if (!user) return { success: false, error: 'Não autorizado.' }
 
+  const store = await getActiveStoreId()
+  if (!store) return { success: false, error: 'Não autorizado.' }
+
   const question = (input.question ?? '').trim()
   const answer = (input.answer ?? '').trim()
   if (!question) return { success: false, error: 'Pergunta inválida.' }
@@ -367,7 +377,7 @@ export async function answerKnowledgeGap(input: {
   const { data: row, error: readErr } = await supabase
     .from('store_settings')
     .select('faq')
-    .eq('id', user.id)
+    .eq('id', store)
     .maybeSingle()
   if (readErr) {
     console.error('answerKnowledgeGap read error', readErr)
@@ -386,7 +396,7 @@ export async function answerKnowledgeGap(input: {
   const { error: updErr } = await supabase
     .from('store_settings')
     .update({ faq: merged.faq })
-    .eq('id', user.id)
+    .eq('id', store)
   if (updErr) {
     console.error('answerKnowledgeGap update error', updErr)
     return { success: false, error: 'Erro ao salvar. Tente novamente.' }
@@ -395,7 +405,7 @@ export async function answerKnowledgeGap(input: {
   const { data: gapRows } = await supabase
     .from('knowledge_gaps')
     .select('id, question')
-    .eq('store_id', user.id)
+    .eq('store_id', store)
     .is('resolved_at', null)
 
   const target = normalizeGapKey(question)
@@ -441,7 +451,8 @@ export async function getProductIntent(
   const user = await getAuthedUser()
   if (!user) return { items: [], totalProducts: 0, withIssues: 0 }
 
-  const store = user.id
+  const store = await getActiveStoreId()
+  if (!store) return { items: [], totalProducts: 0, withIssues: 0 }
   const start = rangeStart(new Date(), range).toISOString()
 
   const [mentionsRes, leadsConvsRes, productsRes] = await Promise.all([

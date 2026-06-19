@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getActiveStoreId } from '@/lib/active-store'
 import { getStoreRole } from '@/lib/store-role'
 import type { Product } from '@/types/product'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -15,6 +16,9 @@ export default async function EstoquePage() {
   if (!user) redirect('/login')
   if ((await getStoreRole()) !== 'owner') redirect('/conversas')
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) redirect('/login')
+
   // F1.1: projeção explícita; colunas pesadas (description, variants,
   // attributes) ficam pro fetch lazy via getProductDetails quando um drawer
   // abre.
@@ -25,13 +29,11 @@ export default async function EstoquePage() {
         'id, sku, name, category, brand, price, compare_at_price, stock_quantity, stock_min, image_urls, tamanhos, cores',
       )
       .order('name', { ascending: true }),
-    user
-      ? supabase
-          .from('store_settings')
-          .select('default_stock_min')
-          .eq('id', user.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
+    supabase
+      .from('store_settings')
+      .select('default_stock_min')
+      .eq('id', storeId)
+      .maybeSingle(),
   ])
 
   const products = (productsData ?? []) as Product[]

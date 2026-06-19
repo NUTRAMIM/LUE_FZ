@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { getActiveStoreId } from '@/lib/active-store'
 import {
   sanitizeFaq,
   normalizeDiscount,
@@ -131,6 +132,11 @@ export async function saveStoreSettings(data: {
     return { success: false, error: 'Não autorizado. Faça login novamente.' }
   }
 
+  const storeId = await getActiveStoreId()
+  if (!storeId) {
+    return { success: false, error: 'Não autorizado. Faça login novamente.' }
+  }
+
   const storeName = sanitizeText(data.store_name, MAX_STORE_NAME_LENGTH)
   const serviceInstructions = sanitizeText(data.service_instructions, MAX_INSTRUCTIONS_LENGTH)
   const serviceSteps = sanitizeArray(data.service_steps, VALID_SERVICE_STEPS)
@@ -174,7 +180,7 @@ export async function saveStoreSettings(data: {
     .from('store_settings')
     .upsert(
       {
-        id: user.id,
+        id: storeId,
         store_name: storeName,
         service_steps: serviceSteps,
         service_instructions: serviceInstructions,
