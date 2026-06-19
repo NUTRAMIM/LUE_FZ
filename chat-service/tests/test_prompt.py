@@ -220,6 +220,15 @@ def test_prompt_atacado_shows_category_after_carro_chefe(store):
     assert "já mostre" in p.lower()
 
 
+def test_prompt_atacado_asks_what_reseller_sells_on_suggestion(store):
+    p = build_store_prompt(_atacado(store))
+    low = p.lower()
+    # ao sugerir categoria nova pra revendedora, pergunta o que ela mais vende
+    assert "revendedora" in low
+    assert "o que ela mais vende" in low or "saem mais na loja dela" in low
+    assert "varie" in low  # maleável, sem frase fixa
+
+
 def test_prompt_atacado_bans_filler_openers(store):
     p = build_system_prompt(_atacado(store), shown_list="", lead=None)
     low = p.lower()
