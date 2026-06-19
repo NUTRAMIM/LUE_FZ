@@ -8,6 +8,7 @@ import { MediaCarousel } from './MediaCarousel'
 import { ImageLightbox } from './ImageLightbox'
 import { useSwipeToReply } from './useSwipeToReply'
 import { replyPreviewText, truncate } from './reply-helpers'
+import { proxiedImage } from '@/lib/proxy-image'
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -199,10 +200,10 @@ export function MessageBubble({
                   className="my-1 block w-full"
                 >
                   <img
-                    src={item.src}
+                    src={proxiedImage(item.src)}
                     alt=""
                     className="max-h-80 w-full rounded object-cover"
-                    loading="lazy"
+                    referrerPolicy="no-referrer"
                   />
                 </button>
               )

@@ -5,23 +5,28 @@ from app.config import settings
 
 log = logging.getLogger("chat-service")
 from app.models import AgentResult
-from app.agent.prompt import build_system_prompt, build_order_state_reminder
-from app.agent.tools import buscar_produtos, listar_categoria, registrar_pedido
+from app.agent.prompt import (
+    STATIC_PROMPT, build_store_prompt, build_dynamic_state,
+    build_order_state_reminder)
+from app.agent.tools import (buscar_produtos, listar_categoria, registrar_pedido,
+                             bare_category_target)
 
 TOOL_NAME = "BUSCAR_PRODUTOS"
 LISTAR_TOOL_NAME = "LISTAR_CATEGORIA"
 REGISTRAR_TOOL_NAME = "REGISTRAR_PEDIDO"
-MAX_TOOL_ROUNDS = 5
 
 TOOL_SCHEMA = {
     "type": "function",
     "function": {
         "name": TOOL_NAME,
         "description": (
-            "Busca semântica no catálogo de produtos da loja. Use quando o "
-            "cliente pedir produtos COM algum filtro (cor, tamanho, ocasião, "
-            "estilo, preço). Na consulta descreva o pedido em linguagem natural. "
-            "`category` é a categoria EXATA da loja (string vazia se vago)."
+            "Busca semântica no catálogo de produtos da loja. Use SOMENTE quando "
+            "o cliente pedir produtos COM algum filtro real (cor, tamanho, ocasião, "
+            "estilo, preço). NÃO use para o nome de uma categoria sozinho "
+            "('bodies', 'conjuntos') nem para 'mais opções'/'ver tudo' de uma "
+            "categoria — isso é categoria inteira, use LISTAR_CATEGORIA. Na consulta "
+            "descreva o pedido em linguagem natural. `category` é a categoria EXATA "
+            "da loja (string vazia se vago)."
         ),
         "parameters": {
             "type": "object",
@@ -39,11 +44,12 @@ TOOL_SCHEMA_LISTAR = {
     "function": {
         "name": LISTAR_TOOL_NAME,
         "description": (
-            "Mostra TODAS as peças de uma categoria de uma vez. Use SOMENTE "
-            "quando o cliente pedir a categoria inteira SEM nenhum filtro "
-            "(ex.: 'me mostra os conjuntos', 'quais tops vocês têm'). Se houver "
-            "qualquer filtro (cor, tamanho, ocasião, preço), use BUSCAR_PRODUTOS. "
-            "`categoria` deve ser a categoria EXATA da loja."
+            "Mostra TODAS as peças de uma categoria de uma vez. Use quando o "
+            "cliente pedir a categoria inteira SEM filtro. Isso inclui o nome de "
+            "uma categoria sozinho ('bodies', 'conjuntos', 'calças') e pedidos de "
+            "'mais opções'/'ver tudo'/'tem mais?' da categoria atual. Se houver "
+            "qualquer filtro (cor, tamanho, ocasião, preço), aí sim use "
+            "BUSCAR_PRODUTOS. `categoria` deve ser a categoria EXATA da loja."
         ),
         "parameters": {
             "type": "object",
@@ -93,19 +99,35 @@ TOOL_SCHEMA_REGISTRAR = {
 
 
 async def run_agent(llm, db, store, shown_list, chat_input, history,
-                    conversation_id=None, lead=None) -> AgentResult:
-    messages = [{"role": "system", "content": build_system_prompt(store, shown_list, lead)}]
+                    conversation_id=None, lead=None, shown_ids=None,
+                    categorias_estoque=None) -> AgentResult:
+    # Ordem pensada pra maximizar prompt caching da OpenAI (casa por prefixo
+    # exato): primeiro o bloco GLOBAL-estático (idêntico p/ toda loja), depois o
+    # POR-LOJA-estático (estável na conversa), só então o histórico e o estado
+    # dinâmico do turno. Assim o prefixo estável é reaproveitado entre os rounds
+    # de tool da mesma mensagem e entre mensagens da conversa.
+    messages = [
+        {"role": "system", "content": STATIC_PROMPT},
+        {"role": "system", "content": build_store_prompt(store)},
+    ]
     messages.extend(history)
+    messages.append({"role": "system", "content": build_dynamic_state(
+        store, shown_list, lead, categorias_estoque)})
     messages.append({"role": "system", "content": build_order_state_reminder(lead)})
     messages.append({"role": "user", "content": chat_input})
 
     product_segments: list[str] = []
     shown_product_ids: list[str] = []
+    # IDs já mostrados (turnos anteriores + os mostrados neste turno), pra nenhuma
+    # tool reenviar peça repetida.
+    excluido: set[str] = {str(x) for x in (shown_ids or [])}
 
-    for _ in range(MAX_TOOL_ROUNDS):
+    for _ in range(settings.max_tool_rounds):
         resp = await llm.chat(
             model=settings.chat_model, messages=messages,
-            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_REGISTRAR], max_tokens=4096)
+            tools=[TOOL_SCHEMA, TOOL_SCHEMA_LISTAR, TOOL_SCHEMA_REGISTRAR],
+            max_tokens=4096,
+            reasoning_effort=settings.foreground_reasoning_effort)
 
         tool_calls = resp.get("tool_calls")
         if not tool_calls:
@@ -125,37 +147,54 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
         })
         for call in tool_calls:
             args = json.loads(call["arguments"])
-            log.info("tool call %s args=%s", call["name"], args)
+            # args carrega o texto/consulta do cliente (PII potencial) — DEBUG,
+            # não INFO, pra não vazar conteúdo do cliente nos logs da plataforma.
+            log.debug("tool call %s args=%s", call["name"], args)
             if call["name"] == LISTAR_TOOL_NAME:
                 segmento, ids, resumo = await listar_categoria(
-                    db, store.id, args.get("categoria", ""))
+                    db, store.id, args.get("categoria", ""), exclude_ids=excluido)
                 if segmento:
                     product_segments.append(segmento)
                     shown_product_ids.extend(ids)
-                log.info("LISTAR_CATEGORIA(%r) -> %d peças", args.get("categoria", ""), len(ids))
+                    excluido.update(ids)
+                log.debug("LISTAR_CATEGORIA(%r) -> %d peças", args.get("categoria", ""), len(ids))
                 content = resumo
             elif call["name"] == REGISTRAR_TOOL_NAME:
                 content = await registrar_pedido(
                     db, store.id, conversation_id,
                     args.get("itens", []), args.get("forma_pagamento"),
                     args.get("forma_entrega"))
-                log.info("REGISTRAR_PEDIDO -> %s", content)
+                log.debug("REGISTRAR_PEDIDO -> %s", content)
             elif call["name"] == TOOL_NAME:
-                segmento, ids, resumo = await buscar_produtos(
-                    db, llm, store.id, args.get("consulta", ""), args.get("category", ""))
+                consulta = args.get("consulta", "")
+                category = args.get("category", "")
+                # Rede de segurança: pedido de categoria inteira sem filtro que o
+                # modelo mandou pro BUSCAR (teto 3) é redirecionado pra LISTAR
+                # (mostra tudo), sem depender da escolha do modelo.
+                alvo = bare_category_target(store.categories, consulta, category)
+                if alvo:
+                    segmento, ids, resumo = await listar_categoria(
+                        db, store.id, alvo, exclude_ids=excluido)
+                    log.info("BUSCAR_PRODUTOS->LISTAR_CATEGORIA(%r) -> %d peças",
+                             alvo, len(ids))
+                else:
+                    segmento, ids, resumo = await buscar_produtos(
+                        db, llm, store.id, consulta, category, exclude_ids=excluido)
+                    log.info("BUSCAR_PRODUTOS(consulta=%r, category=%r) -> %d cards",
+                             consulta, category,
+                             segmento.count("[produto]") if segmento else 0)
                 if segmento:
                     product_segments.append(segmento)
                     shown_product_ids.extend(ids)
-                log.info("BUSCAR_PRODUTOS(consulta=%r, category=%r) -> %d cards",
-                         args.get("consulta", ""), args.get("category", ""),
-                         segmento.count("[produto]") if segmento else 0)
+                    excluido.update(ids)
                 content = resumo
             else:
                 content = ""
             messages.append({"role": "tool", "tool_call_id": call["id"],
                              "content": content})
 
-    resp = await llm.chat(model=settings.chat_model, messages=messages, max_tokens=4096)
+    resp = await llm.chat(model=settings.chat_model, messages=messages, max_tokens=4096,
+                          reasoning_effort=settings.foreground_reasoning_effort)
     return AgentResult(
         text=resp.get("content") or "",
         product_segments=product_segments,

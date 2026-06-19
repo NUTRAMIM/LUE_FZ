@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
+import { proxiedImage } from '@/lib/proxy-image'
 import type { MediaItem } from './message-segments'
 
 interface MediaCarouselProps {
@@ -80,9 +81,9 @@ export function MediaCarousel({ items, onImageClick }: MediaCarouselProps) {
                   className="block w-full"
                 >
                   <img
-                    src={item.src}
+                    src={proxiedImage(item.src)}
                     alt=""
-                    loading="lazy"
+                    referrerPolicy="no-referrer"
                     className="max-h-80 w-full object-cover"
                   />
                 </button>

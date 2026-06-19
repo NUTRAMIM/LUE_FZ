@@ -11,6 +11,7 @@ export interface SidebarData {
   appUrl: string
   isAdmin: boolean
   storeName: string | null
+  email: string | null
 }
 
 // Dados que a Sidebar precisa pra montar — papel do usuário (filtra itens
@@ -21,7 +22,7 @@ export async function getSidebarData(): Promise<SidebarData> {
   const appUrl = getAppUrl()
   try {
     const user = await getAuthedUser()
-    if (!user) return { role: 'owner', slug: null, appUrl, isAdmin: false, storeName: null }
+    if (!user) return { role: 'owner', slug: null, appUrl, isAdmin: false, storeName: null, email: null }
 
     const supabase = await createClient()
     // Usa a loja ativa (impersonation-aware): durante a impersonação a sidebar
@@ -38,9 +39,9 @@ export async function getSidebarData(): Promise<SidebarData> {
     const slug = settingsRes.data?.chat_slug ?? null
     const storeName = settingsRes.data?.store_name ?? null
 
-    return { role, slug, appUrl, isAdmin: isPlatformAdmin(user), storeName }
+    return { role, slug, appUrl, isAdmin: isPlatformAdmin(user), storeName, email: user.email ?? null }
   } catch (err) {
     console.error('getSidebarData error', err)
-    return { role: 'owner', slug: null, appUrl, isAdmin: false, storeName: null }
+    return { role: 'owner', slug: null, appUrl, isAdmin: false, storeName: null, email: null }
   }
 }

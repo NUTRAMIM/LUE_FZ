@@ -9,6 +9,7 @@ import {
 } from '@/app/chat/[slug]/components/message-segments'
 import { MediaCarousel } from '@/app/chat/[slug]/components/MediaCarousel'
 import { ImageLightbox } from '@/app/chat/[slug]/components/ImageLightbox'
+import { proxiedImage } from '@/lib/proxy-image'
 import { avatarColor, avatarInitials } from './formatters'
 import { RelativeTime } from './RelativeTime'
 
@@ -74,10 +75,10 @@ function MessageContent({
               className="block"
             >
               <img
-                src={item.src}
+                src={proxiedImage(item.src)}
                 alt=""
                 className="rounded-md max-w-[260px] block"
-                loading="lazy"
+                referrerPolicy="no-referrer"
               />
             </button>
           )

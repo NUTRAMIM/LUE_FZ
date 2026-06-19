@@ -3,27 +3,47 @@ from openai import AsyncOpenAI
 from app.usage import record_usage
 
 
-def _record(label, usage):
+def _record(label, usage, model):
     if usage is None:
         return
-    # embeddings usage não tem completion_tokens — só chat completions tem
-    record_usage(label, getattr(usage, "prompt_tokens", 0) or 0,
+    # embeddings usage não tem completion_tokens — só chat completions tem.
+    # prompt_tokens_details.cached_tokens indica quantos tokens de input vieram
+    # do cache (cobrados ~90% mais barato nos GPT-5) — métrica do ganho do cache.
+    details = getattr(usage, "prompt_tokens_details", None)
+    cached = (getattr(details, "cached_tokens", 0) or 0) if details else 0
+    record_usage(label, model, getattr(usage, "prompt_tokens", 0) or 0,
                  getattr(usage, "completion_tokens", 0) or 0,
-                 getattr(usage, "total_tokens", 0) or 0)
+                 getattr(usage, "total_tokens", 0) or 0,
+                 cached)
 
 
 class LLMClient:
     def __init__(self, api_key: str):
-        self._client = AsyncOpenAI(api_key=api_key)
+        # max_retries acima do default (2): a SDK retenta erros transitórios de
+        # conexão (DNS/getaddrinfo, timeouts) com backoff, dando resiliência a
+        # blips de rede em produção.
+        # timeout explícito por request: sem ele, uma chamada pendurada (blip de
+        # rede / TLS) segura a task e a conexão indefinidamente. 60s cobre folgado
+        # uma completion normal; a SDK ainda retenta (max_retries) em cima disso.
+        self._client = AsyncOpenAI(api_key=api_key, max_retries=5, timeout=60.0)
 
-    async def chat(self, model, messages, tools=None, max_tokens=None) -> dict:
+    async def chat(self, model, messages, tools=None, max_tokens=None,
+                   reasoning_effort=None, response_format=None) -> dict:
         kwargs = {"model": model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
         if max_tokens:
             kwargs["max_completion_tokens"] = max_tokens
+        # GPT-5 cobra reasoning tokens como output. Em tarefas simples
+        # (classificação/extração) "minimal" corta esse custo.
+        if reasoning_effort:
+            kwargs["reasoning_effort"] = reasoning_effort
+        # Structured Outputs: garante JSON válido conforme schema (sem markdown),
+        # tornando o parsing das branches robusto e permitindo encolher os prompts.
+        if response_format:
+            kwargs["response_format"] = response_format
         resp = await self._client.chat.completions.create(**kwargs)
-        _record("chat", getattr(resp, "usage", None))
+        _record("chat", getattr(resp, "usage", None), model)
         msg = resp.choices[0].message
         tool_calls = None
         if msg.tool_calls:
@@ -34,5 +54,5 @@ class LLMClient:
     async def embed(self, model, text) -> list[float]:
         resp = await self._client.embeddings.create(
             model=model, input=text, dimensions=1536)
-        _record("embed", getattr(resp, "usage", None))
+        _record("embed", getattr(resp, "usage", None), model)
         return resp.data[0].embedding

@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RespondendoA(BaseModel):
@@ -12,7 +12,9 @@ class RespondendoA(BaseModel):
 
 
 class WebhookPayload(BaseModel):
-    mensagem: str
+    # Teto generoso: mensagens normais de chat ficam muito abaixo. Rejeita
+    # payloads absurdos (abuso de custo de tokens / inflar prompt) com 422.
+    mensagem: str = Field(max_length=8000)
     id_mensagem: str
     id_conversa: str
     nome_loja: str
@@ -42,6 +44,12 @@ class StoreSettings:
     service_steps: list[str] = field(default_factory=list)
     faq: list[dict] = field(default_factory=list)
     min_order_enabled: bool = False
+    min_order_quantity: int | None = None
+    min_order_value: float | None = None
+    min_order_logic: str = "all"
+    discount_type: str | None = None
+    discount_value: float | None = None
+    discount_custom: str = ""
 
 
 @dataclass

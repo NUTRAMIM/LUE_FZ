@@ -84,6 +84,28 @@ def test_store_settings_accepts_min_order_enabled():
     assert s.min_order_enabled is True
 
 
+def test_store_settings_min_order_and_discount_defaults():
+    s = StoreSettings(id="x", store_name="Loja")
+    assert s.min_order_quantity is None
+    assert s.min_order_value is None
+    assert s.min_order_logic == "all"
+    assert s.discount_type is None
+    assert s.discount_value is None
+    assert s.discount_custom == ""
+
+
+def test_store_settings_accepts_min_order_and_discount():
+    s = StoreSettings(
+        id="x", store_name="Loja", min_order_enabled=True,
+        min_order_quantity=12, min_order_value=150.0, min_order_logic="any",
+        discount_type="percent_order", discount_value=15.0, discount_custom="")
+    assert s.min_order_quantity == 12
+    assert s.min_order_value == 150.0
+    assert s.min_order_logic == "any"
+    assert s.discount_type == "percent_order"
+    assert s.discount_value == 15.0
+
+
 def test_store_settings_accepts_service_steps_and_faq():
     s = StoreSettings(
         id="x", store_name="Loja",

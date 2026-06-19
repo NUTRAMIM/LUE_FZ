@@ -1,10 +1,21 @@
 # tests/test_prompt.py
-from app.agent.prompt import build_system_prompt, build_order_state_reminder
+import dataclasses
+from app.agent.prompt import (build_system_prompt, build_order_state_reminder,
+                              build_store_prompt)
+
+
+def test_atacado_asks_reseller_or_personal_before_carro_chefe(store):
+    atacado = dataclasses.replace(store, min_order_enabled=True)
+    p = build_store_prompt(atacado)
+    # pergunta revenda vs uso próprio ANTES do carro-chefe, atendendo igual
+    assert "revender" in p
+    assert "uso próprio" in p
+    assert p.index("uso próprio") < p.index("carro-chefe")
 
 
 def test_prompt_includes_store_fields(store):
     p = build_system_prompt(store, shown_list="Top Alça")
-    assert "Assistente da loja LUE" in p
+    assert "loja LUE" in p
     assert "Categorias: top, vestido, calça" in p
     assert "Pagamento: pix, cartão" in p
     assert "Entrega: correios" in p
@@ -17,6 +28,20 @@ def test_prompt_includes_store_fields(store):
 def test_prompt_shown_list_placeholder_when_empty(store):
     p = build_system_prompt(store, shown_list="")
     assert "(nenhum)" in p
+
+
+def test_prompt_lists_in_stock_categories_for_suggestion(store):
+    p = build_system_prompt(store, shown_list="",
+                            categorias_estoque=["BODY", "NOVIDADES"])
+    assert "BODY, NOVIDADES" in p                       # lista renderizada (dinâmico)
+    assert "sugira somente categorias desta lista" in p.lower()
+
+
+def test_prompt_omits_stock_block_when_not_provided(store):
+    # sem a lista, o bloco dinâmico de estoque não é renderizado
+    p = build_system_prompt(store, shown_list="")
+    assert "sugira SOMENTE categorias desta lista" not in p
+    assert "(nenhuma no momento)" not in p
 
 
 def test_prompt_instructs_produto_tags(store):
@@ -37,12 +62,22 @@ def test_prompt_scopes_three_product_cap_to_buscar(store):
 
 def test_prompt_instructs_category_synonym_mapping(store):
     p = build_system_prompt(store, shown_list="")
-    assert "categoria existente mais próxima" in p
+    assert "melhor agrupa" in p
+    # não pode buscar com categoria vazia quando o cliente nomeou um tipo
+    assert "NUNCA chame BUSCAR_PRODUTOS com `category` vazio" in p
+    # não pode mais conter os exemplos fixos de loja fitness
+    assert "Croppeds" not in p and "Leggings" not in p
 
 
 def test_prompt_has_tool_routing_decision(store):
     p = build_system_prompt(store, shown_list="")
     assert "decida pela intenção do cliente" in p
+
+
+def test_prompt_instructs_not_to_interrogate(store):
+    p = build_system_prompt(store, shown_list="")
+    assert "NÃO interrogue" in p or "Não interrogue" in p
+    assert "MÁXIMO UMA pergunta" in p
 
 
 import dataclasses
@@ -73,19 +108,16 @@ def test_prompt_marks_uncaptured_contact_fields(store):
     assert "(não capturado)" in p
 
 
-def test_prompt_shows_current_order_state(store):
+def test_order_state_lives_only_in_reminder_not_system_prompt(store):
+    # Após a raspagem, o estado do pedido NÃO é mais duplicado no system prompt
+    # (era o bloco "# Pedido atual"); a fonte única é o build_order_state_reminder.
     lead = {"name": "Ana",
             "pedido": [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}],
             "forma_pagamento": "Pix", "forma_entrega": "Sedex"}
     p = build_system_prompt(store, shown_list="", lead=lead)
-    assert "2x Cropped" in p
-    assert "Pix" in p
-    assert "Sedex" in p
-
-
-def test_prompt_order_placeholder_when_empty(store):
-    p = build_system_prompt(store, shown_list="", lead=None)
-    assert "(nenhum item ainda)" in p
+    assert "2x Cropped" not in p          # não duplicado no prompt principal
+    r = build_order_state_reminder(lead)
+    assert "2x Cropped" in r and "Pix" in r and "Sedex" in r
 
 
 def test_prompt_includes_store_service_steps(store):
@@ -106,11 +138,42 @@ def test_prompt_omits_steps_and_faq_when_store_has_none(store):
     assert "Perguntas frequentes" not in p
 
 
+def test_prompt_instructs_to_inform_total(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    low = p.lower()
+    # informa o total calculado pelo sistema (não calcula de cabeça)
+    assert "informe" in low and "valor total" in low
+    assert "não calcule o total de cabeça" in low
+
+
 def test_prompt_documents_registrar_pedido_and_payment_question(store):
     p = build_system_prompt(store, shown_list="", lead=None)
     assert "REGISTRAR_PEDIDO" in p
     assert "forma de pagamento" in p
     assert "forma de entrega" in p
+
+
+def test_prompt_splits_varied_quantity_equally(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    low = p.lower()
+    assert "variados" in low and "igualmente" in low
+    assert "sobra de uma em uma" in low
+
+
+def test_prompt_active_selling_before_checkout(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    # ao escolher peça, faz venda ativa e só fecha quando o cliente sinalizar
+    assert "venda ativa" in p.lower()
+    assert "NÃO corra pro fechamento" in p
+    assert "é só isso" in p
+
+
+def test_prompt_asks_size_color_when_missing(store):
+    p = build_system_prompt(store, shown_list="", lead=None)
+    low = p.lower()
+    # pede tamanho/cor antes de registrar quando o cliente não informou
+    assert "antes de registrar" in low
+    assert "tamanho" in low and "cor" in low
 
 
 def _atacado(store):
@@ -191,6 +254,75 @@ def test_prompt_asks_cep_in_both_modes(store):
 def test_prompt_shows_captured_cep(store):
     p = build_system_prompt(store, shown_list="", lead={"name": "Ana", "cep": "01310-100"})
     assert "01310-100" in p
+
+
+def test_varejo_shares_warm_persona_with_atacado(store):
+    # o tom de abertura é o mesmo nos dois modos; só o enquadramento muda
+    persona = "vendedora de verdade conversando no WhatsApp"
+    varejo = build_store_prompt(store)
+    atacado = build_store_prompt(_atacado(store))
+    assert persona in varejo
+    assert persona in atacado
+
+
+def test_atacado_prompt_shows_min_order_rule(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_logic="all")
+    p = build_store_prompt(s)
+    assert "Pedido mínimo" in p
+    assert "10 peças" in p
+    assert "R$ 200,00" in p
+
+
+def test_atacado_min_order_logic_any_uses_ou(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_logic="any")
+    p = build_store_prompt(s)
+    assert "10 peças ou R$ 200,00" in p
+
+
+def test_atacado_min_order_logic_all_uses_e(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_logic="all")
+    p = build_store_prompt(s)
+    assert "10 peças e R$ 200,00" in p
+
+
+def test_atacado_prompt_shows_percent_piece_discount(store):
+    s = dataclasses.replace(store, min_order_enabled=True,
+                            discount_type="percent_piece", discount_value=10.0)
+    p = build_store_prompt(s)
+    assert "10% de desconto" in p
+
+
+def test_atacado_prompt_shows_fixed_piece_discount(store):
+    s = dataclasses.replace(store, min_order_enabled=True,
+                            discount_type="fixed_piece", discount_value=5.0)
+    p = build_store_prompt(s)
+    assert "R$ 5,00 de desconto por peça" in p
+
+
+def test_atacado_custom_discount_uses_text(store):
+    s = dataclasses.replace(store, min_order_enabled=True,
+                            discount_type="custom", discount_custom="Leve 3 pague 2")
+    p = build_store_prompt(s)
+    assert "Leve 3 pague 2" in p
+
+
+def test_varejo_prompt_omits_min_order_and_discount(store):
+    # mesmo com dados preenchidos, loja varejo (min_order_enabled=False) não usa
+    s = dataclasses.replace(store, min_order_quantity=10,
+                            discount_type="percent_piece", discount_value=10.0)
+    p = build_store_prompt(s)
+    assert "Pedido mínimo" not in p
+    assert "desconto" not in p.lower()
+
+
+def test_atacado_without_rules_omits_block(store):
+    p = build_store_prompt(_atacado(store))
+    assert "# Regras desta loja (atacado)" not in p
+    assert "Pedido mínimo:" not in p
+    assert "Desconto:" not in p
 
 
 def test_order_state_reminder_renders_current_state():

@@ -40,27 +40,33 @@ export interface Database {
         Row: {
           store_id: string
           day: string
+          model: string
           prompt_tokens: number
           completion_tokens: number
           total_tokens: number
+          cached_tokens: number
           calls: number
           updated_at: string
         }
         Insert: {
           store_id: string
           day: string
+          model?: string
           prompt_tokens?: number
           completion_tokens?: number
           total_tokens?: number
+          cached_tokens?: number
           calls?: number
           updated_at?: string
         }
         Update: {
           store_id?: string
           day?: string
+          model?: string
           prompt_tokens?: number
           completion_tokens?: number
           total_tokens?: number
+          cached_tokens?: number
           calls?: number
           updated_at?: string
         }
@@ -607,7 +613,14 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      painel_atividade_ia: {
+        Args: { p_inicio: string }
+        Returns: {
+          store_id: string
+          ia_mensagens: number
+          atendimentos: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

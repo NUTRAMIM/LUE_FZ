@@ -28,7 +28,9 @@ class Database:
         r = await self._pool.fetchrow(
             """SELECT id::text, store_name, categories, payment_methods,
                       delivery_methods, service_instructions, seller_phone,
-                      instagram_handle, service_steps, faq, min_order_enabled
+                      instagram_handle, service_steps, faq, min_order_enabled,
+                      min_order_quantity, min_order_value, min_order_logic,
+                      discount_type, discount_value, discount_custom
                FROM store_settings WHERE id = $1""", store_id)
         if r is None:
             return None
@@ -45,7 +47,15 @@ class Database:
             instagram_handle=r["instagram_handle"] or "",
             service_steps=list(r["service_steps"] or []),
             faq=list(faq or []),
-            min_order_enabled=bool(r["min_order_enabled"]))
+            min_order_enabled=bool(r["min_order_enabled"]),
+            min_order_quantity=r["min_order_quantity"],
+            min_order_value=(float(r["min_order_value"])
+                             if r["min_order_value"] is not None else None),
+            min_order_logic=r["min_order_logic"] or "all",
+            discount_type=r["discount_type"],
+            discount_value=(float(r["discount_value"])
+                            if r["discount_value"] is not None else None),
+            discount_custom=r["discount_custom"] or "")
 
     async def get_shown_products(self, conversation_id):
         r = await self._pool.fetchrow(
@@ -54,6 +64,13 @@ class Database:
                WHERE pm.conversation_id = $1 AND pm.source = 'ai_shown'""",
             conversation_id)
         return r["shown_list"] if r else ""
+
+    async def get_shown_product_ids(self, conversation_id):
+        rows = await self._pool.fetch(
+            """SELECT DISTINCT product_id::text AS pid FROM product_mentions
+               WHERE conversation_id = $1 AND source = 'ai_shown'""",
+            conversation_id)
+        return [r["pid"] for r in rows]
 
     async def get_recent_messages(self, conversation_id, limit=10):
         rows = await self._pool.fetch(
@@ -73,7 +90,8 @@ class Database:
         out = []
         for r in rows:
             md = r["metadata"]
-            out.append({"content": r["content"],
+            out.append({"id": str(r["id"]),
+                        "content": r["content"],
                         "metadata": json.loads(md) if isinstance(md, str) else md,
                         "similarity": r["similarity"]})
         return out
@@ -90,12 +108,32 @@ class Database:
         return {r["name"].strip().lower(): float(r["price"])
                 for r in rows if r["name"]}
 
+    async def get_product_ids_by_name(self, store_id):
+        # match_documents devolve o id do DOCUMENTO (bigint), não o do produto.
+        # product_mentions.product_id é UUID -> resolvemos pelo nome (estável).
+        rows = await self._pool.fetch(
+            "SELECT id::text AS pid, name FROM products WHERE user_id = $1", store_id)
+        return {r["name"].strip().lower(): r["pid"] for r in rows if r["name"]}
+
+    async def get_categories_with_stock(self, store_id):
+        # categorias que têm AO MENOS uma peça disponível, pra IA só sugerir
+        # categorias com estoque. btrim: cadastro às vezes tem espaço sobrando.
+        rows = await self._pool.fetch(
+            """SELECT DISTINCT btrim(category) AS cat FROM products
+               WHERE user_id = $1 AND is_available = true
+                 AND category IS NOT NULL AND btrim(category) <> ''
+               ORDER BY 1""", store_id)
+        return [r["cat"] for r in rows]
+
     async def get_products_by_category(self, store_id, category):
+        # btrim: o cadastro de produtos vem com espaço sobrando no começo/fim da
+        # categoria (ex.: " PIJAMA CICLISTA"), que não casava com o nome limpo que
+        # o agente passa. Ignora esses espaços nos dois lados.
         rows = await self._pool.fetch(
             """SELECT id::text, name, price, brand, tamanhos, cores, image_urls,
                       video_url
                FROM products
-               WHERE user_id = $1 AND lower(category) = lower($2)
+               WHERE user_id = $1 AND lower(btrim(category)) = lower(btrim($2))
                  AND is_available = true
                ORDER BY name""", store_id, category)
         return [dict(r) for r in rows]
@@ -172,16 +210,18 @@ class Database:
             """INSERT INTO product_mentions (store_id, conversation_id, product_id, source)
                VALUES ($1, $2, $3, $4)""", store_id, conversation_id, product_id, source)
 
-    async def record_daily_usage(self, store_id, prompt, completion, total, calls):
+    async def record_daily_usage(self, store_id, model, prompt, completion,
+                                 total, cached, calls):
         await self._pool.execute(
-            """INSERT INTO ai_usage_daily (store_id, day, prompt_tokens,
-                   completion_tokens, total_tokens, calls, updated_at)
-               VALUES ($1, (now() at time zone 'America/Sao_Paulo')::date,
-                   $2, $3, $4, $5, now())
-               ON CONFLICT (store_id, day) DO UPDATE SET
+            """INSERT INTO ai_usage_daily (store_id, day, model, prompt_tokens,
+                   completion_tokens, total_tokens, cached_tokens, calls, updated_at)
+               VALUES ($1, (now() at time zone 'America/Sao_Paulo')::date, $2,
+                   $3, $4, $5, $6, $7, now())
+               ON CONFLICT (store_id, day, model) DO UPDATE SET
                    prompt_tokens     = ai_usage_daily.prompt_tokens     + EXCLUDED.prompt_tokens,
                    completion_tokens = ai_usage_daily.completion_tokens + EXCLUDED.completion_tokens,
                    total_tokens      = ai_usage_daily.total_tokens      + EXCLUDED.total_tokens,
+                   cached_tokens     = ai_usage_daily.cached_tokens     + EXCLUDED.cached_tokens,
                    calls             = ai_usage_daily.calls             + EXCLUDED.calls,
                    updated_at        = now()""",
-            store_id, prompt, completion, total, calls)
+            store_id, model, prompt, completion, total, cached, calls)

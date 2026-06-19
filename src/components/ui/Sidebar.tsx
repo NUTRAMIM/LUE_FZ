@@ -17,7 +17,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { href: '/painel', label: 'Painel', iconName: 'trend', ownerOnly: true },
-  { href: '/conversas', label: 'Conversas', iconName: 'msgSq', badge: '12' },
+  { href: '/conversas', label: 'Conversas', iconName: 'msgSq' },
   { href: '/leads', label: 'Leads', iconName: 'inbox' },
   { href: '/estoque', label: 'Estoque', iconName: 'package', ownerOnly: true },
   { href: '/loja', label: 'Loja', iconName: 'store', ownerOnly: true },
@@ -27,49 +27,6 @@ const NAV: NavItem[] = [
 const NAV_ACCOUNT: NavItem[] = [
   { href: '/painel/planos', label: 'Planos & assinatura', iconName: 'sparkle', ownerOnly: true },
 ]
-
-const OPERADORES = [
-  { n: 'Mariana A.', i: 'MA', c: '#A78BFA', s: 'em 3 chats' },
-  { n: 'Bruno T.', i: 'BT', c: '#FBBF24', s: 'em 2 chats' },
-  { n: 'Camila R.', i: 'CR', c: '#34D399', s: 'em 4 chats' },
-  { n: 'Diego P.', i: 'DP', c: '#60A5FA', s: 'ocioso' },
-]
-
-function OperadoresOnline() {
-  return (
-    <>
-      <div className="eyebrow text-ink-400 px-3 mt-7 mb-2">
-        OPERADORES · ONLINE
-      </div>
-      <ul className="space-y-1.5 px-1">
-        {OPERADORES.map((o) => (
-          <li
-            key={o.n}
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-ink-50"
-          >
-            <div className="relative">
-              <div
-                className="w-7 h-7 rounded-full font-display font-bold text-white text-[10.5px] flex items-center justify-center"
-                style={{ background: o.c }}
-              >
-                {o.i}
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-success-500 ring-2 ring-white" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[12.5px] font-semibold text-ink-900 truncate leading-tight">
-                {o.n}
-              </div>
-              <div className="text-[10.5px] text-ink-500 truncate leading-tight">
-                {o.s}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </>
-  )
-}
 
 const LOJA_SECTIONS = [
   { href: '#sec-identidade', label: 'Identidade' },
@@ -153,34 +110,6 @@ function SuaUrlPublica({
   )
 }
 
-function AgenteIA() {
-  return (
-    <div className="mt-6 mx-1 p-3.5 rounded-2xl bg-ink-900 text-white relative overflow-hidden">
-      <div
-        aria-hidden
-        className="absolute -top-10 -right-10 w-32 h-32 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(167,139,250,0.30), transparent 65%)',
-        }}
-      />
-      <div className="relative">
-        <div className="flex items-center gap-2">
-          <span className="live-dot" />
-          <span className="eyebrow text-brand-300">AGENTE IA</span>
-        </div>
-        <div className="text-[13px] mt-1.5 text-ink-200 leading-snug">
-          Auto-respondendo em{' '}
-          <span className="font-semibold text-white">2 conversas</span> agora.
-        </div>
-        <button className="mt-2.5 w-full bg-white/10 hover:bg-white/15 text-white text-[12px] font-semibold py-1.5 rounded-lg ring-1 ring-white/15">
-          Configurar IA
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function SidebarBody({
   role,
   slug,
@@ -189,6 +118,7 @@ function SidebarBody({
   onNavigate,
   isAdmin,
   storeName,
+  email,
 }: {
   role: StoreRole
   slug: string | null
@@ -197,9 +127,10 @@ function SidebarBody({
   onNavigate?: () => void
   isAdmin: boolean
   storeName: string | null
+  email: string | null
 }) {
   const isOwner = role !== 'agent'
-  const isConversas = pathname?.startsWith('/conversas') ?? false
+  const userInitials = (email?.trim()?.[0] ?? '?').toUpperCase()
   const isLoja = pathname?.startsWith('/loja') ?? false
 
   return (
@@ -302,12 +233,7 @@ function SidebarBody({
         )}
 
         {/* Context-aware bottom widget */}
-        {isConversas ? (
-          <>
-            <OperadoresOnline />
-            <AgenteIA />
-          </>
-        ) : isLoja ? (
+        {isLoja ? (
           <>
             <NestaPaginaLoja />
             <SuaUrlPublica slug={slug} appUrl={appUrl} />
@@ -319,13 +245,15 @@ function SidebarBody({
       <div className="p-3 border-t border-ink-200 shrink-0">
         <div className="flex items-center gap-3 px-2 py-1.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-300 to-brand-500 font-display font-bold text-white flex items-center justify-center text-[11px]">
-            MA
+            {userInitials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[13px] font-semibold text-ink-900 truncate">
-              Mariana Alves
+              {email ?? 'Minha conta'}
             </div>
-            <div className="eyebrow text-ink-500 truncate">OPERADORA</div>
+            <div className="eyebrow text-ink-500 truncate">
+              {isOwner ? 'DONO DA LOJA' : 'OPERADOR'}
+            </div>
           </div>
           <form action={logout}>
             <button
@@ -354,12 +282,14 @@ export function Sidebar({
   appUrl,
   isAdmin,
   storeName,
+  email,
 }: {
   role: StoreRole
   slug: string | null
   appUrl: string
   isAdmin: boolean
   storeName: string | null
+  email: string | null
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -429,6 +359,7 @@ export function Sidebar({
           pathname={pathname}
           isAdmin={isAdmin}
           storeName={storeName}
+          email={email}
         />
       </aside>
 
@@ -474,6 +405,7 @@ export function Sidebar({
               onNavigate={() => setMobileOpen(false)}
               isAdmin={isAdmin}
               storeName={storeName}
+              email={email}
             />
           </aside>
         </>

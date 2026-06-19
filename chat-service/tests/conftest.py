@@ -11,10 +11,13 @@ class FakeDB:
         self.window_messages = []          # list[dict(id, content)]
         self.store = None                  # StoreSettings | None
         self.shown_list = ""
+        self.shown_ids = []                # list[str]: product_ids já mostrados
         self.recent_messages = []          # list[dict(role, content)]
+        self.recent_limit = None
         self.match_results = []            # list[dict(content, metadata, similarity)]
         self.catalog = []                  # list[dict(id, name)]
         self.category_products = []        # list[dict(id,name,price,brand,tamanhos,cores,image_urls,category,is_available)]
+        self.categories_with_stock = []    # list[str]: categorias com peça disponível
         self.lead = None                   # dict | None
         self.inserted_messages = []
         self.created_leads = []
@@ -25,6 +28,7 @@ class FakeDB:
         self.order_upserts = []
         self.daily_usage = []
         self.product_prices = {}           # dict(lower(name) -> price)
+        self.product_ids_by_name = {}      # dict(lower(name) -> product_id uuid)
 
     async def get_user_messages_in_window(self, conversation_id):
         return list(self.window_messages)
@@ -35,7 +39,11 @@ class FakeDB:
     async def get_shown_products(self, conversation_id):
         return self.shown_list
 
+    async def get_shown_product_ids(self, conversation_id):
+        return list(self.shown_ids)
+
     async def get_recent_messages(self, conversation_id, limit=10):
+        self.recent_limit = limit
         return list(self.recent_messages)
 
     async def match_documents(self, embedding, match_count, user_id, category):
@@ -51,9 +59,17 @@ class FakeDB:
     async def get_product_prices(self, store_id):
         return dict(self.product_prices)
 
+    async def get_product_ids_by_name(self, store_id):
+        return dict(self.product_ids_by_name)
+
+    async def get_categories_with_stock(self, store_id):
+        return list(self.categories_with_stock)
+
     async def get_products_by_category(self, store_id, category):
+        # espelha o btrim do SQL real (cadastro vem com espaço sobrando)
+        alvo = (category or "").strip().lower()
         return [p for p in self.category_products
-                if (p.get("category") or "").lower() == category.lower()
+                if (p.get("category") or "").strip().lower() == alvo
                 and p.get("is_available", True)]
 
     async def insert_message(self, conversation_id, role, content, store_id=None):
@@ -95,11 +111,16 @@ class FakeDB:
         self.inserted_mentions.append(
             {"store_id": store_id, "conversation_id": conversation_id,
              "product_id": product_id, "source": source})
+        # reflete o estado real: o que foi mostrado fica visível p/ get_shown_product_ids
+        if source == "ai_shown" and product_id not in self.shown_ids:
+            self.shown_ids.append(product_id)
 
-    async def record_daily_usage(self, store_id, prompt, completion, total, calls):
+    async def record_daily_usage(self, store_id, model, prompt, completion,
+                                 total, cached, calls):
         self.daily_usage.append(
-            {"store_id": store_id, "prompt": prompt, "completion": completion,
-             "total": total, "calls": calls})
+            {"store_id": store_id, "model": model, "prompt": prompt,
+             "completion": completion, "total": total, "cached": cached,
+             "calls": calls})
 
 
 class FakeLLM:
@@ -110,14 +131,17 @@ class FakeLLM:
         self.chat_calls = []
         self.embed_calls = []
 
-    async def chat(self, model, messages, tools=None, max_tokens=None):
-        self.chat_calls.append({"messages": messages, "tools": tools})
-        record_usage("chat", 10, 4, 14)
+    async def chat(self, model, messages, tools=None, max_tokens=None,
+                   reasoning_effort=None, response_format=None):
+        self.chat_calls.append({"model": model, "messages": messages, "tools": tools,
+                                "reasoning_effort": reasoning_effort,
+                                "response_format": response_format})
+        record_usage("chat", model, 10, 4, 14)
         return self.chat_responses.pop(0)
 
     async def embed(self, model, text):
         self.embed_calls.append(text)
-        record_usage("embed", 5, 0, 5)
+        record_usage("embed", model, 5, 0, 5)
         return [0.0] * 1536
 
 

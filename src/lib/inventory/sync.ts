@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { assertPublicUrl } from '@/lib/ssrf'
 import type { Database } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -266,6 +267,8 @@ export async function syncInventoryFromUrl(
   userId: string,
   url: string,
 ): Promise<ImportResult> {
+  await assertPublicUrl(url)
+
   const response = await fetch(url.trim(), {
     headers: {
       Accept: 'application/json',

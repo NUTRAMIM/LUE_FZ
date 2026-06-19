@@ -3,7 +3,7 @@ from app.agent.tools import (buscar_produtos, registrar_pedido, format_pedido,
                              calcular_valor_total)
 
 
-def _doc(name, category, cores, image_urls=None, video_url=None):
+def _doc(name, category, cores, image_urls=None, video_url=None, pid="d1"):
     md = {"name": name, "category": category, "price": 99.9,
           "tamanhos": ["P", "M"], "cores": cores, "brand": None,
           "image_url": f"http://x/{name}"}
@@ -11,15 +11,25 @@ def _doc(name, category, cores, image_urls=None, video_url=None):
         md["image_urls"] = image_urls
     if video_url is not None:
         md["video_url"] = video_url
-    return {"content": name, "similarity": 0.5, "metadata": md}
+    return {"id": pid, "content": name, "similarity": 0.5, "metadata": md}
+
+
+async def test_buscar_produtos_resolves_product_uuid_by_name(db, llm):
+    # match_documents devolve o id do DOCUMENTO (bigint); o id retornado tem que
+    # ser o do PRODUTO (uuid), resolvido pelo nome — senão product_mentions quebra
+    db.match_results = [_doc("Top Alça", "top", ["rosa"], pid="234396")]  # doc id
+    db.product_ids_by_name = {"top alça": "uuid-top-alca"}
+    _, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top")
+    assert ids == ["uuid-top-alca"]
 
 
 async def test_buscar_produtos_builds_cards_with_video_last(db, llm):
     db.match_results = [_doc("Top Alça", "top", ["rosa", "azul"],
                              image_urls=["http://img/a.jpg", "http://img/b.jpg"],
                              video_url="http://vid/a.mp4")]
+    db.product_ids_by_name = {"top alça": "d1"}
     segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "top floral", "top")
-    assert ids == []
+    assert ids == ["d1"]
     assert segmento == (
         "[produto]\n"
         "Top Alça\n"
@@ -42,10 +52,14 @@ async def test_buscar_produtos_falls_back_to_single_image_url(db, llm):
     assert "http://x/Vestido" in segmento
 
 
-async def test_buscar_produtos_category_fallback_when_filtered_empty(db, llm):
+async def test_buscar_produtos_no_cross_category_when_filtered_empty(db, llm):
+    # categoria foi informada (top) mas só há vestido: NÃO pode vazar pra outra
+    # categoria (evita "pedi calcinha, veio sutiã"). Retorna vazio.
     db.match_results = [_doc("Vestido Longo", "vestido", ["azul"])]
-    segmento, _, _ = await buscar_produtos(db, llm, "store-1", "algo", "top")
-    assert "Vestido Longo" in segmento
+    segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "algo", "top")
+    assert segmento == ""
+    assert ids == []
+    assert "Vestido Longo" not in segmento
 
 
 async def test_buscar_produtos_empty_returns_empty_segment(db, llm):
@@ -54,6 +68,74 @@ async def test_buscar_produtos_empty_returns_empty_segment(db, llm):
     assert segmento == ""
     assert ids == []
     assert resumo
+
+
+async def test_buscar_produtos_returns_shown_ids(db, llm):
+    # os IDs dos produtos mostrados são devolvidos pra registrar como "ai_shown"
+    # e não reaparecerem nas próximas mensagens
+    db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1"),
+                        _doc("Top B", "top", ["azul"], pid="p2")]
+    db.product_ids_by_name = {"top a": "p1", "top b": "p2"}
+    _, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top")
+    assert ids == ["p1", "p2"]
+
+
+async def test_buscar_produtos_excludes_already_shown(db, llm):
+    db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1"),
+                        _doc("Top B", "top", ["azul"], pid="p2")]
+    db.product_ids_by_name = {"top a": "p1", "top b": "p2"}
+    segmento, ids, _ = await buscar_produtos(db, llm, "store-1", "top", "top",
+                                             exclude_ids=["p1"])
+    assert ids == ["p2"]
+    assert "Top A" not in segmento
+
+
+async def test_buscar_produtos_all_shown_returns_suggestion(db, llm):
+    db.match_results = [_doc("Top A", "top", ["rosa"], pid="p1")]
+    db.product_ids_by_name = {"top a": "p1"}
+    segmento, ids, resumo = await buscar_produtos(db, llm, "store-1", "top", "top",
+                                                  exclude_ids=["p1"])
+    assert segmento == ""
+    assert ids == []
+    assert "outra categoria" in resumo.lower()
+
+
+from app.agent.tools import bare_category_target
+
+
+def test_bare_category_target_plain_name():
+    cats = ["Bodies", "Conjuntos"]
+    assert bare_category_target(cats, "bodies", "Bodies") == "Bodies"
+    assert bare_category_target(cats, "bodies", "") == "Bodies"
+
+
+def test_bare_category_target_matches_singular_or_plural():
+    cats = ["Conjuntos"]
+    assert bare_category_target(cats, "conjunto", "") == "Conjuntos"
+
+
+def test_bare_category_target_more_options_uses_category_arg():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "quero ver mais opções", "Bodies") == "Bodies"
+    assert bare_category_target(cats, "me mostra mais", "Bodies") == "Bodies"
+
+
+def test_bare_category_target_more_pieces_of_category():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "tem mais peças de bodies?", "") == "Bodies"
+    assert bare_category_target(cats, "me mostra o resto dos bodies", "Bodies") == "Bodies"
+
+
+def test_bare_category_target_none_when_filter_present():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "body preto", "Bodies") is None
+    assert bare_category_target(cats, "bodies tamanho P", "Bodies") is None
+
+
+def test_bare_category_target_none_for_unknown_category():
+    cats = ["Bodies"]
+    assert bare_category_target(cats, "calcinha", "") is None
+    assert bare_category_target(cats, "algo qualquer", "") is None
 
 
 from app.agent.tools import listar_categoria
@@ -109,6 +191,85 @@ async def test_listar_categoria_is_case_insensitive(db):
     assert ids == ["p1"]
 
 
+async def test_card_sorts_sizes_in_canonical_order(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", tamanhos=["G", "GG", "M", "P"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Tamanhos: P, M, G, GG" in segmento
+
+
+async def test_card_sorts_numeric_sizes(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", tamanhos=["42", "38", "40", "36"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Tamanhos: 36, 38, 40, 42" in segmento
+
+
+async def test_card_color_equal_to_tamanho_shows_single_color(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", cores=["Tamanho"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Cor única" in segmento
+    assert "Cores: Tamanho" not in segmento
+
+
+async def test_card_keeps_real_colors_drops_only_tamanho(db):
+    db.category_products = [_prod("p1", "Peça", "Tops", cores=["Bege", "Tamanho"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "Cores: Bege" in segmento
+    assert "Cor única" not in segmento
+
+
+async def test_card_drops_incomplete_image_urls(db):
+    # URL de imagem incompleta (ex.: ".webp") é descartada, não vira imagem quebrada
+    db.category_products = [_prod("p1", "Conjunto", "Tops",
+                                  image_urls=["https://img/ok.jpg", ".webp", "",
+                                              "http://img/ok2.png"])]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert "https://img/ok.jpg" in segmento
+    assert "http://img/ok2.png" in segmento
+    assert ".webp" not in segmento
+
+
+async def test_card_drops_incomplete_video_url(db):
+    db.category_products = [_prod("p1", "Conjunto", "Tops",
+                                  image_urls=["https://img/ok.jpg"], video_url=".mp4")]
+    segmento, _, _ = await listar_categoria(db, "store-1", "Tops")
+    assert ".mp4" not in segmento
+
+
+async def test_listar_categoria_caps_at_limit(db, monkeypatch):
+    import app.agent.tools as tools_mod
+    monkeypatch.setattr(tools_mod.settings, "listar_limit", 15)
+    db.category_products = [_prod(f"p{i}", f"Peça {i}", "Tops") for i in range(20)]
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops")
+    assert len(ids) == 15                       # no máximo 15 por envio
+    assert segmento.count("[produto]") == 15
+    assert "mais" in resumo.lower()             # avisa que tem mais
+
+
+async def test_listar_categoria_below_limit_has_no_more(db, monkeypatch):
+    import app.agent.tools as tools_mod
+    monkeypatch.setattr(tools_mod.settings, "listar_limit", 15)
+    db.category_products = [_prod(f"p{i}", f"Peça {i}", "Tops") for i in range(3)]
+    _, ids, _ = await listar_categoria(db, "store-1", "Tops")
+    assert len(ids) == 3
+
+
+async def test_listar_categoria_second_page_after_exclusion(db, monkeypatch):
+    # com os 15 primeiros já mostrados, o próximo envio traz o restante
+    import app.agent.tools as tools_mod
+    monkeypatch.setattr(tools_mod.settings, "listar_limit", 15)
+    db.category_products = [_prod(f"p{i}", f"Peça {i}", "Tops") for i in range(20)]
+    ja_mostrados = [f"p{i}" for i in range(15)]
+    _, ids, _ = await listar_categoria(db, "store-1", "Tops", exclude_ids=ja_mostrados)
+    assert ids == [f"p{i}" for i in range(15, 20)]   # os 5 restantes
+
+
+async def test_listar_categoria_ignores_surrounding_whitespace(db):
+    # cadastro vem com espaço sobrando na categoria; deve casar mesmo assim
+    db.category_products = [_prod("p1", "Body Doll", " BABY DOLL")]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "BABY DOLL")
+    assert ids == ["p1"]
+
+
 async def test_listar_categoria_skips_out_of_stock(db):
     db.category_products = [
         _prod("p1", "Em estoque", "Tops"),
@@ -124,7 +285,7 @@ async def test_listar_categoria_empty_when_no_stock(db):
     segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops")
     assert segmento == ""
     assert ids == []
-    assert "Nenhuma" in resumo
+    assert "tem peça de Tops em estoque" in resumo
 
 
 async def test_listar_categoria_empty_when_no_category(db):
@@ -176,6 +337,36 @@ async def test_listar_categoria_card_appends_video_after_images(db):
         "Cores: preto, branco\n"
         "[/produto]"
     )
+
+
+async def test_listar_categoria_excludes_already_shown(db):
+    db.category_products = [_prod("p1", "A", "Tops"), _prod("p2", "B", "Tops")]
+    segmento, ids, _ = await listar_categoria(db, "store-1", "Tops", exclude_ids=["p1"])
+    assert ids == ["p2"]
+    assert "A\n" not in segmento and "B" in segmento
+
+
+async def test_listar_categoria_all_shown_suggests_other_category(db):
+    db.category_products = [_prod("p1", "A", "Tops")]
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops",
+                                                   exclude_ids=["p1"])
+    assert segmento == ""
+    assert ids == []
+    low = resumo.lower()
+    assert "não tem mais" in low          # avisa que não tem mais, não "é só isso"
+    assert "estoque" in low               # sugere categoria com estoque
+    assert "é só isso" not in low
+
+
+async def test_listar_categoria_empty_category_keeps_distinct_message(db):
+    # categoria SEM nenhuma peça (não é "tudo já mostrado") mantém msg própria
+    db.category_products = []
+    segmento, ids, resumo = await listar_categoria(db, "store-1", "Tops",
+                                                   exclude_ids=["p1"])
+    assert segmento == ""
+    low = resumo.lower()
+    assert "não tem peça de tops" in low
+    assert "estoque" in low
 
 
 def test_format_pedido_empty():
@@ -267,6 +458,31 @@ async def test_registrar_pedido_completa_preco_pelo_catalogo(db):
     assert db.order_upserts[0]["pedido"][0]["preco"] == 50.0
     assert db.order_upserts[0]["valor_total"] == 100.0
     assert "R$ 100,00" in out
+
+
+async def test_preco_match_ignora_acento_e_espaco(db):
+    db.product_prices = {"calça  jeans": 120.0}     # acento + espaço duplo
+    itens = [{"produto": "Calca Jeans", "qtd": 1}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["valor_total"] == 120.0
+
+
+async def test_preco_match_nome_encurtado_unico(db):
+    # agente registrou nome encurtado; casa pelo único produto que contém as palavras
+    db.product_prices = {"body elegance liso bege nude": 44.33}
+    itens = [{"produto": "Body Elegance Bege", "qtd": 2}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] == 44.33
+    assert db.order_upserts[0]["valor_total"] == 88.66
+
+
+async def test_preco_nao_chuta_quando_ambiguo(db):
+    # "body" sozinho casa com dois produtos -> não inventa preço
+    db.product_prices = {"body bege": 40.0, "body preto": 50.0}
+    itens = [{"produto": "Body", "qtd": 1}]
+    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    assert db.order_upserts[0]["pedido"][0]["preco"] is None
+    assert db.order_upserts[0]["valor_total"] is None
 
 
 async def test_registrar_pedido_preco_do_agente_tem_prioridade(db):
