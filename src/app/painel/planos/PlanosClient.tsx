@@ -53,14 +53,11 @@ function BillingToggle({
 /* ───────── Card de plano ───────── */
 function PlanCard({
   plan,
-  billing,
   currentPlanId,
 }: {
   plan: PlanDisplay
-  billing: 'monthly' | 'annual'
   currentPlanId: PlanDisplay['id'] | null
 }) {
-  const price = billing === 'annual' ? plan.priceAnnual : plan.priceMonthly
   const isCurrent = plan.id === currentPlanId
   const cls = `plan ${plan.featured ? 'featured' : ''} ${isCurrent ? 'current' : ''}`
   const btnCls = plan.featured
@@ -87,18 +84,13 @@ function PlanCard({
       <div className="plan-for">{plan.for}</div>
 
       <div>
-        <div className="plan-msgs tabular">{plan.msgs}</div>
+        <div className="plan-msgs tabular">Indefinido</div>
         <div className="plan-msgs-suffix">mensagens / mês</div>
       </div>
 
       <div className="plan-price-row">
-        <span className="plan-curr">R$</span>
-        <span className="plan-amt">{price}</span>
-        <span className="plan-per">
-          /mês{billing === 'annual' ? ', no anual' : ''}
-        </span>
+        <span className="plan-amt">Indefinido</span>
       </div>
-      <div className="plan-cpm">{plan.cpm}</div>
 
       <button type="button" className={btnCls} disabled={isCurrent}>
         {ctaLabel}
@@ -289,7 +281,6 @@ export function PlanosInteractive({
             <PlanCard
               key={p.id}
               plan={p}
-              billing={billing}
               currentPlanId={currentPlanId}
             />
           ))}
