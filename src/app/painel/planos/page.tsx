@@ -35,9 +35,10 @@ function daysUntil(iso: string | null): number | null {
   return Math.ceil(diff / 86_400_000)
 }
 
-function providerLabel(provider: 'stripe' | 'mercadopago' | null): string {
+function providerLabel(provider: 'stripe' | 'mercadopago' | 'manual' | null): string {
   if (provider === 'stripe') return 'Stripe'
   if (provider === 'mercadopago') return 'Mercado Pago'
+  if (provider === 'manual') return 'Acesso concedido'
   return '—'
 }
 

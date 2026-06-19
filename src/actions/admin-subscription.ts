@@ -16,10 +16,13 @@ export async function setStoreSubscription(storeId: string, action: 'grant' | 'r
 
   if (action === 'grant') {
     // Acesso comp perpétuo (current_period_end null => sempre ativo no gating).
+    // plan_id 'essencial': precisa ser um plano de PLANS_DISPLAY com maxAgents>0
+    // pra também liberar o cadastro de vendedores (maxAgentsForPlan). 'pro' não
+    // está em PLANS_DISPLAY => daria maxAgents 0 e não liberaria vendedores.
     await admin.from('store_subscriptions').upsert(
       {
         store_id: storeId,
-        plan_id: 'pro',
+        plan_id: 'essencial',
         provider: 'manual',
         status: 'active',
         current_period_end: null,

@@ -30,7 +30,7 @@ describe('setStoreSubscription (gate de admin)', () => {
     vi.mocked(isPlatformAdmin).mockReturnValue(true)
     await setStoreSubscription('loja', 'grant')
     expect(mockUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ store_id: 'loja', status: 'active', provider: 'manual', plan_id: 'pro' }),
+      expect.objectContaining({ store_id: 'loja', status: 'active', provider: 'manual', plan_id: 'essencial' }),
       expect.objectContaining({ onConflict: 'store_id' }),
     )
   })

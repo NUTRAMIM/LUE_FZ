@@ -9,7 +9,7 @@ import { getActiveStoreId } from '@/lib/active-store'
 export interface SubscriptionState {
   isActive: boolean
   planId: string | null
-  provider: 'stripe' | 'mercadopago' | null
+  provider: 'stripe' | 'mercadopago' | 'manual' | null
   status: string | null
   currentPeriodEnd: string | null
   cancelAtPeriodEnd: boolean

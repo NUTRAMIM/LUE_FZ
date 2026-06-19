@@ -15,9 +15,19 @@ import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Icon } from '@/components/painel/Icons'
 import { enterStore } from '@/actions/impersonation'
+import { setStoreSubscription } from '@/actions/admin-subscription'
 import { PeriodSelector } from './PeriodSelector'
 
 export const dynamic = 'force-dynamic'
+
+type SubInfo = { status: string; current_period_end: string | null; provider: string }
+
+// Espelha o gating de billing: ativa = status 'active' e (sem fim de período
+// ou fim de período no futuro).
+const isSubActive = (sub: SubInfo | undefined): boolean =>
+  !!sub &&
+  sub.status === 'active' &&
+  (!sub.current_period_end || new Date(sub.current_period_end) > new Date())
 
 const PERIODOS: Periodo[] = ['dia', 'semana', 'mes']
 const LABEL: Record<Periodo, string> = { dia: 'hoje', semana: 'últimos 7 dias', mes: 'este mês' }
@@ -41,17 +51,30 @@ export default async function AdminInternalPage({
 
   // Leitura via service-role (ignora RLS) — só acontece após o gate de admin.
   const admin = createAdminClient()
-  const [usageRes, storesRes] = await Promise.all([
+  const [usageRes, storesRes, subsRes] = await Promise.all([
     admin
       .from('ai_usage_daily')
       .select('store_id, prompt_tokens, completion_tokens, total_tokens, calls')
       .gte('day', start),
     admin.from('store_settings').select('id, store_name'),
+    admin
+      .from('store_subscriptions')
+      .select('store_id, status, current_period_end, provider'),
   ])
 
   const rows: UsageRow[] = usageRes.data ?? []
   const names = new Map(
     (storesRes.data ?? []).map((s) => [s.id, s.store_name] as const),
+  )
+  const subs = new Map<string, SubInfo>(
+    (subsRes.data ?? []).map((s) => [
+      s.store_id,
+      {
+        status: s.status,
+        current_period_end: s.current_period_end,
+        provider: s.provider,
+      },
+    ]),
   )
   const porLoja = aggregateByStore(rows, names)
   const totais = sumUsage(porLoja)
@@ -170,19 +193,59 @@ export default async function AdminInternalPage({
               <h2 className="font-display text-sm font-semibold text-slate-900">Todas as lojas</h2>
             </div>
             <ul className="divide-y divide-slate-100">
-              {(storesRes.data ?? []).map((loja) => (
-                <li key={loja.id} className="flex items-center justify-between px-5 py-3">
-                  <span className="text-sm font-medium text-slate-900">{loja.store_name}</span>
-                  <form action={enterStore.bind(null, loja.id)}>
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      Entrar
-                    </button>
-                  </form>
-                </li>
-              ))}
+              {(storesRes.data ?? []).map((loja) => {
+                const sub = subs.get(loja.id)
+                const active = isSubActive(sub)
+                return (
+                  <li key={loja.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-900">
+                        {loja.store_name}
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          active
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : sub
+                              ? 'bg-slate-100 text-slate-600'
+                              : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {active ? 'Ativa' : sub ? sub.status : 'Sem assinatura'}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <form action={enterStore.bind(null, loja.id)}>
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Entrar
+                        </button>
+                      </form>
+                      {active ? (
+                        <form action={setStoreSubscription.bind(null, loja.id, 'revoke')}>
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                          >
+                            Revogar
+                          </button>
+                        </form>
+                      ) : (
+                        <form action={setStoreSubscription.bind(null, loja.id, 'grant')}>
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                          >
+                            Liberar
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           </Card>
         </>
