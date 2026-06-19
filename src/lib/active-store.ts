@@ -1,24 +1,33 @@
 import { cache } from 'react'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthedUser } from '@/lib/auth'
+import { isPlatformAdmin } from '@/lib/platform-admin'
+import { IMPERSONATE_COOKIE } from '@/lib/impersonation-cookie'
 
 export interface StoreContext {
   storeId: string
   role: 'owner' | 'agent'
+  impersonating: boolean
 }
 
-// Fonte única do store_id + role do user atual. Cacheado por request, então
-// uma só query em `store_members` serve a página, o layout (sidebar) e as
-// actions no mesmo render — antes cada um disparava a sua. `getActiveStoreId`
-// e `getStoreRole` delegam aqui.
+// Fonte única do store_id + role do user atual. Cacheado por request.
 //
-//   - Sem row em store_members: fallback storeId=user.id, role='owner'
-//     (preserva a convenção anterior onde owner.store_id = owner.user.id
-//     antes do seed da membership rodar)
+//   - Admin + cookie de impersonação: opera a loja-alvo como owner. Não
+//     consulta store_members (a loja vem do cookie). O RLS, via
+//     app_impersonated_store(), libera só as linhas dessa loja.
+//   - Sem row em store_members: fallback storeId=user.id, role='owner'.
 export const getStoreContext = cache(
   async (): Promise<StoreContext | null> => {
     const user = await getAuthedUser()
     if (!user) return null
+
+    const cookieStore = await cookies()
+    const impersonated = cookieStore.get(IMPERSONATE_COOKIE)?.value
+    if (impersonated && isPlatformAdmin(user)) {
+      return { storeId: impersonated, role: 'owner', impersonating: true }
+    }
+
     const supabase = await createClient()
     const { data } = await supabase
       .from('store_members')
@@ -28,6 +37,7 @@ export const getStoreContext = cache(
     return {
       storeId: data?.store_id ?? user.id,
       role: data?.role === 'agent' ? 'agent' : 'owner',
+      impersonating: false,
     }
   },
 )
