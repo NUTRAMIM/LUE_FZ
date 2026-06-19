@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGetCookie = vi.fn()
-const createServerClient = vi.fn(() => ({ ok: true }))
+const createServerClient = vi.fn((..._args: unknown[]) => ({ ok: true }))
 
 vi.mock('@supabase/ssr', () => ({ createServerClient: (...a: unknown[]) => createServerClient(...a) }))
 vi.mock('next/headers', () => ({
