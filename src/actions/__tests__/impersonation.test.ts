@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockSet = vi.fn()
 const mockDelete = vi.fn()
-const mockMaybeSingle = vi.fn(async () => ({ data: { id: 'loja-alvo' } }))
+const mockMaybeSingle = vi.fn(
+  async (): Promise<{ data: { id: string } | null }> => ({ data: { id: 'loja-alvo' } }),
+)
 const mockEq = vi.fn(() => ({ maybeSingle: mockMaybeSingle }))
 const mockSelect = vi.fn(() => ({ eq: mockEq }))
 const mockFrom = vi.fn(() => ({ select: mockSelect }))
