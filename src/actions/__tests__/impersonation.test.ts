@@ -17,7 +17,7 @@ vi.mock('@/lib/auth', () => ({ getAuthedUser: vi.fn() }))
 vi.mock('@/lib/platform-admin', () => ({ isPlatformAdmin: vi.fn() }))
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: vi.fn(() => ({ from: mockFrom })) }))
 
-import { enterStore } from '../impersonation'
+import { enterStore, exitStore } from '../impersonation'
 import { getAuthedUser } from '@/lib/auth'
 import { isPlatformAdmin } from '@/lib/platform-admin'
 
@@ -31,12 +31,27 @@ describe('enterStore (gate de admin)', () => {
     expect(mockSet).not.toHaveBeenCalled()
   })
 
-  it('seta cookie para admin quando a loja existe', async () => {
+  it('não seta cookie (nem redireciona) quando a loja não existe', async () => {
+    vi.mocked(getAuthedUser).mockResolvedValue({ id: 'admin' } as never)
+    vi.mocked(isPlatformAdmin).mockReturnValue(true)
+    mockMaybeSingle.mockResolvedValueOnce({ data: null })
+    await expect(enterStore('loja-fantasma')).resolves.toBeUndefined()
+    expect(mockSet).not.toHaveBeenCalled()
+  })
+
+  it('seta cookie endurecido para admin quando a loja existe', async () => {
     vi.mocked(getAuthedUser).mockResolvedValue({ id: 'admin' } as never)
     vi.mocked(isPlatformAdmin).mockReturnValue(true)
     await expect(enterStore('loja-alvo')).rejects.toThrow('REDIRECT')
     expect(mockSet).toHaveBeenCalledWith('impersonate_store', 'loja-alvo', expect.objectContaining({
-      httpOnly: true, path: '/',
+      httpOnly: true, secure: true, sameSite: 'lax', path: '/',
     }))
+  })
+})
+
+describe('exitStore', () => {
+  it('limpa o cookie e redireciona', async () => {
+    await expect(exitStore()).rejects.toThrow('REDIRECT')
+    expect(mockDelete).toHaveBeenCalledWith('impersonate_store')
   })
 })
