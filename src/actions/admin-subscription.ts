@@ -19,7 +19,7 @@ export async function setStoreSubscription(storeId: string, action: 'grant' | 'r
     // plan_id 'essencial': precisa ser um plano de PLANS_DISPLAY com maxAgents>0
     // pra também liberar o cadastro de vendedores (maxAgentsForPlan). 'pro' não
     // está em PLANS_DISPLAY => daria maxAgents 0 e não liberaria vendedores.
-    await admin.from('store_subscriptions').upsert(
+    const { error } = await admin.from('store_subscriptions').upsert(
       {
         store_id: storeId,
         plan_id: 'essencial',
@@ -31,11 +31,19 @@ export async function setStoreSubscription(storeId: string, action: 'grant' | 'r
       },
       { onConflict: 'store_id' },
     )
+    if (error) {
+      console.error('setStoreSubscription grant error', error)
+      return
+    }
   } else {
-    await admin
+    const { error } = await admin
       .from('store_subscriptions')
       .update({ status: 'canceled', updated_at: now })
       .eq('store_id', storeId)
+    if (error) {
+      console.error('setStoreSubscription revoke error', error)
+      return
+    }
   }
 
   revalidatePath('/painel/_internal')
