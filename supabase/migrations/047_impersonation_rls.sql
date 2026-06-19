@@ -27,18 +27,22 @@ DECLARE
   raw TEXT;
   sid UUID;
 BEGIN
-  raw := current_setting('request.headers', true)::json ->> 'x-impersonate-store';
-  IF raw IS NULL OR raw = '' THEN
+  -- Gate de admin primeiro: fail-closed e evita parsear o header de não-admin.
+  IF NOT app_is_platform_admin(auth.uid()) THEN
     RETURN NULL;
   END IF;
+  -- Lê e valida o header dentro do handler: qualquer erro de parse (header
+  -- ausente/NULL, JSON malformado, UUID inválido) => NULL. Mantém o contrato
+  -- fail-closed mesmo se request.headers contiver algo que não seja JSON.
   BEGIN
+    raw := current_setting('request.headers', true)::json ->> 'x-impersonate-store';
+    IF raw IS NULL OR raw = '' THEN
+      RETURN NULL;
+    END IF;
     sid := raw::uuid;
   EXCEPTION WHEN others THEN
     RETURN NULL;
   END;
-  IF NOT app_is_platform_admin(auth.uid()) THEN
-    RETURN NULL;
-  END IF;
   RETURN sid;
 END;
 $$;
