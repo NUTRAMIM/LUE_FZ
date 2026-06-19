@@ -24,14 +24,15 @@ export async function getSidebarData(): Promise<SidebarData> {
     if (!user) return { role: 'owner', slug: null, appUrl, isAdmin: false, storeName: null }
 
     const supabase = await createClient()
-    const [ctx, settingsRes] = await Promise.all([
-      getStoreContext(),
-      supabase
-        .from('store_settings')
-        .select('chat_slug, store_name')
-        .eq('id', user.id)
-        .maybeSingle(),
-    ])
+    // Usa a loja ativa (impersonation-aware): durante a impersonação a sidebar
+    // reflete a loja-alvo, não a do admin. Resolve o ctx antes pra ter o storeId.
+    const ctx = await getStoreContext()
+    const storeId = ctx?.storeId ?? user.id
+    const settingsRes = await supabase
+      .from('store_settings')
+      .select('chat_slug, store_name')
+      .eq('id', storeId)
+      .maybeSingle()
 
     const role: StoreRole = ctx?.role ?? 'owner'
     const slug = settingsRes.data?.chat_slug ?? null
