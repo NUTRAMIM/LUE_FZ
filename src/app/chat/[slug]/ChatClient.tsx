@@ -309,7 +309,8 @@ export function ChatClient({
   const visitorKeyRef = useRef(crypto.randomUUID())
 
   useEffect(() => {
-    if (!conversationId) return
+    if (!conversationId || !visitorId) return
+    let cancelled = false
     const supabase = createBrowserSupabase()
     const channel = supabase
       .channel(`messages:${conversationId}`)
@@ -387,12 +388,31 @@ export function ChatClient({
           dispatch({ type: 'add', message: msg })
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        // postgres_changes não faz backfill: mensagens inseridas ANTES do canal
+        // ficar SUBSCRIBED se perdem (corrida no load — pior em iframe, onde o
+        // WebSocket de terceiro conecta mais devagar e a 1ª resposta da IA some).
+        // Ao (re)subscrever, re-busca o histórico e reconcilia o que faltou.
+        // dispatch('add') já deduplica por id e casa o temp do usuário por
+        // conteúdo, então reprocessar mensagens já exibidas é no-op.
+        if (status !== 'SUBSCRIBED') return
+        ensureConversation(slug, visitorId)
+          .then((bootstrap) => {
+            if (cancelled) return
+            for (const m of expandInitialMessages(bootstrap.messages)) {
+              dispatch({ type: 'add', message: m })
+            }
+          })
+          .catch(() => {
+            // catch-up é best-effort; sem ele a UI segue como antes (refresh)
+          })
+      })
 
     return () => {
+      cancelled = true
       supabase.removeChannel(channel)
     }
-  }, [conversationId, dispatchCycle])
+  }, [conversationId, slug, visitorId, dispatchCycle])
 
   useEffect(() => {
     const supabase = createBrowserSupabase()
