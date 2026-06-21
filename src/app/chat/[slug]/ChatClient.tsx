@@ -1,6 +1,7 @@
 'use client'
 
 import { useReducer, useEffect, useRef, useState, useCallback } from 'react'
+import { ensureConversation } from '@/actions/chat'
 import { createClient as createBrowserSupabase } from '@/lib/supabase/client'
 import { ChatHeader } from './components/ChatHeader'
 import { MessageList } from './components/MessageList'
@@ -72,6 +73,27 @@ function flattenToItems(msgs: ChatMessage[]): EmitItem[] {
   return items
 }
 
+// visitorId vive no localStorage (não em cookie): o chat roda em iframe
+// cross-site e cookies de terceiros são bloqueados pelos navegadores. O
+// localStorage é particionado por site automaticamente, então cada loja onde o
+// widget é embarcado mantém seu próprio visitante de forma persistente.
+const VISITOR_STORAGE_KEY = 'lue:visitor'
+const VISITOR_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function getOrCreateVisitorId(): string {
+  try {
+    const existing = localStorage.getItem(VISITOR_STORAGE_KEY)
+    if (existing && VISITOR_ID_RE.test(existing)) return existing
+    const fresh = crypto.randomUUID()
+    localStorage.setItem(VISITOR_STORAGE_KEY, fresh)
+    return fresh
+  } catch {
+    // localStorage indisponível (modo restrito): ID efêmero por sessão.
+    return crypto.randomUUID()
+  }
+}
+
 interface State {
   messages: ChatMessage[]
   sending: boolean
@@ -79,6 +101,7 @@ interface State {
 }
 
 type Action =
+  | { type: 'init'; messages: ChatMessage[] }
   | { type: 'add'; message: ChatMessage }
   | { type: 'replaceTemp'; tempId: string; realId: string }
   | { type: 'sending'; sending: boolean }
@@ -86,6 +109,8 @@ type Action =
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'init':
+      return { ...state, messages: action.messages }
     case 'add': {
       if (state.messages.some((m) => m.id === action.message.id)) return state
       // Realtime entrega o INSERT da msg do user antes do server action
@@ -131,23 +156,49 @@ function reducer(state: State, action: Action): State {
 export function ChatClient({
   slug,
   storeId,
-  conversationId,
   storeName,
   storeLogoUrl,
-  initialMessages,
 }: {
   slug: string
   storeId: string
-  conversationId: string
   storeName: string
   storeLogoUrl: string | null
-  initialMessages: ChatMessage[]
 }) {
   const [state, dispatch] = useReducer(reducer, {
-    messages: expandInitialMessages(initialMessages),
+    messages: [],
     sending: false,
     error: null,
   })
+
+  // Conversa é criada no cliente após termos o visitorId do localStorage.
+  // Até lá, conversationId é null e a UI mostra carregando. visitorId é
+  // resolvido no lazy initializer do useState (roda uma vez no cliente; null no
+  // SSR, onde localStorage não existe).
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [visitorId] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : getOrCreateVisitorId(),
+  )
+
+  useEffect(() => {
+    if (!visitorId) return
+    let cancelled = false
+    ensureConversation(slug, visitorId)
+      .then((bootstrap) => {
+        if (cancelled) return
+        dispatch({
+          type: 'init',
+          messages: expandInitialMessages(bootstrap.messages),
+        })
+        setConversationId(bootstrap.conversationId)
+      })
+      .catch(() => {
+        if (cancelled) return
+        dispatch({ type: 'error', error: 'Não foi possível iniciar a conversa.' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slug, visitorId])
 
   const [cycle, setCycle] = useState<Cycle | null>(null)
   const cycleRef = useRef<Cycle | null>(null)
@@ -258,6 +309,7 @@ export function ChatClient({
   const visitorKeyRef = useRef(crypto.randomUUID())
 
   useEffect(() => {
+    if (!conversationId) return
     const supabase = createBrowserSupabase()
     const channel = supabase
       .channel(`messages:${conversationId}`)
@@ -429,6 +481,8 @@ export function ChatClient({
       />
       <ChatInput
         slug={slug}
+        visitorId={visitorId}
+        disabled={!conversationId}
         sending={state.sending}
         onSending={(sending) => dispatch({ type: 'sending', sending })}
         onError={(error) => dispatch({ type: 'error', error })}
