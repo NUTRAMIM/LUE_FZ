@@ -270,6 +270,23 @@ def calcular_valor_total(itens) -> float | None:
     return round(sum(precos), 2)
 
 
+def minimo_atacado_atingido(store, itens) -> bool:
+    """True se o pedido bate o mínimo de atacado configurado na loja.
+    Sem mínimo configurado, retorna True (não há barreira para o desconto)."""
+    norm = _normalize_itens(itens)
+    qtd_total = sum(it["qtd"] for it in norm)
+    valor_bruto = calcular_valor_total(norm) or 0.0
+    minq = store.min_order_quantity
+    minv = store.min_order_value
+    if not minq and not minv:
+        return True
+    cond_qtd = (not minq) or (qtd_total >= minq)
+    cond_val = (not minv) or (valor_bruto >= minv)
+    if (store.min_order_logic or "all") == "all":
+        return cond_qtd and cond_val
+    return cond_qtd or cond_val
+
+
 def format_pedido(itens) -> str:
     norm = _normalize_itens(itens)
     if not norm:

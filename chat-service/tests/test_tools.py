@@ -1,6 +1,7 @@
 # tests/test_tools.py
 from app.agent.tools import (buscar_produtos, registrar_pedido, format_pedido,
-                             calcular_valor_total)
+                             calcular_valor_total, minimo_atacado_atingido)
+from app.models import StoreSettings
 
 
 def _doc(name, category, cores, image_urls=None, video_url=None, pid="d1"):
@@ -492,3 +493,47 @@ async def test_registrar_pedido_preco_do_agente_tem_prioridade(db):
     await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
     assert db.order_upserts[0]["pedido"][0]["preco"] == 49.9
     assert db.order_upserts[0]["valor_total"] == 49.9
+
+
+def _store_desc(**kw):
+    """StoreSettings mínimo para testar desconto/mínimo."""
+    base = dict(id="store-1", store_name="LUE")
+    base.update(kw)
+    return StoreSettings(**base)
+
+
+def test_minimo_atingido_sem_minimo_configurado_e_sempre_true():
+    store = _store_desc()
+    itens = [{"produto": "Top", "qtd": 1, "preco": 10.0}]
+    assert minimo_atacado_atingido(store, itens) is True
+
+
+def test_minimo_por_quantidade_all():
+    store = _store_desc(min_order_quantity=12, min_order_logic="all")
+    abaixo = [{"produto": "Top", "qtd": 5, "preco": 10.0}]
+    atingiu = [{"produto": "Top", "qtd": 12, "preco": 10.0}]
+    assert minimo_atacado_atingido(store, abaixo) is False
+    assert minimo_atacado_atingido(store, atingiu) is True
+
+
+def test_minimo_por_valor_all():
+    store = _store_desc(min_order_value=100.0, min_order_logic="all")
+    abaixo = [{"produto": "Top", "qtd": 1, "preco": 50.0}]
+    atingiu = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    assert minimo_atacado_atingido(store, abaixo) is False
+    assert minimo_atacado_atingido(store, atingiu) is True
+
+
+def test_minimo_logica_any_basta_um():
+    store = _store_desc(min_order_quantity=12, min_order_value=100.0,
+                        min_order_logic="any")
+    # bate o valor (100) mas não a qtd (2 < 12) -> any => True
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    assert minimo_atacado_atingido(store, itens) is True
+
+
+def test_minimo_logica_all_precisa_dos_dois():
+    store = _store_desc(min_order_quantity=12, min_order_value=100.0,
+                        min_order_logic="all")
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]  # valor ok, qtd não
+    assert minimo_atacado_atingido(store, itens) is False
