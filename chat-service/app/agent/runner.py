@@ -71,6 +71,11 @@ TOOL_SCHEMA_REGISTRAR = {
             "confirmar/alterar um item, a forma de pagamento ou a forma de "
             "entrega. O campo `itens` SUBSTITUI o pedido inteiro — envie a lista "
             "completa e atualizada."
+            " Quando a regra de desconto da loja for por faixa ou condicional "
+            "(texto livre, ex.: '5% acima de 20 peças'), calcule o total JÁ COM o "
+            "desconto e informe em `valor_com_desconto`. Para descontos simples "
+            "(percentual ou valor fixo por peça) NÃO preencha `valor_com_desconto` "
+            "— o sistema calcula sozinho."
         ),
         "parameters": {
             "type": "object",
@@ -91,6 +96,7 @@ TOOL_SCHEMA_REGISTRAR = {
                 },
                 "forma_pagamento": {"type": "string"},
                 "forma_entrega": {"type": "string"},
+                "valor_com_desconto": {"type": "number"},
             },
             "required": ["itens"],
         },
@@ -161,9 +167,9 @@ async def run_agent(llm, db, store, shown_list, chat_input, history,
                 content = resumo
             elif call["name"] == REGISTRAR_TOOL_NAME:
                 content = await registrar_pedido(
-                    db, store.id, conversation_id,
+                    db, store, conversation_id,
                     args.get("itens", []), args.get("forma_pagamento"),
-                    args.get("forma_entrega"))
+                    args.get("forma_entrega"), args.get("valor_com_desconto"))
                 log.debug("REGISTRAR_PEDIDO -> %s", content)
             elif call["name"] == TOOL_NAME:
                 consulta = args.get("consulta", "")

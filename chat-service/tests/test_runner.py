@@ -284,3 +284,26 @@ async def test_tool_rounds_capped_by_settings(db, llm, store, monkeypatch):
     await runner.run_agent(llm, db, store, "(nenhum)", "oi", [])
     # 3 rounds no loop + 1 chamada final fora do loop = 4
     assert len(llm.chat_calls) == 4
+
+
+async def test_registrar_tool_schema_tem_valor_com_desconto(db, llm, store):
+    from app.agent.runner import TOOL_SCHEMA_REGISTRAR
+    props = TOOL_SCHEMA_REGISTRAR["function"]["parameters"]["properties"]
+    assert "valor_com_desconto" in props
+    assert props["valor_com_desconto"]["type"] == "number"
+
+
+async def test_registrar_pedido_repassa_valor_com_desconto(db, llm, store):
+    # loja com desconto custom; a LLM manda o total já com desconto
+    store.discount_type = "custom"
+    store.discount_custom = "5% acima de 10 peças"
+    llm.chat_responses = [
+        {"tool_calls": [{"id": "c1", "name": "REGISTRAR_PEDIDO",
+                         "arguments": '{"itens": [{"produto": "Top", "qtd": 20, '
+                                      '"preco": 5.0}], "valor_com_desconto": 95.0}'}]},
+        {"content": "Fechado!"},
+    ]
+    await run_agent(llm, db, store, shown_list="", chat_input="pode fechar",
+                    history=[], conversation_id="conv-1")
+    assert db.order_upserts[0]["valor_total"] == 95.0
+    assert db.order_upserts[0]["desconto_aplicado"] == 5.0
