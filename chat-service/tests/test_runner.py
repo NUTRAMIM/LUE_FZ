@@ -295,6 +295,7 @@ async def test_registrar_tool_schema_tem_valor_com_desconto(db, llm, store):
 
 async def test_registrar_pedido_repassa_valor_com_desconto(db, llm, store):
     # loja com desconto custom; a LLM manda o total já com desconto
+    store.min_order_enabled = True
     store.discount_type = "custom"
     store.discount_custom = "5% acima de 10 peças"
     llm.chat_responses = [

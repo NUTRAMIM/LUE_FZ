@@ -295,7 +295,10 @@ def aplicar_desconto(valor_bruto, store, itens, valor_com_desconto=None):
         return None, None
     dt = store.discount_type
     dv = store.discount_value
-    if not dt:
+    # O desconto é "de atacado": só vale em modo atacado (min_order_enabled) e
+    # quando o mínimo é atingido. Em varejo, mesmo com discount_type legado no
+    # banco, grava o bruto — a IA nunca menciona desconto fora do atacado.
+    if not dt or not store.min_order_enabled:
         return valor_bruto, 0.0
     if not minimo_atacado_atingido(store, itens):
         return valor_bruto, 0.0

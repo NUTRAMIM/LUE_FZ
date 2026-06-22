@@ -497,8 +497,10 @@ async def test_registrar_pedido_preco_do_agente_tem_prioridade(db, store):
 
 
 def _store_desc(**kw):
-    """StoreSettings mínimo para testar desconto/mínimo."""
-    base = dict(id="store-1", store_name="LUE")
+    """StoreSettings mínimo para testar desconto/mínimo.
+    Default é modo atacado (min_order_enabled=True), pois o desconto só vale
+    em atacado; passe min_order_enabled=False para cobrir o caso varejo."""
+    base = dict(id="store-1", store_name="LUE", min_order_enabled=True)
     base.update(kw)
     return StoreSettings(**base)
 
@@ -602,6 +604,15 @@ def test_aplicar_desconto_bruto_none_retorna_none():
     store = _store_desc(discount_type="percent_order", discount_value=10.0)
     itens = [{"produto": "Top", "qtd": 2}]  # sem preço
     assert aplicar_desconto(None, store, itens) == (None, None)
+
+
+def test_aplicar_desconto_varejo_min_order_off_nao_desconta():
+    # loja varejo (min_order_enabled=False) com discount_type legado no banco:
+    # NÃO aplica desconto — o desconto é "de atacado" e a IA nunca o menciona.
+    store = _store_desc(discount_type="percent_order", discount_value=10.0,
+                        min_order_enabled=False)
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    assert aplicar_desconto(100.0, store, itens) == (100.0, 0.0)
 
 
 async def test_registrar_pedido_grava_bruto_liquido_e_desconto(db):
