@@ -91,16 +91,20 @@ class FakeDB:
              "interest_summary": interest_summary})
 
     async def upsert_lead_order(self, conversation_id, store_id, pedido,
-                                forma_pagamento, forma_entrega, valor_total=None):
+                                forma_pagamento, forma_entrega, valor_total=None,
+                                valor_bruto=None, desconto_aplicado=None):
         self.order_upserts.append(
             {"conversation_id": conversation_id, "store_id": store_id,
              "pedido": pedido, "forma_pagamento": forma_pagamento,
-             "forma_entrega": forma_entrega, "valor_total": valor_total})
+             "forma_entrega": forma_entrega, "valor_total": valor_total,
+             "valor_bruto": valor_bruto, "desconto_aplicado": desconto_aplicado})
         # reflete o estado para leituras subsequentes de get_lead no mesmo teste
         if self.lead is None:
             self.lead = {}
         self.lead.update({"pedido": pedido, "forma_pagamento": forma_pagamento,
-                          "forma_entrega": forma_entrega, "valor_total": valor_total})
+                          "forma_entrega": forma_entrega, "valor_total": valor_total,
+                          "valor_bruto": valor_bruto,
+                          "desconto_aplicado": desconto_aplicado})
 
     async def insert_knowledge_gap(self, store_id, conversation_id, question, tag):
         self.inserted_gaps.append(

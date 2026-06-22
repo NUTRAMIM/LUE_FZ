@@ -186,19 +186,24 @@ class Database:
             conversation_id, store_id, interest_summary)
 
     async def upsert_lead_order(self, conversation_id, store_id, pedido,
-                                forma_pagamento, forma_entrega, valor_total=None):
+                                forma_pagamento, forma_entrega, valor_total=None,
+                                valor_bruto=None, desconto_aplicado=None):
         await self._pool.execute(
             """INSERT INTO leads (conversation_id, store_id, pedido,
-                                  forma_pagamento, forma_entrega, valor_total, source)
-               VALUES ($1, $2, $3::jsonb, $4, $5, $6, 'chat')
+                                  forma_pagamento, forma_entrega, valor_total,
+                                  valor_bruto, desconto_aplicado, source)
+               VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, 'chat')
                ON CONFLICT (conversation_id) DO UPDATE SET
                  pedido = EXCLUDED.pedido,
                  forma_pagamento = COALESCE(EXCLUDED.forma_pagamento, leads.forma_pagamento),
                  forma_entrega   = COALESCE(EXCLUDED.forma_entrega, leads.forma_entrega),
-                 valor_total     = EXCLUDED.valor_total,
+                 valor_total       = EXCLUDED.valor_total,
+                 valor_bruto       = EXCLUDED.valor_bruto,
+                 desconto_aplicado = EXCLUDED.desconto_aplicado,
                  last_seen_at = now()""",
             conversation_id, store_id, json.dumps(pedido),
-            forma_pagamento, forma_entrega, valor_total)
+            forma_pagamento, forma_entrega, valor_total,
+            valor_bruto, desconto_aplicado)
 
     async def insert_knowledge_gap(self, store_id, conversation_id, question, tag):
         await self._pool.execute(
