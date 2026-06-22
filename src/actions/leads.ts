@@ -26,6 +26,8 @@ export interface LeadRow {
   formaPagamento: string | null
   formaEntrega: string | null
   valorTotal: number | null
+  valorBruto: number | null
+  descontoAplicado: number | null
   tipoCliente: string
   carroChefe: string | null
 }
@@ -41,7 +43,7 @@ export async function getLeads(): Promise<LeadRow[]> {
   const { data, error } = await supabase
     .from('leads')
     .select(
-      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name, email, cep, conversation_id, pedido, forma_pagamento, forma_entrega, valor_total, tipo_cliente, carro_chefe',
+      'id, name, whatsapp, interest_summary, created_at, contacted_at, contacted_by_name, email, cep, conversation_id, pedido, forma_pagamento, forma_entrega, valor_total, valor_bruto, desconto_aplicado, tipo_cliente, carro_chefe',
     )
     .order('created_at', { ascending: false })
     .limit(200)
@@ -65,6 +67,8 @@ export async function getLeads(): Promise<LeadRow[]> {
     formaPagamento: l.forma_pagamento ?? null,
     formaEntrega: l.forma_entrega ?? null,
     valorTotal: l.valor_total ?? null,
+    valorBruto: l.valor_bruto ?? null,
+    descontoAplicado: l.desconto_aplicado ?? null,
     tipoCliente: l.tipo_cliente ?? 'varejo',
     carroChefe: l.carro_chefe ?? null,
   }))

@@ -251,6 +251,8 @@ export interface Database {
           forma_pagamento: string | null
           forma_entrega: string | null
           valor_total: number | null
+          valor_bruto: number | null
+          desconto_aplicado: number | null
           tipo_cliente: string
           carro_chefe: string | null
         }
@@ -275,6 +277,8 @@ export interface Database {
           forma_pagamento?: string | null
           forma_entrega?: string | null
           valor_total?: number | null
+          valor_bruto?: number | null
+          desconto_aplicado?: number | null
           tipo_cliente?: string
           carro_chefe?: string | null
         }
@@ -297,6 +301,8 @@ export interface Database {
           forma_pagamento?: string | null
           forma_entrega?: string | null
           valor_total?: number | null
+          valor_bruto?: number | null
+          desconto_aplicado?: number | null
           tipo_cliente?: string
           carro_chefe?: string | null
         }

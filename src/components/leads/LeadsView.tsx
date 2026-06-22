@@ -289,6 +289,14 @@ export function LeadsView({ leads }: { leads: LeadRow[] }) {
                         {l.valorTotal != null ? (
                           <span className="text-ink-900 font-medium">
                             {formatBRL(l.valorTotal)}
+                            {l.descontoAplicado != null &&
+                              l.descontoAplicado > 0 &&
+                              l.valorBruto != null && (
+                                <span className="text-ink-400 font-normal ml-1">
+                                  · bruto {formatBRL(l.valorBruto)} · desconto{' '}
+                                  {formatBRL(l.descontoAplicado)}
+                                </span>
+                              )}
                           </span>
                         ) : (
                           <span className="text-ink-400">Não informado</span>
