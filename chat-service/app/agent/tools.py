@@ -287,6 +287,34 @@ def minimo_atacado_atingido(store, itens) -> bool:
     return cond_qtd or cond_val
 
 
+def aplicar_desconto(valor_bruto, store, itens, valor_com_desconto=None):
+    """Aplica o desconto de atacado ao total bruto e devolve (liquido, desconto).
+    Tipos percent_*/fixed_piece são calculados aqui; custom usa o valor que a LLM
+    enviou (com fallback seguro pro bruto). Só desconta se o mínimo foi atingido."""
+    if valor_bruto is None:
+        return None, None
+    dt = store.discount_type
+    dv = store.discount_value
+    if not dt:
+        return valor_bruto, 0.0
+    if not minimo_atacado_atingido(store, itens):
+        return valor_bruto, 0.0
+
+    if dt in ("percent_piece", "percent_order") and dv is not None:
+        liquido = round(valor_bruto * (1 - dv / 100), 2)
+    elif dt == "fixed_piece" and dv is not None:
+        qtd_total = sum(it["qtd"] for it in _normalize_itens(itens))
+        liquido = max(0.0, round(valor_bruto - dv * qtd_total, 2))
+    elif dt == "custom" and valor_com_desconto is not None \
+            and 0 < valor_com_desconto <= valor_bruto:
+        liquido = round(float(valor_com_desconto), 2)
+    else:
+        liquido = valor_bruto
+
+    desconto = round(valor_bruto - liquido, 2)
+    return liquido, desconto
+
+
 def format_pedido(itens) -> str:
     norm = _normalize_itens(itens)
     if not norm:

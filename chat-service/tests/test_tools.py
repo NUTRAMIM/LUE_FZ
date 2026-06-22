@@ -1,6 +1,7 @@
 # tests/test_tools.py
 from app.agent.tools import (buscar_produtos, registrar_pedido, format_pedido,
-                             calcular_valor_total, minimo_atacado_atingido)
+                             calcular_valor_total, minimo_atacado_atingido,
+                             aplicar_desconto)
 from app.models import StoreSettings
 
 
@@ -537,3 +538,67 @@ def test_minimo_logica_all_precisa_dos_dois():
                         min_order_logic="all")
     itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]  # valor ok, qtd não
     assert minimo_atacado_atingido(store, itens) is False
+
+
+def test_aplicar_desconto_sem_tipo_retorna_bruto():
+    store = _store_desc()
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    assert aplicar_desconto(100.0, store, itens) == (100.0, 0.0)
+
+
+def test_aplicar_desconto_percent_order():
+    store = _store_desc(discount_type="percent_order", discount_value=10.0)
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    assert aplicar_desconto(100.0, store, itens) == (90.0, 10.0)
+
+
+def test_aplicar_desconto_percent_piece_igual_a_percent_order():
+    store = _store_desc(discount_type="percent_piece", discount_value=10.0)
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    assert aplicar_desconto(100.0, store, itens) == (90.0, 10.0)
+
+
+def test_aplicar_desconto_fixed_piece_por_peca():
+    store = _store_desc(discount_type="fixed_piece", discount_value=5.0)
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]  # 2 peças -> -10
+    assert aplicar_desconto(100.0, store, itens) == (90.0, 10.0)
+
+
+def test_aplicar_desconto_fixed_piece_nao_fica_negativo():
+    store = _store_desc(discount_type="fixed_piece", discount_value=80.0)
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]  # -160 -> piso 0
+    assert aplicar_desconto(100.0, store, itens) == (0.0, 100.0)
+
+
+def test_aplicar_desconto_custom_usa_valor_da_llm():
+    store = _store_desc(discount_type="custom",
+                        discount_custom="5% acima de 10 peças")
+    itens = [{"produto": "Top", "qtd": 20, "preco": 5.0}]
+    assert aplicar_desconto(100.0, store, itens, valor_com_desconto=95.0) == (95.0, 5.0)
+
+
+def test_aplicar_desconto_custom_sem_valor_grava_bruto():
+    store = _store_desc(discount_type="custom", discount_custom="combine no fechamento")
+    itens = [{"produto": "Top", "qtd": 20, "preco": 5.0}]
+    assert aplicar_desconto(100.0, store, itens, valor_com_desconto=None) == (100.0, 0.0)
+
+
+def test_aplicar_desconto_custom_valor_invalido_grava_bruto():
+    store = _store_desc(discount_type="custom", discount_custom="x")
+    itens = [{"produto": "Top", "qtd": 20, "preco": 5.0}]
+    # maior que o bruto e <=0 são ignorados (fallback seguro)
+    assert aplicar_desconto(100.0, store, itens, valor_com_desconto=150.0) == (100.0, 0.0)
+    assert aplicar_desconto(100.0, store, itens, valor_com_desconto=0.0) == (100.0, 0.0)
+
+
+def test_aplicar_desconto_minimo_nao_atingido_retorna_bruto():
+    store = _store_desc(discount_type="percent_order", discount_value=10.0,
+                        min_order_quantity=12, min_order_logic="all")
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]  # qtd 2 < 12
+    assert aplicar_desconto(100.0, store, itens) == (100.0, 0.0)
+
+
+def test_aplicar_desconto_bruto_none_retorna_none():
+    store = _store_desc(discount_type="percent_order", discount_value=10.0)
+    itens = [{"produto": "Top", "qtd": 2}]  # sem preço
+    assert aplicar_desconto(None, store, itens) == (None, None)
