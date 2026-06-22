@@ -356,3 +356,12 @@ def test_order_state_reminder_total_placeholder_when_missing():
     lead = {"pedido": [{"produto": "Cropped", "qtd": 1}]}
     r = build_order_state_reminder(lead)
     assert "Valor total: (não definido)" in r
+
+
+def test_prompt_exige_whatsapp_para_fechar():
+    from app.agent.prompt import STATIC_PROMPT
+    p = STATIC_PROMPT.lower()
+    assert "whatsapp" in p
+    # a obrigatoriedade do número para encaminhar/fechar precisa estar explícita
+    assert "obrigat" in p
+    assert "não encaminh" in p or "nao encaminh" in p
