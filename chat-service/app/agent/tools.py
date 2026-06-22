@@ -333,20 +333,25 @@ def format_pedido(itens) -> str:
     return "; ".join(partes)
 
 
-async def registrar_pedido(db, store_id: str, conversation_id: str,
-                           itens, forma_pagamento, forma_entrega) -> str:
+async def registrar_pedido(db, store, conversation_id: str,
+                           itens, forma_pagamento, forma_entrega,
+                           valor_com_desconto=None) -> str:
     norm = _normalize_itens(itens)
-    await _fill_missing_prices(db, store_id, norm)
+    await _fill_missing_prices(db, store.id, norm)
     pag = (forma_pagamento or "").strip() or None
     ent = (forma_entrega or "").strip() or None
-    total = calcular_valor_total(norm)
+    valor_bruto = calcular_valor_total(norm)
+    valor_total, desconto = aplicar_desconto(
+        valor_bruto, store, norm, valor_com_desconto)
     await db.upsert_lead_order(
-        conversation_id=conversation_id, store_id=store_id,
+        conversation_id=conversation_id, store_id=store.id,
         pedido=norm, forma_pagamento=pag, forma_entrega=ent,
-        valor_total=total)
-    total_str = _format_price(total) if total is not None else "não definido"
+        valor_total=valor_total, valor_bruto=valor_bruto,
+        desconto_aplicado=desconto)
+    total_str = _format_price(valor_total) if valor_total is not None else "não definido"
+    com_desc = " (já com desconto de atacado)" if (desconto or 0) > 0 else ""
     return (
         "Pedido atualizado. ESTADO ATUAL (fonte da verdade, responda com base "
         f"exatamente nisto): Itens: {format_pedido(norm)}. "
-        f"Total: {total_str}. "
+        f"Total: {total_str}{com_desc}. "
         f"Pagamento: {pag or 'não definido'}. Entrega: {ent or 'não definido'}.")

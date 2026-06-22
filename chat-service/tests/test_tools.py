@@ -384,9 +384,9 @@ def test_format_pedido_lists_items():
     assert out == "2x Cropped rosa (tam P, cor rosa); 1x Legging (tam M)"
 
 
-async def test_registrar_pedido_upserts_and_confirms(db):
+async def test_registrar_pedido_upserts_and_confirms(db, store):
     itens = [{"produto": "Cropped", "qtd": 2, "tamanho": "P"}]
-    out = await registrar_pedido(db, "store-1", "conv-1", itens, "Pix", "Sedex")
+    out = await registrar_pedido(db, store, "conv-1", itens, "Pix", "Sedex")
     assert db.order_upserts[0]["conversation_id"] == "conv-1"
     assert db.order_upserts[0]["store_id"] == "store-1"
     assert db.order_upserts[0]["pedido"] == [
@@ -399,9 +399,9 @@ async def test_registrar_pedido_upserts_and_confirms(db):
     assert "2x Cropped" in out
 
 
-async def test_registrar_pedido_drops_invalid_items(db):
+async def test_registrar_pedido_drops_invalid_items(db, store):
     itens = [{"produto": "", "qtd": 1}, {"qtd": 3}, {"produto": "Top", "qtd": "x"}]
-    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    await registrar_pedido(db, store, "conv-1", itens, None, None)
     # "" e sem produto são descartados; qtd inválida vira 1
     assert db.order_upserts[0]["pedido"] == [
         {"produto": "Top", "qtd": 1, "tamanho": None, "cor": None, "preco": None}
@@ -434,64 +434,64 @@ def test_calcular_valor_total_vazio():
     assert calcular_valor_total([]) is None
 
 
-async def test_registrar_pedido_calcula_e_grava_valor_total(db):
+async def test_registrar_pedido_calcula_e_grava_valor_total(db, store):
     itens = [
         {"produto": "Cropped", "qtd": 2, "preco": 50.0},
         {"produto": "Legging", "qtd": 1, "preco": 89.9},
     ]
-    out = await registrar_pedido(db, "store-1", "conv-1", itens, "Pix", "Sedex")
+    out = await registrar_pedido(db, store, "conv-1", itens, "Pix", "Sedex")
     assert db.order_upserts[0]["valor_total"] == 189.9
     # total formatado em R$ aparece no retorno autoritativo
     assert "R$ 189,90" in out
 
 
-async def test_registrar_pedido_valor_total_none_sem_preco(db):
+async def test_registrar_pedido_valor_total_none_sem_preco(db, store):
     itens = [{"produto": "Cropped", "qtd": 2}]
-    out = await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    out = await registrar_pedido(db, store, "conv-1", itens, None, None)
     assert db.order_upserts[0]["valor_total"] is None
     assert "não definido" in out
 
 
-async def test_registrar_pedido_completa_preco_pelo_catalogo(db):
+async def test_registrar_pedido_completa_preco_pelo_catalogo(db, store):
     # agente não mandou preço; o catálogo preenche pelo nome exato (case-insensitive)
     db.product_prices = {"cropped rosa": 50.0}
     itens = [{"produto": "Cropped Rosa", "qtd": 2}]
-    out = await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    out = await registrar_pedido(db, store, "conv-1", itens, None, None)
     assert db.order_upserts[0]["pedido"][0]["preco"] == 50.0
     assert db.order_upserts[0]["valor_total"] == 100.0
     assert "R$ 100,00" in out
 
 
-async def test_preco_match_ignora_acento_e_espaco(db):
+async def test_preco_match_ignora_acento_e_espaco(db, store):
     db.product_prices = {"calça  jeans": 120.0}     # acento + espaço duplo
     itens = [{"produto": "Calca Jeans", "qtd": 1}]
-    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    await registrar_pedido(db, store, "conv-1", itens, None, None)
     assert db.order_upserts[0]["valor_total"] == 120.0
 
 
-async def test_preco_match_nome_encurtado_unico(db):
+async def test_preco_match_nome_encurtado_unico(db, store):
     # agente registrou nome encurtado; casa pelo único produto que contém as palavras
     db.product_prices = {"body elegance liso bege nude": 44.33}
     itens = [{"produto": "Body Elegance Bege", "qtd": 2}]
-    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    await registrar_pedido(db, store, "conv-1", itens, None, None)
     assert db.order_upserts[0]["pedido"][0]["preco"] == 44.33
     assert db.order_upserts[0]["valor_total"] == 88.66
 
 
-async def test_preco_nao_chuta_quando_ambiguo(db):
+async def test_preco_nao_chuta_quando_ambiguo(db, store):
     # "body" sozinho casa com dois produtos -> não inventa preço
     db.product_prices = {"body bege": 40.0, "body preto": 50.0}
     itens = [{"produto": "Body", "qtd": 1}]
-    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    await registrar_pedido(db, store, "conv-1", itens, None, None)
     assert db.order_upserts[0]["pedido"][0]["preco"] is None
     assert db.order_upserts[0]["valor_total"] is None
 
 
-async def test_registrar_pedido_preco_do_agente_tem_prioridade(db):
+async def test_registrar_pedido_preco_do_agente_tem_prioridade(db, store):
     # se o agente já mandou preço, não sobrescreve pelo catálogo
     db.product_prices = {"cropped": 999.0}
     itens = [{"produto": "Cropped", "qtd": 1, "preco": 49.9}]
-    await registrar_pedido(db, "store-1", "conv-1", itens, None, None)
+    await registrar_pedido(db, store, "conv-1", itens, None, None)
     assert db.order_upserts[0]["pedido"][0]["preco"] == 49.9
     assert db.order_upserts[0]["valor_total"] == 49.9
 
@@ -602,3 +602,46 @@ def test_aplicar_desconto_bruto_none_retorna_none():
     store = _store_desc(discount_type="percent_order", discount_value=10.0)
     itens = [{"produto": "Top", "qtd": 2}]  # sem preço
     assert aplicar_desconto(None, store, itens) == (None, None)
+
+
+async def test_registrar_pedido_grava_bruto_liquido_e_desconto(db):
+    store = _store_desc(discount_type="percent_order", discount_value=10.0)
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    out = await registrar_pedido(db, store, "conv-1", itens, "Pix", "Sedex")
+    up = db.order_upserts[0]
+    assert up["valor_bruto"] == 100.0
+    assert up["valor_total"] == 90.0
+    assert up["desconto_aplicado"] == 10.0
+    assert "R$ 90,00" in out
+    assert "desconto de atacado" in out
+
+
+async def test_registrar_pedido_sem_desconto_bruto_igual_liquido(db, store):
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    out = await registrar_pedido(db, store, "conv-1", itens, None, None)
+    up = db.order_upserts[0]
+    assert up["valor_bruto"] == 100.0
+    assert up["valor_total"] == 100.0
+    assert up["desconto_aplicado"] == 0.0
+    assert "desconto de atacado" not in out
+
+
+async def test_registrar_pedido_minimo_nao_atingido_nao_desconta(db):
+    store = _store_desc(discount_type="percent_order", discount_value=10.0,
+                        min_order_quantity=12, min_order_logic="all")
+    itens = [{"produto": "Top", "qtd": 2, "preco": 50.0}]
+    await registrar_pedido(db, store, "conv-1", itens, None, None)
+    up = db.order_upserts[0]
+    assert up["valor_total"] == 100.0
+    assert up["desconto_aplicado"] == 0.0
+
+
+async def test_registrar_pedido_custom_usa_valor_da_llm(db):
+    store = _store_desc(discount_type="custom", discount_custom="5% acima de 10")
+    itens = [{"produto": "Top", "qtd": 20, "preco": 5.0}]
+    await registrar_pedido(db, store, "conv-1", itens, None, None,
+                           valor_com_desconto=95.0)
+    up = db.order_upserts[0]
+    assert up["valor_bruto"] == 100.0
+    assert up["valor_total"] == 95.0
+    assert up["desconto_aplicado"] == 5.0
