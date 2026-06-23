@@ -47,6 +47,7 @@ class StoreSettings:
     min_order_quantity: int | None = None
     min_order_value: float | None = None
     min_order_logic: str = "all"
+    min_order_required: bool = False
     discount_type: str | None = None
     discount_value: float | None = None
     discount_custom: str = ""

@@ -30,6 +30,7 @@ class Database:
                       delivery_methods, service_instructions, seller_phone,
                       instagram_handle, service_steps, faq, min_order_enabled,
                       min_order_quantity, min_order_value, min_order_logic,
+                      min_order_required,
                       discount_type, discount_value, discount_custom
                FROM store_settings WHERE id = $1""", store_id)
         if r is None:
@@ -52,6 +53,7 @@ class Database:
             min_order_value=(float(r["min_order_value"])
                              if r["min_order_value"] is not None else None),
             min_order_logic=r["min_order_logic"] or "all",
+            min_order_required=bool(r["min_order_required"]),
             discount_type=r["discount_type"],
             discount_value=(float(r["discount_value"])
                             if r["discount_value"] is not None else None),

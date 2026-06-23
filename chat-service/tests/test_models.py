@@ -114,3 +114,13 @@ def test_store_settings_accepts_service_steps_and_faq():
     )
     assert s.service_steps[0] == "Pergunte o tamanho"
     assert s.faq[0]["resposta"] == "Em 7 dias."
+
+
+def test_store_settings_min_order_required_defaults_false():
+    s = StoreSettings(id="x", store_name="Loja")
+    assert s.min_order_required is False
+
+
+def test_store_settings_accepts_min_order_required():
+    s = StoreSettings(id="x", store_name="Loja", min_order_required=True)
+    assert s.min_order_required is True
