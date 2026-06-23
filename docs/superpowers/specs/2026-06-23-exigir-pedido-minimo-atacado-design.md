@@ -57,17 +57,21 @@ Idempotente, no padrão das outras migrations. Aplicada manualmente no Supabase.
 Dentro do collapsible de atacado (que abre com `min_order_enabled`), abaixo dos
 campos de quantidade/valor/lógica, um novo toggle:
 
-- Rótulo: **"Exigir pedido mínimo para fechar o pedido"**.
-- Texto auxiliar: *"Se desligado, o agente fecha mesmo abaixo do mínimo e avisa o
-  cliente quando estiver perto, incentivando a atingir o mínimo para ganhar o
-  desconto."*
+- Rótulo: **"Bloquear fechamento abaixo do mínimo"** (o toggle externo já se chama
+  "Exigir pedido mínimo (atacado)" e significa apenas "ativar atacado"; este novo
+  controla se o agente *impede* o fechamento abaixo do mínimo).
+- Texto auxiliar: *"Se ligado, o agente só fecha quando o mínimo for atingido. Se
+  desligado, fecha mesmo abaixo e avisa o cliente quando estiver perto,
+  incentivando a atingir o mínimo para ganhar o desconto."*
 - Estado `minOrderRequired` (default vindo de `settings?.min_order_required ?? false`).
 - Incluído no payload de salvar como `min_order_required`.
 
-### 3. Action + sanitize — `src/actions/store-settings.ts`, `src/lib/store-settings-sanitize.ts`
+### 3. Action — `src/actions/store-settings.ts`
 
-- O tipo/payload de update passa a aceitar `min_order_required: boolean`.
-- O sanitizador coage para booleano (default `false`).
+- O payload de `saveStoreSettings` passa a aceitar `min_order_required: boolean`,
+  coagido inline com `data.min_order_required === true` (mesmo padrão de
+  `min_order_enabled`), e incluído no `upsert`. Sem mudança em
+  `store-settings-sanitize.ts` (que cobre só faq/desconto).
 - `src/types/database.ts`: coluna `min_order_required` nos blocos Row/Insert/Update
   da tabela `store_settings`.
 
@@ -89,8 +93,9 @@ campos de quantidade/valor/lógica, um novo toggle:
     mínimo" / incentivo ao desconto, e NÃO contém a obrigatoriedade.
 - `chat-service/tests/test_models.py`: `min_order_required` default `False`;
   aceitação quando setado.
-- `src/lib/__tests__/store-settings-sanitize.test.ts`: novo campo coagido para
-  booleano, default `false`.
+- Frontend (action + LojaForm + types): coberto por typecheck (`tsc --noEmit`).
+  A coerção `=== true` segue o padrão de `min_order_enabled`, que não tem teste
+  unitário próprio.
 
 ## Fora de escopo
 
