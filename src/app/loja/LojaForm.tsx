@@ -248,6 +248,9 @@ export function LojaForm({
   const [minOrderLogic, setMinOrderLogic] = useState<'all' | 'any'>(
     settings?.min_order_logic === 'any' ? 'any' : 'all',
   )
+  const [minOrderRequired, setMinOrderRequired] = useState(
+    settings?.min_order_required ?? false,
+  )
   const faqIdRef = useRef(settings?.faq?.length ?? 0)
   const [faq, setFaq] = useState(() =>
     (settings?.faq ?? []).map((p, i) => ({
@@ -327,6 +330,7 @@ export function LojaForm({
       min_order_quantity: cleanQty,
       min_order_value: cleanValue,
       min_order_logic: minOrderLogic,
+      min_order_required: minOrderRequired,
       faq: faq
         .filter((p) => p.pergunta.trim() !== '' && p.resposta.trim() !== '')
         .map((p) => ({ pergunta: p.pergunta, resposta: p.resposta })),
@@ -818,6 +822,26 @@ export function LojaForm({
                     Pelo menos um dos campos acima é obrigatório quando o
                     pedido mínimo está ativado.
                   </p>
+
+                  <label className="flex items-start gap-3 p-3.5 rounded-xl border border-ink-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="check mt-0.5"
+                      checked={minOrderRequired}
+                      onChange={() => setMinOrderRequired((v) => !v)}
+                    />
+                    <span className="flex-1">
+                      <span className="text-[13.5px] font-semibold text-ink-900">
+                        Bloquear fechamento abaixo do mínimo
+                      </span>
+                      <span className="block text-[11.5px] text-ink-600 mt-0.5">
+                        Se ligado, o agente só fecha quando o mínimo for atingido.
+                        Se desligado, fecha mesmo abaixo e avisa o cliente quando
+                        estiver perto, incentivando a atingir o mínimo para ganhar
+                        o desconto.
+                      </span>
+                    </span>
+                  </label>
 
                   <div className="h-px bg-ink-100" />
 
