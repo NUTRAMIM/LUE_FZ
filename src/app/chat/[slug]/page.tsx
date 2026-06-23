@@ -1,4 +1,4 @@
-import { ensureConversation } from '@/actions/chat'
+import { getChatStore } from '@/actions/chat'
 import { ChatClient } from './ChatClient'
 
 export const dynamic = 'force-dynamic'
@@ -9,16 +9,14 @@ export default async function ChatPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const bootstrap = await ensureConversation(slug)
+  const store = await getChatStore(slug)
 
   return (
     <ChatClient
       slug={slug}
-      storeId={bootstrap.storeId}
-      conversationId={bootstrap.conversationId}
-      storeName={bootstrap.storeName}
-      storeLogoUrl={bootstrap.storeLogoUrl}
-      initialMessages={bootstrap.messages}
+      storeId={store.storeId}
+      storeName={store.storeName}
+      storeLogoUrl={store.storeLogoUrl}
     />
   )
 }

@@ -41,10 +41,20 @@ export function parseVisitorCookieValue(raw: string | undefined): string | null 
   return visitorId
 }
 
+// Em produção o chat é embarcado em iframe cross-site (site do lojista), então
+// o cookie de visitante só é enviado nesse contexto third-party com
+// SameSite=None; Secure, + Partitioned (CHIPS) pra sobreviver ao bloqueio de
+// cookies de terceiros dos navegadores (Safari/Chrome). Sem isto, o POST do
+// sendMessage não recebe o cookie, o visitorId muda e a conversa "some"
+// ("Conversa não encontrada"). Em dev (http://localhost) mantemos Lax porque
+// None exige Secure e o cookie seria descartado sem HTTPS.
+const IS_PROD = process.env.NODE_ENV === 'production'
+
 export const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: IS_PROD,
+  sameSite: (IS_PROD ? 'none' : 'lax') as 'none' | 'lax',
+  partitioned: IS_PROD,
   path: '/chat',
   maxAge: 60 * 60 * 24 * 365,
 }

@@ -1,19 +1,23 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { randomUUID } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dispatchToN8n } from '@/lib/n8n'
 import { signedReadUrl } from '@/lib/chat-media'
 import { splitAIMessage } from '@/app/chat/[slug]/components/ai-split'
-import {
-  COOKIE_NAME,
-  COOKIE_OPTIONS,
-  buildVisitorCookieValue,
-  generateVisitorId,
-  parseVisitorCookieValue,
-} from '@/lib/visitor-cookie'
+
+// Identidade do visitante vem do cliente (localStorage), não de cookie: o chat
+// roda embarcado em iframe cross-site (site do lojista) e cookies de terceiros
+// são bloqueados pela maioria dos navegadores (Safari por padrão, Chrome/Firefox
+// com partição). O visitorId é um UUID v4 de alta entropia gerado no cliente e
+// enviado explicitamente; validamos o formato aqui antes de usar.
+const VISITOR_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isValidVisitorId(visitorId: string | undefined): visitorId is string {
+  return !!visitorId && VISITOR_ID_RE.test(visitorId)
+}
 
 export interface ChatBootstrap {
   conversationId: string
@@ -31,24 +35,6 @@ export interface ChatBootstrap {
   }>
 }
 
-async function getOrCreateVisitorId(): Promise<string> {
-  const cookieStore = await cookies()
-  const raw = cookieStore.get(COOKIE_NAME)?.value
-  const existing = parseVisitorCookieValue(raw)
-  if (existing) return existing
-
-  // Cookie missing/invalid in a Server Component context — middleware
-  // normally sets it for /chat/*. Server Actions (POST) can also set it.
-  try {
-    const newId = generateVisitorId()
-    cookieStore.set(COOKIE_NAME, buildVisitorCookieValue(newId), COOKIE_OPTIONS)
-    return newId
-  } catch {
-    // Fallback: middleware will set on next request; transient ID for this render.
-    return generateVisitorId()
-  }
-}
-
 async function resolveStoreBySlug(slug: string) {
   const admin = createAdminClient()
   const { data, error } = await admin
@@ -63,11 +49,36 @@ async function resolveStoreBySlug(slug: string) {
   return data
 }
 
-export async function ensureConversation(slug: string): Promise<ChatBootstrap> {
+export interface ChatStore {
+  storeId: string
+  storeName: string
+  storeLogoUrl: string | null
+}
+
+// Resolve a loja pelo slug para o render server-side da página (casca do chat).
+// A conversa em si é criada no cliente via ensureConversation, depois que o
+// visitorId do localStorage estiver disponível. notFound() aqui é seguro porque
+// roda no Server Component.
+export async function getChatStore(slug: string): Promise<ChatStore> {
   const store = await resolveStoreBySlug(slug)
   if (!store) notFound()
+  return {
+    storeId: store.id,
+    storeName: store.store_name,
+    storeLogoUrl: store.logo_url ?? null,
+  }
+}
 
-  const visitorId = await getOrCreateVisitorId()
+export async function ensureConversation(
+  slug: string,
+  visitorId: string,
+): Promise<ChatBootstrap> {
+  if (!isValidVisitorId(visitorId)) {
+    throw new Error('Identificador de visitante inválido.')
+  }
+  const store = await resolveStoreBySlug(slug)
+  if (!store) throw new Error('Loja não encontrada.')
+
   const admin = createAdminClient()
 
   let { data: conversation } = await admin
@@ -126,6 +137,7 @@ export async function ensureConversation(slug: string): Promise<ChatBootstrap> {
 
 export interface SendMessageInput {
   slug: string
+  visitorId: string
   text: string
   mediaPath?: string
   messageType: 'text' | 'image' | 'audio'
@@ -142,17 +154,19 @@ export interface SendMessageResult {
 export async function sendMessage(
   input: SendMessageInput,
 ): Promise<SendMessageResult> {
+  if (!isValidVisitorId(input.visitorId)) {
+    return { success: false, error: 'Conversa não encontrada.' }
+  }
   const store = await resolveStoreBySlug(input.slug)
   if (!store) return { success: false, error: 'Loja não encontrada.' }
 
-  const visitorId = await getOrCreateVisitorId()
   const admin = createAdminClient()
 
   const { data: conv } = await admin
     .from('conversations')
     .select('id')
     .eq('store_id', store.id)
-    .eq('visitor_id', visitorId)
+    .eq('visitor_id', input.visitorId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -278,6 +292,7 @@ const MAX_AUDIO_BYTES = 2 * 1024 * 1024
 
 export interface GetUploadUrlInput {
   slug: string
+  visitorId: string
   mime: string
   size: number
 }
@@ -293,17 +308,19 @@ export interface GetUploadUrlResult {
 export async function getUploadUrl(
   input: GetUploadUrlInput,
 ): Promise<GetUploadUrlResult> {
+  if (!isValidVisitorId(input.visitorId)) {
+    return { success: false, error: 'Conversa não encontrada.' }
+  }
   const store = await resolveStoreBySlug(input.slug)
   if (!store) return { success: false, error: 'Loja não encontrada.' }
 
-  const visitorId = await getOrCreateVisitorId()
   const admin = createAdminClient()
 
   const { data: conv } = await admin
     .from('conversations')
     .select('id')
     .eq('store_id', store.id)
-    .eq('visitor_id', visitorId)
+    .eq('visitor_id', input.visitorId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()

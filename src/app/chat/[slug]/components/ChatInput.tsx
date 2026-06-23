@@ -13,6 +13,8 @@ import {
 
 export function ChatInput({
   slug,
+  visitorId,
+  disabled = false,
   sending,
   onSending,
   onError,
@@ -26,6 +28,8 @@ export function ChatInput({
   onCancelReply,
 }: {
   slug: string
+  visitorId: string | null
+  disabled?: boolean
   sending: boolean
   onSending: (s: boolean) => void
   onError: (e: string | null) => void
@@ -53,6 +57,7 @@ export function ChatInput({
   async function handleSend() {
     const trimmed = text.trim()
     if (!trimmed) return
+    if (!visitorId) return // conversa ainda inicializando
     const replyId = replyTo ? normalizeMessageId(replyTo.id) : undefined
     const replySegmentIndex = replyTo ? segmentIndexFromId(replyTo.id) : undefined
     onSending(true)
@@ -74,6 +79,7 @@ export function ChatInput({
 
     const result = await sendMessage({
       slug,
+      visitorId,
       text: trimmed,
       messageType: 'text',
       ...(replyId ? { replyToMessageId: replyId } : {}),
@@ -99,7 +105,7 @@ export function ChatInput({
     }
   }
 
-  const canSend = text.trim().length > 0
+  const canSend = text.trim().length > 0 && !disabled && !!visitorId
 
   const replyLabel = replyTo
     ? replyAuthorForRole(replyTo.role) === 'cliente'
@@ -135,9 +141,10 @@ export function ChatInput({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKey}
+        disabled={disabled}
         rows={1}
-        placeholder="Mensagem"
-        className="max-h-32 flex-1 resize-none rounded-2xl bg-gray-100 px-4 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54]"
+        placeholder={disabled ? 'Iniciando conversa…' : 'Mensagem'}
+        className="max-h-32 flex-1 resize-none rounded-2xl bg-gray-100 px-4 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#075E54] disabled:opacity-60"
       />
       <button
         type="button"
