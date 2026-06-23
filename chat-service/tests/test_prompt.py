@@ -365,3 +365,20 @@ def test_prompt_exige_whatsapp_para_fechar():
     # a obrigatoriedade do número para encaminhar/fechar precisa estar explícita
     assert "obrigat" in p
     assert "não encaminh" in p or "nao encaminh" in p
+
+
+def test_atacado_min_order_required_bloqueia_fechamento(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_required=True)
+    p = build_store_prompt(s)
+    assert "OBRIGATÓRIO" in p
+    assert "enquanto o mínimo não for atingido" in p
+
+
+def test_atacado_min_order_nao_obrigatorio_avisa_perto(store):
+    s = dataclasses.replace(store, min_order_enabled=True, min_order_quantity=10,
+                            min_order_value=200.0, min_order_required=False)
+    p = build_store_prompt(s)
+    assert "OBRIGATÓRIO" not in p
+    assert "perto do mínimo" in p
+    assert "Pode fechar mesmo abaixo" in p

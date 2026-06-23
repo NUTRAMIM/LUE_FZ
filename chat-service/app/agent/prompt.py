@@ -154,10 +154,23 @@ def _regras_atacado_block(store: StoreSettings) -> str:
         return ""
     linhas = ["\n\n# Regras desta loja (atacado)"]
     if minimo:
-        linhas.append(
-            f"Pedido mínimo: {minimo}. Avise o cliente do pedido mínimo de um jeito leve "
-            "quando ele estiver montando o pedido ou perguntar, e vá somando as peças pra "
-            "conferir se já bateu. Não feche abaixo do mínimo sem avisar.")
+        if store.min_order_required:
+            linhas.append(
+                f"Pedido mínimo: {minimo}. Esse mínimo é OBRIGATÓRIO pra fechar. Vá "
+                "somando as peças e avise o cliente de leve enquanto ele monta o pedido. "
+                "NÃO dê o pedido por fechado nem encaminhe pra loja enquanto o mínimo não "
+                "for atingido. Se o cliente quiser fechar abaixo, explique com leveza que "
+                "o mínimo é necessário e ajude a completar, sugerindo mais peças, até "
+                "bater o mínimo.")
+        else:
+            linhas.append(
+                f"Pedido mínimo: {minimo}. Avise o cliente do pedido mínimo de um jeito "
+                "leve quando ele estiver montando o pedido ou perguntar, e vá somando as "
+                "peças pra conferir se já bateu. Pode fechar mesmo abaixo do mínimo. "
+                "Quando o pedido estiver perto do mínimo, avise sobre o mínimo e, se a "
+                "loja tiver desconto de atacado, lembre que atingindo o mínimo ele garante "
+                "o desconto — pergunte se ele quer adicionar mais peças, sem insistir se "
+                "não quiser.")
     if desconto:
         linhas.append(
             f"Desconto: {desconto}. Comente esse desconto de forma natural quando fizer "
