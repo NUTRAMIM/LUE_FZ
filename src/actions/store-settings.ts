@@ -120,6 +120,7 @@ export async function saveStoreSettings(data: {
   min_order_quantity: number | null
   min_order_value: number | null
   min_order_logic: 'all' | 'any'
+  min_order_required?: boolean
   faq: FaqItem[]
   discount_type: 'percent_piece' | 'percent_order' | 'fixed_piece' | 'custom' | null
   discount_value: number | null
@@ -151,6 +152,7 @@ export async function saveStoreSettings(data: {
   const minOrderQuantity = sanitizeMinOrderQuantity(data.min_order_quantity)
   const minOrderValue = sanitizeMinOrderValue(data.min_order_value)
   const minOrderLogic = sanitizeMinOrderLogic(data.min_order_logic)
+  const minOrderRequired = data.min_order_required === true
   const faq = sanitizeFaq(data.faq)
   const discount = normalizeDiscount(
     data.discount_type,
@@ -195,6 +197,7 @@ export async function saveStoreSettings(data: {
         min_order_quantity: minOrderQuantity,
         min_order_value: minOrderValue,
         min_order_logic: minOrderLogic,
+        min_order_required: minOrderRequired,
         faq,
         discount_type: discount.discount_type,
         discount_value: discount.discount_value,
