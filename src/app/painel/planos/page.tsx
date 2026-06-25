@@ -6,18 +6,22 @@ import { getCurrentSubscription } from '@/actions/billing'
 import { logout } from '@/actions/auth'
 import { Icon, Chip } from '@/components/painel/Icons'
 import { PLANS_DISPLAY, type PlanDisplay } from '@/lib/plans-display'
+import { PLANS, isPlanId } from '@/lib/plans'
+import { monthStartIso } from '@/lib/conversation-quota'
+import { getActiveStoreId } from '@/lib/active-store'
 import { PlanosInteractive } from './PlanosClient'
+import { SubscriptionActions } from './SubscriptionActions'
 
 export const dynamic = 'force-dynamic'
 
-// Hoje só existe 'pro' em lib/plans.ts; mapeia pra Essencial até os 3
-// planos do display virarem reais no checkout.
+// Mapeia o plan_id da assinatura para o id do card de display. Plan ids
+// desconhecidos (legado) caem em null — sem card destacado (o preço real já
+// vem de PLANS via isPlanId, não daqui).
 function mapPlanIdToDisplay(planId: string | null): PlanDisplay['id'] | null {
-  if (!planId) return null
   if (planId === 'essencial' || planId === 'profissional' || planId === 'performance') {
     return planId
   }
-  return 'essencial'
+  return null
 }
 
 function formatPtBrDay(iso: string | null): string {
@@ -47,26 +51,22 @@ export default async function PainelPlanosPage() {
   const user = await getAuthedUser()
   if (!user) redirect('/login')
 
-  const [subscription, msgCountRes, storeRes] = await Promise.all([
+  // Loja-alvo coerente com getCurrentSubscription (considera impersonação de
+  // admin e membership), pra contagem de uso e nome baterem com a assinatura.
+  const storeId = (await getActiveStoreId()) ?? user.id
+
+  const [subscription, convCountRes, storeRes] = await Promise.all([
     getCurrentSubscription(),
+    // Uso do mês = conversas criadas neste mês civil (a métrica de cota).
     supabase
-      .from('messages')
+      .from('conversations')
       .select('id', { count: 'exact', head: true })
-      .eq('store_id', user.id)
-      .eq('role', 'assistant')
-      .gte(
-        'created_at',
-        (() => {
-          const d = new Date()
-          d.setUTCDate(1)
-          d.setUTCHours(0, 0, 0, 0)
-          return d.toISOString()
-        })(),
-      ),
+      .eq('store_id', storeId)
+      .gte('created_at', monthStartIso()),
     supabase
       .from('store_settings')
       .select('store_name')
-      .eq('id', user.id)
+      .eq('id', storeId)
       .maybeSingle(),
   ])
 
@@ -99,9 +99,17 @@ export default async function PainelPlanosPage() {
     ? `PLANO ${currentPlan.name.toUpperCase()}`
     : 'SEM PLANO'
 
-  const messagesUsed = msgCountRes.count ?? 0
-  const limit = currentPlan?.msgsLimit ?? 1000
-  const used = Math.min(messagesUsed, limit)
+  // Preço/limites reais vêm de PLANS (fonte única); PLANS_DISPLAY só dá copy.
+  const realPlan = isPlanId(subscription.planId) ? PLANS[subscription.planId] : null
+  const cycle = subscription.billingCycle ?? 'monthly'
+  const priceReais = realPlan
+    ? (realPlan[cycle].price_brl / 100).toLocaleString('pt-BR')
+    : null
+  const cycleSuffix = cycle === 'quarterly' ? '/trimestre' : '/mês'
+
+  const conversationsUsed = convCountRes.count ?? 0
+  const limit = realPlan?.convsLimit ?? 1000
+  const used = Math.min(conversationsUsed, limit)
   const usagePct = limit > 0 ? (used / limit) * 100 : 0
   const days = daysUntil(subscription.currentPeriodEnd)
 
@@ -282,12 +290,12 @@ export default async function PainelPlanosPage() {
                   >
                     {currentPlan?.name ?? 'Nenhum plano ativo'}
                   </h2>
-                  {currentPlan && (
+                  {priceReais && (
                     <>
                       <span className="text-ink-500 text-[14px]">·</span>
                       <span className="text-ink-700 tabular text-[14px] font-semibold">
-                        R$ {currentPlan.priceMonthly}
-                        <span className="text-ink-500 font-normal">/mês</span>
+                        R$ {priceReais}
+                        <span className="text-ink-500 font-normal">{cycleSuffix}</span>
                       </span>
                     </>
                   )}
@@ -343,22 +351,20 @@ export default async function PainelPlanosPage() {
                 Você pode trocar de plano a qualquer momento — o ajuste é
                 proporcional aos dias restantes do mês.
               </div>
-              <div className="flex items-center gap-2">
-                <button className="btn btn-ghost" disabled={!subscription.isActive}>
-                  Gerenciar pagamento
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  disabled={!subscription.isActive}
-                >
-                  Cancelar assinatura
-                </button>
-              </div>
+              <SubscriptionActions
+                isActive={subscription.isActive}
+                provider={subscription.provider}
+                cancelAtPeriodEnd={subscription.cancelAtPeriodEnd}
+              />
             </div>
           </div>
 
           {/* Interactive: toggle + 3 cards + compare + FAQ */}
-          <PlanosInteractive currentPlanId={currentPlanId} />
+          <PlanosInteractive
+            currentPlanId={currentPlanId}
+            isActive={subscription.isActive}
+            provider={subscription.provider}
+          />
 
           <footer className="mt-10 mb-4 flex items-center justify-end text-[11.5px] text-ink-500 font-mono">
             <div className="eyebrow">LUE FZ · v0.4.0</div>

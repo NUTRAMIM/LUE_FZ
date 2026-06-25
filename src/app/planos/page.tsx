@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentSubscription } from '@/actions/billing'
 import { getStoreRole } from '@/lib/store-role'
-import { PLANS } from '@/lib/plans'
+import { PLANS, type PlanId } from '@/lib/plans'
 import { CheckoutClient } from './CheckoutClient'
 
 export const dynamic = 'force-dynamic'
@@ -26,6 +26,8 @@ export default async function PlanosPage() {
   const subscription = await getCurrentSubscription()
   if (subscription.isActive) redirect('/painel')
 
+  const planIds = Object.keys(PLANS) as PlanId[]
+
   return (
     <main className="min-h-screen bg-neutral-950 px-6 py-16 text-neutral-100">
       <div className="mx-auto max-w-2xl">
@@ -40,31 +42,34 @@ export default async function PlanosPage() {
         </header>
 
         <div className="space-y-6">
-          {Object.entries(PLANS).map(([id, plan]) => (
-            <article
-              key={id}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8 shadow-2xl shadow-black/40 backdrop-blur"
-            >
-              <div className="mb-8 flex items-baseline justify-between gap-6">
-                <div>
-                  <h2 className="text-2xl font-semibold">{plan.name}</h2>
-                  <p className="mt-1 text-sm text-neutral-400">
-                    {plan.duration_days} dias de acesso completo
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold tracking-tight">
-                    R$ {(plan.price_brl / 100).toFixed(2).replace('.', ',')}
+          {planIds.map((planId) => {
+            const plan = PLANS[planId]
+            return (
+              <article
+                key={planId}
+                className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8 shadow-2xl shadow-black/40 backdrop-blur"
+              >
+                <div className="mb-8 flex items-baseline justify-between gap-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold">{plan.name}</h2>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      A partir de R$ {(plan.monthly.price_brl / 100).toFixed(2).replace('.', ',')}/mês
+                    </p>
                   </div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-neutral-500">
-                    por período
+                  <div className="text-right">
+                    <div className="text-3xl font-bold tracking-tight">
+                      R$ {(plan.monthly.price_brl / 100).toFixed(2).replace('.', ',')}
+                    </div>
+                    <div className="mt-1 text-xs uppercase tracking-wider text-neutral-500">
+                      por mês
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <CheckoutClient planId={id as keyof typeof PLANS} />
-            </article>
-          ))}
+                <CheckoutClient planId={planId} />
+              </article>
+            )
+          })}
         </div>
       </div>
     </main>

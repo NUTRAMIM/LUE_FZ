@@ -340,6 +340,9 @@ export function LojaForm({
 
     if (result.success) {
       setSuccess(true)
+    } else if (result.error === 'subscription_required') {
+      window.location.href = '/planos'
+      return
     } else {
       setError(result.error ?? 'Erro desconhecido.')
     }

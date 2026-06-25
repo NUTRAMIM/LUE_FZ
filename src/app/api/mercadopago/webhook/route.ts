@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import crypto from 'node:crypto'
 import { getMpPayment } from '@/lib/mercadopago'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { PLANS, type PlanId } from '@/lib/plans'
+import { resolvePlanCycle } from '@/lib/plans'
 import type { Json } from '@/types/database'
 
 export const runtime = 'nodejs'
@@ -15,9 +15,8 @@ export const dynamic = 'force-dynamic'
 //   header `x-request-id`
 //   manifest = `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`
 //   HMAC-SHA256(manifest, MERCADOPAGO_WEBHOOK_SECRET) deve bater com v1.
-// Se o secret não está configurado (placeholder), pula validação e loga
-// warning — útil em dev local com `ngrok` antes de configurar webhook no
-// dashboard MP. EM PRODUÇÃO sem secret a verificação fica frouxa, atenção.
+// Secret ausente ou 'placeholder' retorna 500 (servidor não pode operar sem
+// autenticação). Configure MERCADOPAGO_WEBHOOK_SECRET via dashboard MP.
 //
 // Idempotência: PK = `mp_<data.id>_<action>` em payment_events.
 //
@@ -72,20 +71,17 @@ export async function POST(req: NextRequest) {
   const dataIdStr = String(dataId)
 
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET
+  if (!secret || secret === 'placeholder') {
+    console.error('MERCADOPAGO_WEBHOOK_SECRET not configured')
+    return new NextResponse('Server misconfigured', { status: 500 })
+  }
   const sigHeader = req.headers.get('x-signature')
   const requestId = req.headers.get('x-request-id')
-
-  if (secret && secret !== 'placeholder') {
-    if (!sigHeader || !requestId) {
-      return new NextResponse('Missing signature headers', { status: 400 })
-    }
-    if (!verifySignature(sigHeader, requestId, dataIdStr, secret)) {
-      return new NextResponse('Invalid signature', { status: 401 })
-    }
-  } else {
-    console.warn(
-      'MP webhook signature verification SKIPPED — MERCADOPAGO_WEBHOOK_SECRET is placeholder',
-    )
+  if (!sigHeader || !requestId) {
+    return new NextResponse('Missing signature headers', { status: 400 })
+  }
+  if (!verifySignature(sigHeader, requestId, dataIdStr, secret)) {
+    return new NextResponse('Invalid signature', { status: 401 })
   }
 
   const admin = createAdminClient()
@@ -120,25 +116,32 @@ export async function POST(req: NextRequest) {
     }
 
     const storeId = payment.external_reference
-    const meta = (payment.metadata ?? {}) as Record<string, unknown>
-    // O SDK do MP normaliza `metadata` em snake_case quando lê; usamos os dois.
-    const planIdRaw = (meta.plan_id ?? meta.planId ?? 'pro') as string
-    const planId: PlanId = planIdRaw in PLANS ? (planIdRaw as PlanId) : 'pro'
-
     if (!storeId) {
       console.error('MP webhook: missing external_reference on payment', payment.id)
       return new NextResponse('Missing store_id', { status: 400 })
     }
 
-    const plan = PLANS[planId]
-    const periodEnd = new Date(Date.now() + plan.duration_days * 86_400_000).toISOString()
+    const meta = (payment.metadata ?? {}) as Record<string, unknown>
+    // O SDK do MP normaliza `metadata` em snake_case quando lê; aceitamos os dois.
+    const planIdRaw = (meta.plan_id ?? meta.planId) as string | undefined
+    const cycleRaw = (meta.billing_cycle ?? meta.billingCycle) as string | undefined
+    const resolved = resolvePlanCycle(planIdRaw, cycleRaw)
+    if (!resolved) {
+      console.error('MP webhook: unresolved plan/cycle', { planIdRaw, cycleRaw })
+      return new NextResponse('Unknown plan', { status: 400 })
+    }
+
+    const periodEnd = new Date(
+      Date.now() + resolved.pricing.duration_days * 86_400_000,
+    ).toISOString()
 
     const { error: upsertError } = await admin.from('store_subscriptions').upsert(
       {
         store_id: storeId,
-        plan_id: planId,
+        plan_id: resolved.planId,
         provider: 'mercadopago',
         status: 'active',
+        billing_cycle: resolved.cycle,
         mp_payment_id: dataIdStr,
         mp_customer_id: payment.payer?.id ? String(payment.payer.id) : null,
         current_period_end: periodEnd,

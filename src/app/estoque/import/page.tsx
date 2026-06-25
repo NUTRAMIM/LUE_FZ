@@ -37,6 +37,10 @@ export default function ImportPage() {
       const data = await res.json()
 
       if (!res.ok) {
+        if (data.error === 'subscription_required') {
+          window.location.href = '/planos'
+          return
+        }
         setError(data.error || 'Erro ao importar')
         return
       }

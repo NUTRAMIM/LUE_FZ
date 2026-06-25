@@ -538,6 +538,7 @@ export interface Database {
           plan_id: string
           provider: 'stripe' | 'mercadopago' | 'manual'
           status: 'active' | 'past_due' | 'canceled' | 'pending' | 'incomplete'
+          billing_cycle: 'monthly' | 'quarterly' | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           stripe_price_id: string | null
@@ -555,6 +556,7 @@ export interface Database {
           plan_id: string
           provider: 'stripe' | 'mercadopago' | 'manual'
           status: 'active' | 'past_due' | 'canceled' | 'pending' | 'incomplete'
+          billing_cycle?: 'monthly' | 'quarterly' | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_price_id?: string | null
@@ -572,6 +574,7 @@ export interface Database {
           plan_id?: string
           provider?: 'stripe' | 'mercadopago' | 'manual'
           status?: 'active' | 'past_due' | 'canceled' | 'pending' | 'incomplete'
+          billing_cycle?: 'monthly' | 'quarterly' | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_price_id?: string | null

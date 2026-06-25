@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isBillingCycle } from '@/lib/plans'
 import type { Json } from '@/types/database'
 
 export const runtime = 'nodejs'
@@ -81,6 +82,7 @@ async function upsertStripeSubscription(
   customerId: string | null,
   sub: Stripe.Subscription,
   planId: string,
+  cycle: string | null,
 ) {
   const priceId = sub.items?.data?.[0]?.price?.id ?? null
   const { error } = await admin.from('store_subscriptions').upsert(
@@ -89,6 +91,7 @@ async function upsertStripeSubscription(
       plan_id: planId,
       provider: 'stripe',
       status: mapStripeStatus(sub.status),
+      billing_cycle: isBillingCycle(cycle) ? cycle : null,
       stripe_customer_id: customerId,
       stripe_subscription_id: sub.id,
       stripe_price_id: priceId,
@@ -155,7 +158,8 @@ export async function POST(req: NextRequest) {
           storeId,
           customerId,
           sub,
-          session.metadata?.plan_id ?? 'pro',
+          session.metadata?.plan_id ?? sub.metadata?.plan_id ?? 'unknown',
+          session.metadata?.billing_cycle ?? sub.metadata?.billing_cycle ?? null,
         )
         break
       }
@@ -172,7 +176,8 @@ export async function POST(req: NextRequest) {
             storeId,
             customerId,
             sub,
-            sub.metadata?.plan_id ?? 'pro',
+            sub.metadata?.plan_id ?? 'unknown',
+            sub.metadata?.billing_cycle ?? null,
           )
         } else {
           // Fallback quando metadata ausente: localiza pela coluna unique.

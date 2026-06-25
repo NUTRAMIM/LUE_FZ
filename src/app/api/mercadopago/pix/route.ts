@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import crypto from 'node:crypto'
 import { getMpPayment } from '@/lib/mercadopago'
 import { createClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
-import { PLANS, type PlanId } from '@/lib/plans'
+import { resolvePlanCycle } from '@/lib/plans'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -30,35 +31,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'agent_cannot_pay' }, { status: 403 })
   }
 
-  let body: { plan_id?: string }
+  let body: { plan_id?: string; cycle?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
   }
 
-  const planIdRaw = body.plan_id ?? 'pro'
-  if (!(planIdRaw in PLANS)) {
+  const resolved = resolvePlanCycle(body.plan_id, body.cycle)
+  if (!resolved) {
     return NextResponse.json({ error: 'unknown_plan' }, { status: 400 })
   }
-  const planId = planIdRaw as PlanId
-  const plan = PLANS[planId]
+  const { planId, cycle, plan, pricing } = resolved
 
   const siteUrl = getAppUrl()
 
   try {
     const payment = await getMpPayment().create({
       body: {
-        transaction_amount: plan.price_brl / 100,
+        transaction_amount: pricing.price_brl / 100,
         payment_method_id: 'pix',
         payer: {
           email: user.email ?? `store-${user.id}@lue.fz`,
         },
-        description: `${plan.name} - ${plan.duration_days} dias`,
+        description: `${plan.name} - ${pricing.duration_days} dias`,
         external_reference: user.id,
         notification_url: `${siteUrl}/api/mercadopago/webhook`,
-        metadata: { store_id: user.id, plan_id: planId },
+        metadata: { store_id: user.id, plan_id: planId, billing_cycle: cycle },
       },
+      requestOptions: { idempotencyKey: crypto.randomUUID() },
     })
 
     const tx = payment.point_of_interaction?.transaction_data

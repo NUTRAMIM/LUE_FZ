@@ -14,6 +14,11 @@ import {
   generateVisitorId,
   parseVisitorCookieValue,
 } from '@/lib/visitor-cookie'
+import { isStoreSubscriptionActive } from '@/lib/subscription'
+import {
+  storeConversationLimit,
+  conversationWithinQuota,
+} from '@/lib/conversation-quota'
 
 export interface ChatBootstrap {
   conversationId: string
@@ -150,7 +155,7 @@ export async function sendMessage(
 
   const { data: conv } = await admin
     .from('conversations')
-    .select('id')
+    .select('id, created_at')
     .eq('store_id', store.id)
     .eq('visitor_id', visitorId)
     .order('created_at', { ascending: false })
@@ -180,6 +185,28 @@ export async function sendMessage(
   if (insertErr || !inserted) {
     console.error('insert message error', insertErr)
     return { success: false, error: 'Erro ao salvar mensagem.' }
+  }
+
+  // Gate de assinatura: a mensagem do visitante é sempre salva (o dono não
+  // perde o lead), mas a IA só responde se a loja tiver assinatura ativa.
+  const active = await isStoreSubscriptionActive(store.id)
+  if (!active) {
+    return { success: true, messageId: inserted.id }
+  }
+
+  // Cota mensal de conversas: as primeiras N conversas do mês recebem IA.
+  // Esta conversa, se estiver além da cota, não dispara a IA (mensagem do
+  // visitante segue salva). Conversas em andamento de meses anteriores passam.
+  const convLimit = await storeConversationLimit(store.id)
+  if (convLimit !== null) {
+    const within = await conversationWithinQuota(
+      store.id,
+      conv.created_at,
+      convLimit,
+    )
+    if (!within) {
+      return { success: true, messageId: inserted.id }
+    }
   }
 
   const mediaUrl = await signedReadUrl(input.mediaPath ?? null)
