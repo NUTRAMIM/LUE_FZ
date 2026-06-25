@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStoreContext } from '@/lib/active-store'
 import { syncInventoryFromUrl } from '@/lib/inventory/sync'
+import { requireActiveStoreSubscription } from '@/lib/subscription'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const ctx = await getStoreContext()
@@ -18,6 +19,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
   const storeId = ctx.storeId
+
+  const activeStoreId = await requireActiveStoreSubscription()
+  if (!activeStoreId) {
+    return NextResponse.json({ error: 'subscription_required' }, { status: 402 })
+  }
 
   let body: { url?: string }
   try {

@@ -8,6 +8,7 @@ import { getStoreContext } from '@/lib/active-store'
 import { getMaxAgentsForStore } from '@/lib/plan-limits'
 import { isLivePendingInvite } from '@/lib/invite-status'
 import { getAppUrl } from '@/lib/app-url'
+import { requireActiveStoreSubscription } from '@/lib/subscription'
 
 const INVITE_TTL_DAYS = 7
 
@@ -138,6 +139,11 @@ export async function createInvite(input: {
   const storeId = await ownerStoreId()
   if (!storeId) {
     return { ok: false, error: 'Apenas o dono pode convidar vendedores.' }
+  }
+
+  const activeStoreId = await requireActiveStoreSubscription()
+  if (!activeStoreId) {
+    return { ok: false, error: 'subscription_required' }
   }
 
   const fullName = input.fullName.trim()

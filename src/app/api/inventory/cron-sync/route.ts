@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { syncInventoryFromUrl } from '@/lib/inventory/sync'
+import { isStoreSubscriptionActive } from '@/lib/subscription'
 
 // Comparação constante no tempo do Bearer secret (evita timing attack byte-a-byte
 // que o `!==` curto-circuitado permitiria). Tamanhos diferentes => falha direto.
@@ -60,6 +61,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   for (const store of stores ?? []) {
     const url = store.inventory_source_url
     if (!url) continue
+
+    // Pula lojas sem assinatura ativa — sem sessão de usuário no cron,
+    // então usamos isStoreSubscriptionActive diretamente por store_id.
+    const subActive = await isStoreSubscriptionActive(store.id)
+    if (!subActive) {
+      results.push({ store_id: store.id, status: 'error', error: 'subscription_inactive' })
+      failed++
+      continue
+    }
 
     try {
       const r = await syncInventoryFromUrl(store.id, url)

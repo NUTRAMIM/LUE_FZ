@@ -8,6 +8,7 @@ import {
   normalizeDiscount,
   type FaqItem,
 } from '@/lib/store-settings-sanitize'
+import { requireActiveStoreSubscription } from '@/lib/subscription'
 
 const MAX_STORE_NAME_LENGTH = 100
 const MAX_INSTRUCTIONS_LENGTH = 2000
@@ -136,6 +137,11 @@ export async function saveStoreSettings(data: {
   const storeId = await getActiveStoreId()
   if (!storeId) {
     return { success: false, error: 'Não autorizado. Faça login novamente.' }
+  }
+
+  const activeStoreId = await requireActiveStoreSubscription()
+  if (!activeStoreId) {
+    return { success: false, error: 'subscription_required' }
   }
 
   const storeName = sanitizeText(data.store_name, MAX_STORE_NAME_LENGTH)

@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
-import { PLANS_DISPLAY, type PlanDisplay } from '@/lib/plans-display'
+import { PLANS, isPlanId } from '@/lib/plans'
 
-// Resolve o maxAgents do plan_id. Plans desconhecidos (legacy 'pro' antigo,
-// null, undefined) retornam 0 — sem plano ativo == não pode convidar.
+// Resolve o maxAgents do plan_id. Plans desconhecidos (legacy, null, undefined)
+// retornam 0 — sem plano ativo == não pode convidar.
 export function maxAgentsForPlan(
   planId: string | null | undefined,
 ): number {
-  const match = PLANS_DISPLAY.find((p: PlanDisplay) => p.id === planId)
-  return match?.maxAgents ?? 0
+  if (!isPlanId(planId)) return 0
+  return PLANS[planId].maxAgents
 }
 
 // Lê o plano ativo da loja e devolve o maxAgents. Server-only (usa supabase

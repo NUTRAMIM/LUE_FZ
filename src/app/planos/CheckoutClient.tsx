@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import QRCode from 'qrcode'
 import { createCheckoutSession, getCurrentSubscription } from '@/actions/billing'
-import type { PlanId } from '@/lib/plans'
+import type { PlanId, BillingCycle } from '@/lib/plans'
 
 interface PixData {
   payment_id: string
@@ -18,6 +18,7 @@ export function CheckoutClient({ planId }: { planId: PlanId }) {
   const [pix, setPix] = useState<PixData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [cycle, setCycle] = useState<BillingCycle>('monthly')
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // Renderiza o QR no canvas quando o Pix é criado.
@@ -52,7 +53,7 @@ export function CheckoutClient({ planId }: { planId: PlanId }) {
     setLoading('stripe')
     setError(null)
     try {
-      const res = await createCheckoutSession(planId)
+      const res = await createCheckoutSession(planId, cycle)
       if ('url' in res) {
         window.location.href = res.url
       } else {
@@ -73,7 +74,7 @@ export function CheckoutClient({ planId }: { planId: PlanId }) {
       const res = await fetch('/api/mercadopago/pix', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ plan_id: planId }),
+        body: JSON.stringify({ plan_id: planId, cycle }),
       })
       if (!res.ok) {
         const errBody = (await res.json().catch(() => ({}))) as { error?: string }
@@ -135,6 +136,26 @@ export function CheckoutClient({ planId }: { planId: PlanId }) {
 
   return (
     <div className="space-y-3">
+      <div className="flex gap-2 rounded-xl border border-neutral-800 p-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setCycle('monthly')}
+          className={`flex-1 rounded-lg py-2 font-medium transition ${
+            cycle === 'monthly' ? 'bg-neutral-100 text-neutral-950' : 'text-neutral-400'
+          }`}
+        >
+          Mensal
+        </button>
+        <button
+          type="button"
+          onClick={() => setCycle('quarterly')}
+          className={`flex-1 rounded-lg py-2 font-medium transition ${
+            cycle === 'quarterly' ? 'bg-neutral-100 text-neutral-950' : 'text-neutral-400'
+          }`}
+        >
+          Trimestral
+        </button>
+      </div>
       <button
         type="button"
         onClick={handleStripe}

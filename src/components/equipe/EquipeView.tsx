@@ -36,6 +36,10 @@ export function EquipeView({ data }: { data: EquipeData }) {
     startTransition(async () => {
       const res = await createInvite({ fullName, email })
       if (!res.ok || !res.url) {
+        if (res.error === 'subscription_required') {
+          window.location.href = '/planos'
+          return
+        }
         setError(res.error ?? 'Erro ao criar convite.')
         return
       }
