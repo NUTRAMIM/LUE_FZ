@@ -13,6 +13,10 @@ interface PixData {
   expires_at: string | null
 }
 
+// PIX (Mercado Pago) ainda não está configurado em produção. Mantém o botão
+// oculto até o webhook/secret do MP estarem prontos. Trocar para true religa.
+const PIX_ENABLED = false
+
 export function CheckoutClient({ planId }: { planId: PlanId }) {
   const [loading, setLoading] = useState<'stripe' | 'pix' | null>(null)
   const [pix, setPix] = useState<PixData | null>(null)
@@ -164,14 +168,16 @@ export function CheckoutClient({ planId }: { planId: PlanId }) {
       >
         {loading === 'stripe' ? 'Redirecionando...' : 'Pagar com Cartão'}
       </button>
-      <button
-        type="button"
-        onClick={handlePix}
-        disabled={loading !== null}
-        className="w-full rounded-xl border border-neutral-700 bg-neutral-900 py-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {loading === 'pix' ? 'Gerando QR Code...' : 'Pagar com Pix'}
-      </button>
+      {PIX_ENABLED && (
+        <button
+          type="button"
+          onClick={handlePix}
+          disabled={loading !== null}
+          className="w-full rounded-xl border border-neutral-700 bg-neutral-900 py-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading === 'pix' ? 'Gerando QR Code...' : 'Pagar com Pix'}
+        </button>
+      )}
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   )
